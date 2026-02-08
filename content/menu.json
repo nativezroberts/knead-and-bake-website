@@ -39,7 +39,7 @@
       "available": true,
       "seasonal": false,
       "topSeller": true,
-      "image": "/images/menu/whole-wheat.jpg"
+      "image": "/images/menu/KnB_SandwichLoaf_Plain.png"
     },
     {
       "sku": "CL-003",
@@ -171,7 +171,7 @@
       "available": true,
       "seasonal": false,
       "topSeller": true,
-      "image": "/images/menu/KnB_EnglishMuffins.png"
+      "image": "/images/menu/KnB_EnglishMuffins_Plain.png"
     },
     {
       "sku": "NL-004",
