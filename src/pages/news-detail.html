@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News | Knead &amp; Bake TX</title>
+  <meta name="description" content="News from Knead &amp; Bake TX.">
+  <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
+</head>
+<body class="page">
+
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <header class="header" role="banner">
+    <div class="header__inner">
+      <a href="/" class="header__logo" aria-label="Knead &amp; Bake TX — Home">
+        <svg class="header__logo-icon" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="18" r="17" fill="#E8C872" stroke="#5C3D2E" stroke-width="2"/><text x="18" y="23" text-anchor="middle" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#5C3D2E">K</text></svg>
+        <span>Knead &amp; Bake</span>
+      </a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="/" class="nav__link">Home</a>
+        <a href="/about.html" class="nav__link">About</a>
+        <a href="/menu.html" class="nav__link">Menu</a>
+        <a href="/recipes.html" class="nav__link">Recipes</a>
+        <a href="/starter-kit.html" class="nav__link">Starter Kit</a>
+        <a href="/news.html" class="nav__link">News</a>
+        <a href="/social.html" class="nav__link">Social</a>
+        <a href="/preorder.html" class="btn btn--primary btn--sm nav__cta">Preorder</a>
+      </nav>
+      <button class="header__menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="mobile-nav" id="mobile-nav" role="dialog" aria-label="Navigation menu">
+    <div class="mobile-nav__backdrop"></div>
+    <div class="mobile-nav__panel">
+      <button class="mobile-nav__close" aria-label="Close menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <a href="/" class="mobile-nav__link">Home</a>
+      <a href="/about.html" class="mobile-nav__link">About</a>
+      <a href="/menu.html" class="mobile-nav__link">Menu</a>
+      <a href="/recipes.html" class="mobile-nav__link">Recipes</a>
+      <a href="/starter-kit.html" class="mobile-nav__link">Starter Kit</a>
+      <a href="/news.html" class="mobile-nav__link">News</a>
+      <a href="/social.html" class="mobile-nav__link">Social</a>
+      <a href="/preorder.html" class="btn btn--primary btn--full mobile-nav__cta">Preorder</a>
+    </div>
+  </div>
+
+  <main id="main" class="page__content">
+
+    <section class="page-header">
+      <div class="container">
+        <nav aria-label="Breadcrumb" style="margin-bottom:var(--space-4)">
+          <a href="/news.html" style="color:var(--text-secondary);font-size:var(--text-sm)">&larr; All News</a>
+        </nav>
+        <time id="post-date" style="font-size:var(--text-sm);color:var(--text-secondary);display:block;margin-bottom:var(--space-2)"></time>
+        <h1 class="page-header__title" id="post-title">Loading...</h1>
+      </div>
+    </section>
+
+    <section class="section section--white">
+      <div class="container container--md">
+        <div id="post-content" class="prose"></div>
+        <div class="text-center mt-8">
+          <a href="/news.html" class="btn btn--outline">Back to All News</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__bottom">
+        <p>&copy; 2026 Knead &amp; Bake TX. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import ContentLoader from '/src/js/content-loader.js';
+    import { initNav } from '/src/js/nav.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initNav();
+
+      const slug = window.location.pathname.split('/').pop().replace('.html', '');
+      const data = await ContentLoader.news();
+      if (!data?.posts) return;
+
+      const post = data.posts.find(p => p.slug === slug);
+      if (!post) {
+        document.getElementById('post-title').textContent = 'Post Not Found';
+        return;
+      }
+
+      document.title = `${post.title} | Knead & Bake TX`;
+      document.getElementById('post-title').textContent = post.title;
+
+      const d = new Date(post.date + 'T00:00:00');
+      document.getElementById('post-date').textContent =
+        d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Render content paragraphs with basic markdown bold support
+      document.getElementById('post-content').innerHTML =
+        post.content.map(p => {
+          const html = p
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+          // If it starts with "- " treat as list item
+          if (html.startsWith('- ')) {
+            return ''; // will be grouped below
+          }
+          return `<p>${html}</p>`;
+        }).join('') +
+        // Handle list items
+        (() => {
+          const listItems = post.content.filter(p => p.startsWith('- '));
+          if (listItems.length === 0) return '';
+          return '<ul>' + listItems.map(li =>
+            `<li>${li.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`
+          ).join('') + '</ul>';
+        })();
+    });
+  </script>
+
+</body>
+</html>

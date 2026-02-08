@@ -1,0 +1,56 @@
+{
+  "posts": [
+    {
+      "slug": "winter-menu-2026",
+      "title": "Winter Menu is Here!",
+      "date": "2026-01-15",
+      "excerpt": "Cranberry Walnut and Jalapeño Cheddar sourdough are back for the season. Plus, we're introducing Sourdough Discard Crackers.",
+      "content": [
+        "We're kicking off 2026 with two of your favorite seasonal loaves returning to the lineup.",
+        "**Cranberry Walnut Sourdough** — Tart dried cranberries and toasted walnuts folded into our classic dough with a touch of honey. The perfect bread for your cheese board or morning toast.",
+        "**Jalapeño Cheddar Sourdough** — Sharp cheddar and fresh jalapeños from a local farm. This one sells out fast, so preorder to guarantee yours.",
+        "We're also excited to introduce **Sourdough Discard Crackers** as a permanent menu item! Thin, crispy, and ridiculously snackable. They pair perfectly with our loaves or on their own.",
+        "As always, you can preorder for Saturday pickup at the Castell Street Market. See you there!"
+      ],
+      "tags": ["menu", "seasonal", "new items"]
+    },
+    {
+      "slug": "starter-kit-launch",
+      "title": "Free Sourdough Starter Kit — Now on Our Website",
+      "date": "2026-01-08",
+      "excerpt": "We built a free 4-day sourdough starter guide. No experience required. Start your own culture at home.",
+      "content": [
+        "One of the most common questions we get at the market is: *\"How do I start my own sourdough?\"*",
+        "So we built a **free 4-day Starter Kit** right here on our website. It walks you through everything — from mixing your first flour and water on Day 1 to the float test on Day 4.",
+        "No experience required. No special equipment (besides a jar and a kitchen scale). Just flour, water, and patience.",
+        "The guide includes a downloadable cheat sheet and an FAQ section covering all the weird stuff that might happen (hooch, funky smells, slow starters).",
+        "Check it out at the Starter Kit page, and if you'd rather skip the wait, you can always pick up a jar of our live starter at the market!",
+        "Happy baking!"
+      ],
+      "tags": ["starter", "education", "new feature"]
+    },
+    {
+      "slug": "happy-new-year-2026",
+      "title": "Happy New Year from Knead & Bake TX!",
+      "date": "2026-01-01",
+      "excerpt": "A thank-you to everyone who supported us in 2025, and a preview of what's coming this year.",
+      "content": [
+        "Happy New Year! 🎉",
+        "2025 was an incredible first year for Knead & Bake TX. What started as a hobby in our kitchen turned into something we never expected — a real community of bread lovers at the Castell Street Market.",
+        "**Some highlights from 2025:**",
+        "- Over 1,500 loaves baked and sold",
+        "- 12 seasonal flavors rotated through the menu",
+        "- Dozens of sourdough starters sent home with new bakers",
+        "- Zero loaves returned (we're proud of that one)",
+        "**What's coming in 2026:**",
+        "- Online preordering (you're looking at it!)",
+        "- New seasonal flavors every quarter",
+        "- A recipe section with our favorite sourdough recipes",
+        "- Possible pop-ups and collaborations with local businesses",
+        "Thank you for every loaf you've taken home, every kind word at the market, and every Instagram tag. We do this because of you.",
+        "See you Saturday! — Knead & Bake TX"
+      ],
+      "tags": ["update", "year in review"]
+    }
+  ]
+}

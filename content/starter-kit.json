@@ -1,0 +1,102 @@
+{
+  "title": "Sourdough Starter Kit",
+  "subtitle": "Your 4-day plan to a bubbly, active sourdough starter from scratch.",
+  "intro": "Starting a sourdough starter is simpler than you think. All you need is flour, water, a jar, and a little patience. In 4 days you'll have a living culture ready to bake with. This guide gives you everything you need — no experience required.",
+  "supplies": [
+    "1 wide-mouth glass jar (quart-size or larger)",
+    "Unbleached all-purpose flour or bread flour",
+    "Whole wheat or rye flour (for the initial feedings — adds wild yeast)",
+    "Room-temperature filtered water (chlorine-free)",
+    "A kitchen scale (grams are much easier than cups)",
+    "A rubber band or tape to mark the level",
+    "A loose lid, cloth, or coffee filter + rubber band"
+  ],
+  "days": [
+    {
+      "day": 1,
+      "title": "Day 1: Mix & Wait",
+      "summary": "Combine flour and water to create your starter's first home.",
+      "steps": [
+        "In your jar, mix 50g whole wheat flour + 50g all-purpose flour + 100g water.",
+        "Stir vigorously for about 60 seconds to incorporate air.",
+        "Mark the level on the jar with a rubber band.",
+        "Cover loosely (not airtight — it needs to breathe).",
+        "Place in a warm spot (75–80°F is ideal). Top of the fridge or near the oven works."
+      ],
+      "whatToExpect": "Not much will happen today. The mixture will look like thick pancake batter. That's perfect."
+    },
+    {
+      "day": 2,
+      "title": "Day 2: First Feeding",
+      "summary": "Discard and feed to start building the yeast population.",
+      "steps": [
+        "You may see a few small bubbles — that's bacteria starting to wake up!",
+        "Discard about half of the mixture (you should have ~100g remaining).",
+        "Add 50g all-purpose flour + 50g water. Stir well.",
+        "Mark the new level and cover loosely.",
+        "Return to your warm spot."
+      ],
+      "whatToExpect": "You might notice a slightly sour or yeasty smell. Some bubbles appearing. This is normal! The starter may also look completely inactive — also normal."
+    },
+    {
+      "day": 3,
+      "title": "Day 3: Building Momentum",
+      "summary": "Continue feeding. You should see more activity now.",
+      "steps": [
+        "Discard all but about 75g of starter.",
+        "Feed with 50g all-purpose flour + 50g water. Stir well.",
+        "Mark the level, cover, and return to the warm spot.",
+        "Start checking every few hours — you want to see it rise and fall."
+      ],
+      "whatToExpect": "More bubbles! The starter should be noticeably rising between feedings. It may double in size, which is a great sign. The smell might be a bit funky — like overripe fruit or vinegar. This is normal and will mellow out."
+    },
+    {
+      "day": 4,
+      "title": "Day 4: The Float Test",
+      "summary": "Test if your starter is ready to bake with!",
+      "steps": [
+        "Feed your starter as usual: discard to 75g, add 50g flour + 50g water.",
+        "Wait 4–6 hours until it has doubled and is very bubbly.",
+        "Do the float test: drop a small spoonful into a glass of water.",
+        "If it floats — congratulations, your starter is active and ready to bake!",
+        "If it sinks — no worries. Keep feeding once or twice a day for 2–3 more days."
+      ],
+      "whatToExpect": "A healthy starter should reliably double in size within 4–8 hours of feeding. It will smell pleasantly sour, like yogurt or mild vinegar. It will be full of bubbles and have a slightly domed top at peak activity."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "My starter isn't bubbling at all after 2 days. Should I start over?",
+      "answer": "No! Some starters are slow to get going, especially in cool kitchens. Move it to a warmer spot (aim for 78°F) and keep feeding. It can take up to 7 days in some cases."
+    },
+    {
+      "question": "There's dark liquid on top of my starter. Is it ruined?",
+      "answer": "That's called 'hooch' — it's alcohol produced by hungry yeast. It means your starter needs to be fed. Just pour it off (or stir it in for a more sour flavor) and feed as usual."
+    },
+    {
+      "question": "Can I use only all-purpose flour?",
+      "answer": "Yes, but whole wheat or rye in the first couple of feedings helps introduce more wild yeast and gets things going faster. After that, all-purpose is perfectly fine."
+    },
+    {
+      "question": "What do I do with all the discard?",
+      "answer": "Don't throw it away! Use it to make crackers, pancakes, waffles, pizza dough, or banana bread. Check our Recipes page for ideas."
+    },
+    {
+      "question": "How do I store my starter long-term?",
+      "answer": "Once established, you can keep it in the fridge and feed it once a week. Take it out the night before you want to bake, give it 2 feedings at room temperature, and it'll be ready to go."
+    },
+    {
+      "question": "My starter smells like nail polish remover. Is that bad?",
+      "answer": "Not ruined! That acetone smell means it's very hungry and producing acetic acid. Feed it more frequently (twice a day) and it will balance out."
+    },
+    {
+      "question": "What kind of water should I use?",
+      "answer": "Filtered or bottled water is best. If your tap water is chlorinated, let it sit out uncovered for an hour before using, or use a basic carbon filter. Chloramine (used in some cities) won't evaporate — use filtered water in that case."
+    },
+    {
+      "question": "Can I speed this up?",
+      "answer": "Warmth is your best friend. Keep it at 78–82°F for faster fermentation. Using some rye flour in your feedings can also help. But honestly, patience is part of the process!"
+    }
+  ],
+  "cheatSheetPdf": "/downloads/sourdough-starter-cheat-sheet.pdf"
+}

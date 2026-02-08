@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#F2DFA0"/>
+  <ellipse cx="200" cy="160" rx="120" ry="70" fill="#E8C872" stroke="#5C3D2E" stroke-width="2"/>
+  <path d="M140 140 C160 120 200 110 240 120 C260 126 270 140 260 150" stroke="#5C3D2E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <text x="200" y="260" text-anchor="middle" font-family="Georgia,serif" font-size="14" fill="#5C3D2E">Knead &amp; Bake TX</text>
+</svg>

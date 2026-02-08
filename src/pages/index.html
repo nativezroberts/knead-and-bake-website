@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knead &amp; Bake TX | Artisan Sourdough in New Braunfels</title>
+  <meta name="description" content="Handcrafted small-batch sourdough bread at the Castell Street Market in New Braunfels, TX. Preorder online for guaranteed pickup.">
+  <meta name="keywords" content="sourdough, artisan bread, New Braunfels, farmers market, Texas bakery">
+  <link rel="canonical" href="https://kneadandbaketx.com/">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Knead &amp; Bake TX | Artisan Sourdough in New Braunfels">
+  <meta property="og:description" content="Handcrafted small-batch sourdough bread at the Castell Street Market in New Braunfels, TX.">
+  <meta property="og:image" content="/images/og-image.jpg">
+  <meta property="og:url" content="https://kneadandbaketx.com/">
+  <meta property="og:site_name" content="Knead &amp; Bake TX">
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Knead &amp; Bake TX | Artisan Sourdough in New Braunfels">
+  <meta name="twitter:description" content="Handcrafted small-batch sourdough bread at the Castell Street Market in New Braunfels, TX.">
+  <meta name="twitter:image" content="/images/og-image.jpg">
+  <!-- Styles -->
+  <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
+</head>
+<body class="page">
+
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="header" role="banner">
+    <div class="header__inner">
+      <a href="/" class="header__logo" aria-label="Knead &amp; Bake TX — Home">
+        <svg class="header__logo-icon" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <circle cx="18" cy="18" r="17" fill="#E8C872" stroke="#5C3D2E" stroke-width="2"/>
+          <text x="18" y="23" text-anchor="middle" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#5C3D2E">K</text>
+        </svg>
+        <span>Knead &amp; Bake</span>
+      </a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="/" class="nav__link">Home</a>
+        <a href="/about.html" class="nav__link">About</a>
+        <a href="/menu.html" class="nav__link">Menu</a>
+        <a href="/recipes.html" class="nav__link">Recipes</a>
+        <a href="/starter-kit.html" class="nav__link">Starter Kit</a>
+        <a href="/news.html" class="nav__link">News</a>
+        <a href="/social.html" class="nav__link">Social</a>
+        <a href="/preorder.html" class="btn btn--primary btn--sm nav__cta">Preorder</a>
+      </nav>
+      <button class="header__menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav" id="mobile-nav" role="dialog" aria-label="Navigation menu">
+    <div class="mobile-nav__backdrop"></div>
+    <div class="mobile-nav__panel">
+      <button class="mobile-nav__close" aria-label="Close menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <a href="/" class="mobile-nav__link">Home</a>
+      <a href="/about.html" class="mobile-nav__link">About</a>
+      <a href="/menu.html" class="mobile-nav__link">Menu</a>
+      <a href="/recipes.html" class="mobile-nav__link">Recipes</a>
+      <a href="/starter-kit.html" class="mobile-nav__link">Starter Kit</a>
+      <a href="/news.html" class="mobile-nav__link">News</a>
+      <a href="/social.html" class="mobile-nav__link">Social</a>
+      <a href="/preorder.html" class="btn btn--primary btn--full mobile-nav__cta">Preorder</a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main id="main" class="page__content">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero__inner">
+        <div>
+          <span class="hero__kicker">Castell Street Market · New Braunfels, TX</span>
+          <h1 class="hero__title">Small-batch sourdough,<br>made by hand.</h1>
+          <p class="hero__desc">Slow-fermented artisan bread baked fresh every Saturday. Simple ingredients, no shortcuts, incredible flavor.</p>
+          <div class="hero__actions">
+            <a href="/preorder.html" class="btn btn--primary btn--lg">Preorder for Next Market</a>
+            <a href="/menu.html" class="btn btn--outline btn--lg">View Menu</a>
+          </div>
+        </div>
+        <div>
+          <img class="hero__image" src="/images/hero-sourdough.jpg" alt="Fresh sourdough loaf with golden crust" width="600" height="450" loading="eager">
+        </div>
+      </div>
+    </section>
+
+    <!-- Next Market Panel -->
+    <section class="section section--white">
+      <div class="container">
+        <div id="next-market-panel"></div>
+      </div>
+    </section>
+
+    <!-- Top Sellers -->
+    <section class="section section--cream">
+      <div class="container">
+        <div class="section__header">
+          <h2 class="section__title">Customer Favorites</h2>
+          <p class="section__subtitle">Our most-loved loaves — the ones that sell out first every Saturday.</p>
+        </div>
+        <div id="top-sellers" class="top-sellers"></div>
+        <div class="text-center mt-8">
+          <a href="/menu.html" class="btn btn--outline">See Full Menu</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seasonal Spotlight -->
+    <section class="section section--white">
+      <div class="container">
+        <div class="section__header">
+          <h2 class="section__title">Seasonal Spotlight</h2>
+        </div>
+        <div id="seasonal-spotlight" class="spotlight"></div>
+      </div>
+    </section>
+
+    <!-- Social Proof -->
+    <section class="section section--cream">
+      <div class="container">
+        <div class="section__header">
+          <h2 class="section__title">What Our Customers Say</h2>
+        </div>
+        <div id="testimonials" class="testimonials"></div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section section--brown">
+      <div class="container text-center">
+        <h2 class="section__title">Ready to Try Real Sourdough?</h2>
+        <p class="section__subtitle mb-8">Preorder your loaves now and pick them up fresh at the market this Saturday.</p>
+        <a href="/preorder.html" class="btn btn--wheat btn--lg">Place Your Preorder</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__grid">
+        <div class="footer__brand">
+          <div class="footer__logo">Knead &amp; Bake TX</div>
+          <p class="footer__desc">Small-batch artisan sourdough, baked with love in New Braunfels, Texas. Find us every Saturday at the Castell Street Market.</p>
+          <div class="footer__social">
+            <a href="https://instagram.com/kneadandbaketx" class="footer__social-link" aria-label="Instagram" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+            <a href="https://facebook.com/kneadandbaketx" class="footer__social-link" aria-label="Facebook" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385h-3.047v-3.47h3.047v-2.642c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953h-1.514c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385c5.736-.9 10.125-5.864 10.125-11.854z"/></svg>
+            </a>
+          </div>
+        </div>
+        <div>
+          <h3 class="footer__heading">Browse</h3>
+          <a href="/menu.html" class="footer__link">Menu</a>
+          <a href="/preorder.html" class="footer__link">Preorder</a>
+          <a href="/recipes.html" class="footer__link">Recipes</a>
+          <a href="/starter-kit.html" class="footer__link">Starter Kit</a>
+          <a href="/news.html" class="footer__link">News</a>
+        </div>
+        <div>
+          <h3 class="footer__heading">About</h3>
+          <a href="/about.html" class="footer__link">Our Story</a>
+          <a href="/social.html" class="footer__link">Social Media</a>
+          <a href="/market.html" class="footer__link">Market Day</a>
+        </div>
+        <div>
+          <h3 class="footer__heading">Market Info</h3>
+          <p class="footer__link">Castell Street Market</p>
+          <p class="footer__link">New Braunfels, TX 78130</p>
+          <p class="footer__link">Every Saturday, 9 AM – 1 PM</p>
+          <a href="https://maps.google.com/?q=Castell+Street+Market+New+Braunfels+TX" class="footer__link" target="_blank" rel="noopener">Get Directions →</a>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p>&copy; <span id="footer-year">2026</span> Knead &amp; Bake TX. All rights reserved.</p>
+        <p>Made with flour, water, salt &amp; time.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import ContentLoader from '/src/js/content-loader.js';
+    import { initNav } from '/src/js/nav.js';
+    import { renderCard, renderTestimonial, renderNextMarket } from '/src/js/components.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initNav();
+
+      const [config, menuData, testimonialData] = await Promise.all([
+        ContentLoader.siteConfig(),
+        ContentLoader.menu(),
+        ContentLoader.testimonials(),
+      ]);
+
+      // Next Market
+      if (config?.nextMarket) {
+        document.getElementById('next-market-panel').innerHTML = renderNextMarket(config.nextMarket);
+      }
+
+      // Top Sellers
+      if (menuData?.items) {
+        const topSellers = menuData.items.filter(i => i.topSeller && i.available);
+        document.getElementById('top-sellers').innerHTML = topSellers.map(renderCard).join('');
+      }
+
+      // Seasonal Spotlight
+      if (menuData?.items) {
+        const seasonal = menuData.items.find(i => i.seasonal && i.available);
+        if (seasonal) {
+          document.getElementById('seasonal-spotlight').innerHTML = `
+            <img class="spotlight__image" src="${seasonal.image || '/images/placeholder-bread.svg'}" alt="${seasonal.name}" loading="lazy" width="600" height="450">
+            <div>
+              <span class="card__tag card__tag--seasonal">${seasonal.seasonalLabel || 'Seasonal'}</span>
+              <h3 class="spotlight__title">${seasonal.name}</h3>
+              <p class="spotlight__desc">${seasonal.description}</p>
+              <p class="spotlight__desc"><strong>$${seasonal.price.toFixed(2)}</strong></p>
+              <a href="/preorder.html" class="btn btn--secondary mt-4">Preorder This Loaf</a>
+            </div>
+          `;
+        }
+      }
+
+      // Testimonials
+      if (testimonialData?.testimonials) {
+        document.getElementById('testimonials').innerHTML =
+          testimonialData.testimonials.map(renderTestimonial).join('');
+      }
+    });
+  </script>
+
+</body>
+</html>

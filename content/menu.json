@@ -1,0 +1,145 @@
+{
+  "categories": [
+    {
+      "id": "standard-loaves",
+      "name": "Standard Loaves",
+      "description": "Our staple sourdough lineup — available every market day."
+    },
+    {
+      "id": "seasonal-loaves",
+      "name": "Seasonal Loaves",
+      "description": "Limited-edition flavors inspired by the season."
+    },
+    {
+      "id": "non-loaf",
+      "name": "Non-Loaf Items",
+      "description": "Beyond bread — treats and extras from our kitchen."
+    }
+  ],
+  "items": [
+    {
+      "sku": "CL-001",
+      "name": "Classic Country Sourdough",
+      "category": "standard-loaves",
+      "description": "Our signature loaf — crispy crust, open crumb, tangy flavor. Made with a 72-hour cold ferment.",
+      "price": 10.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/country-sourdough.jpg"
+    },
+    {
+      "sku": "CL-002",
+      "name": "Whole Wheat Sourdough",
+      "category": "standard-loaves",
+      "description": "Hearty and nutty with 50% fresh-milled whole wheat. Perfect for sandwiches.",
+      "price": 11.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/whole-wheat.jpg"
+    },
+    {
+      "sku": "CL-003",
+      "name": "Seeded Multigrain Sourdough",
+      "category": "standard-loaves",
+      "description": "Packed with sunflower, flax, sesame, and pumpkin seeds. Crunchy outside, soft inside.",
+      "price": 12.00,
+      "allergens": ["wheat", "sesame", "tree nuts"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/seeded-multigrain.jpg"
+    },
+    {
+      "sku": "CL-004",
+      "name": "Rosemary Olive Oil Sourdough",
+      "category": "standard-loaves",
+      "description": "Fragrant rosemary and extra-virgin olive oil folded into our classic dough.",
+      "price": 12.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/rosemary-olive.jpg"
+    },
+    {
+      "sku": "SL-001",
+      "name": "Cranberry Walnut Sourdough",
+      "category": "seasonal-loaves",
+      "description": "Tart cranberries and toasted walnuts in a lightly sweetened dough. A winter favorite.",
+      "price": 14.00,
+      "allergens": ["wheat", "tree nuts"],
+      "available": true,
+      "seasonal": true,
+      "seasonalLabel": "Winter Special",
+      "image": "/images/menu/cranberry-walnut.jpg"
+    },
+    {
+      "sku": "SL-002",
+      "name": "Jalapeño Cheddar Sourdough",
+      "category": "seasonal-loaves",
+      "description": "Texas heat meets tangy sourdough. Loaded with sharp cheddar and fresh jalapeños.",
+      "price": 14.00,
+      "allergens": ["wheat", "milk"],
+      "available": true,
+      "seasonal": true,
+      "seasonalLabel": "Fan Favorite",
+      "image": "/images/menu/jalapeno-cheddar.jpg"
+    },
+    {
+      "sku": "SL-003",
+      "name": "Cinnamon Raisin Sourdough",
+      "category": "seasonal-loaves",
+      "description": "Swirled with Ceylon cinnamon and plump golden raisins. Amazing toasted.",
+      "price": 13.00,
+      "allergens": ["wheat"],
+      "available": false,
+      "seasonal": true,
+      "seasonalLabel": "Coming in Spring",
+      "image": "/images/menu/cinnamon-raisin.jpg"
+    },
+    {
+      "sku": "NL-001",
+      "name": "Sourdough Focaccia (Half Sheet)",
+      "category": "non-loaf",
+      "description": "Crispy-bottomed, olive-oil-drenched focaccia topped with flaky salt and fresh herbs.",
+      "price": 15.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/focaccia.jpg"
+    },
+    {
+      "sku": "NL-002",
+      "name": "Sourdough Discard Crackers",
+      "category": "non-loaf",
+      "description": "Thin, crispy crackers made from sourdough discard. Perfect with cheese or hummus.",
+      "price": 7.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/crackers.jpg"
+    },
+    {
+      "sku": "NL-003",
+      "name": "Sourdough Starter (Jar)",
+      "category": "non-loaf",
+      "description": "Take home a piece of our starter! Includes care instructions and a beginner recipe.",
+      "price": 8.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/starter-jar.jpg"
+    }
+  ],
+  "seasonalBanner": {
+    "text": "Winter Specials: Cranberry Walnut & Jalapeño Cheddar are here!",
+    "active": true
+  }
+}

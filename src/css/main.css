@@ -1,0 +1,12 @@
+/* ==========================================================================
+   Knead & Bake TX — Main Stylesheet
+   Import order matters: tokens → reset → layout → components → pages
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@import 'variables.css';
+@import 'reset.css';
+@import 'layout.css';
+@import 'components.css';
+@import 'pages.css';

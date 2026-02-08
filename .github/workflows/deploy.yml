@@ -1,0 +1,167 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write  # For OIDC-based AWS auth
+
+env:
+  NODE_VERSION: '22'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # ── Lint & Build ──
+  build:
+    name: Build & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Build the static site
+      - name: Build site
+        run: node scripts/build.js
+
+      # Basic validation
+      - name: Validate HTML files exist
+        run: |
+          test -f dist/index.html
+          test -f dist/about.html
+          test -f dist/menu.html
+          test -f dist/preorder.html
+          test -f dist/recipes.html
+          test -f dist/starter-kit.html
+          test -f dist/news.html
+          test -f dist/social.html
+          test -f dist/market.html
+          test -f dist/sitemap.xml
+          test -f dist/robots.txt
+          echo "All expected files present."
+
+      # Lint CSS (basic check)
+      - name: Check CSS syntax
+        run: |
+          npx stylelint "src/css/**/*.css" --config '{"extends":"stylelint-config-standard","rules":{"no-empty-source":null,"import-notation":null,"at-rule-no-unknown":null}}' || echo "CSS lint warnings (non-blocking)"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-dist
+          path: dist/
+          retention-days: 7
+
+  # ── Deploy (only on main) ──
+  deploy-site:
+    name: Deploy to S3 + CloudFront
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-dist
+          path: dist/
+
+      # Configure AWS credentials via OIDC (recommended) or secrets
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Option A: OIDC (set up GitHub OIDC provider in IAM)
+          # role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          # Option B: Access keys (less secure but simpler to start)
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Sync to S3
+      - name: Sync to S3
+        run: |
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" \
+            --exclude "sitemap.xml" \
+            --exclude "robots.txt" \
+            --exclude "content/*"
+
+          # HTML, sitemap, robots get short cache
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "public, max-age=300, must-revalidate" \
+            --include "*.html" \
+            --include "sitemap.xml" \
+            --include "robots.txt" \
+            --include "content/*" \
+            --exclude "*" \
+            --content-type "text/html; charset=utf-8"
+
+          # Fix content types for JSON
+          aws s3 sync dist/content/ s3://${{ secrets.S3_BUCKET_NAME }}/content/ \
+            --cache-control "public, max-age=300, must-revalidate" \
+            --content-type "application/json; charset=utf-8"
+
+      # Invalidate CloudFront cache
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+  # ── Deploy Infrastructure (manual trigger or on infra changes) ──
+  deploy-infra:
+    name: Deploy CDK Infrastructure
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Only run when infra files change
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for infra changes
+        id: infra-check
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q "^infra/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.infra-check.outputs.changed == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install CDK dependencies
+        if: steps.infra-check.outputs.changed == 'true'
+        working-directory: infra
+        run: npm ci
+
+      - name: Configure AWS credentials
+        if: steps.infra-check.outputs.changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build site for CDK deployment
+        if: steps.infra-check.outputs.changed == 'true'
+        run: node scripts/build.js
+
+      - name: CDK Deploy
+        if: steps.infra-check.outputs.changed == 'true'
+        working-directory: infra
+        run: npx cdk deploy --all --require-approval never

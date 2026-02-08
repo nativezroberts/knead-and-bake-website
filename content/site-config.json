@@ -1,0 +1,48 @@
+{
+  "siteName": "Knead & Bake TX",
+  "tagline": "Small-batch sourdough in New Braunfels",
+  "description": "Handcrafted artisan sourdough bread made with love in New Braunfels, Texas. Preorder for farmers market pickup.",
+  "url": "https://kneadandbaketx.com",
+  "owner": {
+    "name": "Knead & Bake TX",
+    "email": "orders@kneadandbaketx.com",
+    "phone": ""
+  },
+  "social": {
+    "instagram": "https://instagram.com/kneadandbaketx",
+    "instagramHandle": "@kneadandbaketx",
+    "facebook": "https://facebook.com/kneadandbaketx",
+    "facebookHandle": "Knead & Bake TX"
+  },
+  "market": {
+    "name": "Castell Street Market",
+    "location": "New Braunfels, TX",
+    "address": "Castell Street, New Braunfels, TX 78130",
+    "mapLink": "https://maps.google.com/?q=Castell+Street+Market+New+Braunfels+TX",
+    "schedule": "Every Saturday, 9 AM – 1 PM"
+  },
+  "nextMarket": {
+    "date": "Saturday, February 15, 2026",
+    "time": "9:00 AM – 1:00 PM",
+    "location": "Castell Street Market, New Braunfels",
+    "preorderCutoff": "Thursday, February 13, 2026 at 8:00 PM"
+  },
+  "preorder": {
+    "enabled": true,
+    "cutoffText": "Preorders close Thursday at 8 PM before each Saturday market.",
+    "pickupInstructions": "Pick up your order at our booth at Castell Street Market. Look for the Knead & Bake TX banner!",
+    "policies": [
+      "All items are baked fresh Friday evening and Saturday morning.",
+      "Preorders guarantee your loaf — walk-up availability varies.",
+      "Payment is collected at pickup (cash or card).",
+      "Cancellations accepted until Friday at noon.",
+      "Allergen info is listed per item — please review before ordering."
+    ]
+  },
+  "seo": {
+    "title": "Knead & Bake TX | Artisan Sourdough in New Braunfels",
+    "description": "Handcrafted small-batch sourdough bread at the Castell Street Market in New Braunfels, TX. Preorder online for guaranteed pickup.",
+    "ogImage": "/images/og-image.jpg",
+    "keywords": "sourdough, artisan bread, New Braunfels, farmers market, Texas bakery, handmade bread"
+  }
+}

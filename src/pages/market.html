@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Day | Knead &amp; Bake TX</title>
+  <meta name="description" content="Today's menu, preorder, and find us at the Castell Street Market in New Braunfels.">
+  <link rel="canonical" href="https://kneadandbaketx.com/market.html">
+  <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
+</head>
+<body class="page">
+
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <header class="header" role="banner">
+    <div class="header__inner">
+      <a href="/" class="header__logo" aria-label="Knead &amp; Bake TX — Home">
+        <svg class="header__logo-icon" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="18" r="17" fill="#E8C872" stroke="#5C3D2E" stroke-width="2"/><text x="18" y="23" text-anchor="middle" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#5C3D2E">K</text></svg>
+        <span>Knead &amp; Bake</span>
+      </a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="/" class="nav__link">Home</a>
+        <a href="/about.html" class="nav__link">About</a>
+        <a href="/menu.html" class="nav__link">Menu</a>
+        <a href="/preorder.html" class="btn btn--primary btn--sm nav__cta">Preorder</a>
+      </nav>
+      <button class="header__menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="mobile-nav" id="mobile-nav" role="dialog" aria-label="Navigation menu">
+    <div class="mobile-nav__backdrop"></div>
+    <div class="mobile-nav__panel">
+      <button class="mobile-nav__close" aria-label="Close menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <a href="/" class="mobile-nav__link">Home</a>
+      <a href="/menu.html" class="mobile-nav__link">Full Menu</a>
+      <a href="/preorder.html" class="btn btn--primary btn--full mobile-nav__cta">Preorder</a>
+    </div>
+  </div>
+
+  <main id="main" class="page__content">
+
+    <section class="section market-page">
+      <div class="container">
+
+        <h1 style="font-family:var(--font-heading);font-size:var(--text-3xl);margin-bottom:var(--space-2)">Knead &amp; Bake TX</h1>
+        <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">Small-batch sourdough · New Braunfels</p>
+
+        <!-- Next Market -->
+        <div id="market-panel"></div>
+
+        <!-- Quick Menu -->
+        <div class="market-quick-menu mt-8">
+          <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-4)">Today's Menu</h2>
+          <div id="market-items"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-wrap gap-4 justify-center mt-8">
+          <a href="/preorder.html" class="btn btn--primary btn--lg">Preorder Now</a>
+          <a href="/menu.html" class="btn btn--outline btn--lg">Full Menu</a>
+        </div>
+
+        <!-- Social + Map -->
+        <div class="flex flex-wrap gap-4 justify-center mt-8">
+          <a href="https://instagram.com/kneadandbaketx" class="btn btn--sm btn--outline" target="_blank" rel="noopener">Instagram</a>
+          <a href="https://facebook.com/kneadandbaketx" class="btn btn--sm btn--outline" target="_blank" rel="noopener">Facebook</a>
+          <a href="https://maps.google.com/?q=Castell+Street+Market+New+Braunfels+TX" class="btn btn--sm btn--outline" target="_blank" rel="noopener">Directions</a>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module">
+    import ContentLoader from '/src/js/content-loader.js';
+    import { initNav } from '/src/js/nav.js';
+    import { renderNextMarket } from '/src/js/components.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initNav();
+
+      const [config, menuData] = await Promise.all([
+        ContentLoader.siteConfig(),
+        ContentLoader.menu(),
+      ]);
+
+      // Market panel
+      if (config?.nextMarket) {
+        document.getElementById('market-panel').innerHTML = renderNextMarket(config.nextMarket);
+      }
+
+      // Quick menu — available items only
+      if (menuData?.items) {
+        const available = menuData.items.filter(i => i.available);
+        document.getElementById('market-items').innerHTML = available.map(item => `
+          <div class="market-quick-menu__item">
+            <span>${item.name}${item.seasonal ? ' <span class="badge badge--seasonal">Seasonal</span>' : ''}</span>
+            <span style="font-weight:var(--weight-bold);color:var(--color-sage-dark)">$${item.price.toFixed(2)}</span>
+          </div>
+        `).join('');
+      }
+    });
+  </script>
+
+</body>
+</html>

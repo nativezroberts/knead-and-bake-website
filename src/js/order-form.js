@@ -1,0 +1,160 @@
+/**
+ * Order Form — handles item selection, form validation, and submission.
+ */
+
+import ContentLoader from './content-loader.js';
+import { renderOrderItem } from './components.js';
+
+const API_BASE = window.__API_BASE || '';
+
+export async function initOrderForm() {
+  const container = document.getElementById('order-items');
+  const form = document.getElementById('order-form');
+  const summaryEl = document.getElementById('order-summary');
+  const submitBtn = document.getElementById('order-submit');
+  const successMsg = document.getElementById('order-success');
+  const errorMsg = document.getElementById('order-error');
+
+  if (!container || !form) return;
+
+  // Load menu items
+  const menuData = await ContentLoader.menu();
+  if (!menuData) {
+    container.innerHTML = '<p>Unable to load menu. Please try again later.</p>';
+    return;
+  }
+
+  const availableItems = menuData.items.filter(i => i.available);
+  container.innerHTML = availableItems.map(renderOrderItem).join('');
+
+  // Track quantities
+  const quantities = {};
+  availableItems.forEach(item => { quantities[item.sku] = 0; });
+
+  // Item click handlers
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.order-item__qty-btn');
+    if (!btn) return;
+
+    const row = btn.closest('.order-item');
+    const sku = row.dataset.sku;
+    const action = btn.dataset.action;
+    const qtyEl = row.querySelector('[data-qty]');
+
+    if (action === 'increment') {
+      quantities[sku] = Math.min((quantities[sku] || 0) + 1, 10);
+    } else if (action === 'decrement') {
+      quantities[sku] = Math.max((quantities[sku] || 0) - 1, 0);
+    }
+
+    qtyEl.textContent = quantities[sku];
+    updateSummary();
+  });
+
+  function updateSummary() {
+    const selected = Object.entries(quantities)
+      .filter(([, qty]) => qty > 0)
+      .map(([sku, qty]) => {
+        const item = availableItems.find(i => i.sku === sku);
+        return { sku, name: item.name, qty, subtotal: item.price * qty };
+      });
+
+    if (selected.length === 0) {
+      summaryEl.innerHTML = '<p style="color:var(--text-secondary);font-size:var(--text-sm)">Select items above to build your order.</p>';
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const total = selected.reduce((sum, s) => sum + s.subtotal, 0);
+    summaryEl.innerHTML = `
+      <ul style="list-style:none;margin-bottom:var(--space-4)">
+        ${selected.map(s => `
+          <li style="display:flex;justify-content:space-between;padding:var(--space-2) 0;font-size:var(--text-sm);border-bottom:1px solid var(--border-color)">
+            <span>${s.qty}x ${s.name}</span>
+            <span>$${s.subtotal.toFixed(2)}</span>
+          </li>
+        `).join('')}
+      </ul>
+      <div style="display:flex;justify-content:space-between;font-weight:var(--weight-bold)">
+        <span>Estimated Total</span>
+        <span>$${total.toFixed(2)}</span>
+      </div>
+      <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:var(--space-2)">Payment collected at pickup.</p>
+    `;
+    submitBtn.disabled = false;
+  }
+
+  updateSummary();
+
+  // Form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Check honeypot
+    const hp = form.querySelector('[name="website"]');
+    if (hp && hp.value) return;
+
+    // Gather items
+    const items = Object.entries(quantities)
+      .filter(([, qty]) => qty > 0)
+      .map(([sku, qty]) => {
+        const item = availableItems.find(i => i.sku === sku);
+        return { sku, name: item.name, qty };
+      });
+
+    if (items.length === 0) return;
+
+    // Gather form data
+    const formData = new FormData(form);
+    const payload = {
+      name: formData.get('name')?.trim(),
+      email: formData.get('email')?.trim(),
+      phone: formData.get('phone')?.trim() || '',
+      pickupDate: formData.get('pickup_date')?.trim(),
+      items,
+      notes: formData.get('notes')?.trim() || '',
+    };
+
+    // Basic client-side validation
+    if (!payload.name || !payload.email || !payload.pickupDate) {
+      showError('Please fill in all required fields.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      showError('Please enter a valid email address.');
+      return;
+    }
+
+    // Submit
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    errorMsg.classList.add('hidden');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Something went wrong. Please try again.');
+      }
+
+      // Success
+      form.classList.add('hidden');
+      successMsg.classList.remove('hidden');
+    } catch (err) {
+      showError(err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Place Preorder';
+    }
+  });
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.remove('hidden');
+  }
+}
