@@ -163,7 +163,7 @@
     },
     {
       "sku": "NL-003",
-      "name": "Sourdough English Mufics (Pack of 6)",
+      "name": "Sourdough English Muffins (Pack of 6)",
       "category": "non-loaf",
       "description": "These fly off our shelves fast! Soft, chewy, and perfect for breakfast sandwiches or simply toasted with butter.",
       "price": 5.00,
@@ -187,7 +187,7 @@
     }
   ],
   "seasonalBanner": {
-    "text": "Winter Specials: Cranberry Walnut & Jalapeño Cheddar are here!",
+    "text": "Winter Specials: Orange Cranberry Walnut is here!",
     "active": true
   }
 }
