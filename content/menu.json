@@ -86,7 +86,7 @@
       "allergens": ["wheat"],
       "available": true,
       "seasonal": false,
-      "topSeller": false,
+      "topSeller": true,
       "image": "/images/menu/KnB_Loaf_CinnamonBrownSugar.png"
     },
     {
