@@ -95,18 +95,22 @@ jobs:
             --exclude "robots.txt" \
             --exclude "content/*"
 
-          # HTML, sitemap, robots get short cache
+          # HTML files get short cache
           aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} \
-            --delete \
-            --cache-control "public, max-age=300, must-revalidate" \
-            --include "*.html" \
-            --include "sitemap.xml" \
-            --include "robots.txt" \
-            --include "content/*" \
             --exclude "*" \
+            --include "*.html" \
+            --cache-control "public, max-age=300, must-revalidate" \
             --content-type "text/html; charset=utf-8"
 
-          # Fix content types for JSON
+          # Sitemap and robots get short cache
+          aws s3 cp dist/sitemap.xml s3://${{ secrets.S3_BUCKET_NAME }}/sitemap.xml \
+            --cache-control "public, max-age=300, must-revalidate" \
+            --content-type "application/xml; charset=utf-8"
+          aws s3 cp dist/robots.txt s3://${{ secrets.S3_BUCKET_NAME }}/robots.txt \
+            --cache-control "public, max-age=300, must-revalidate" \
+            --content-type "text/plain; charset=utf-8"
+
+          # Content JSON gets short cache
           aws s3 sync dist/content/ s3://${{ secrets.S3_BUCKET_NAME }}/content/ \
             --cache-control "public, max-age=300, must-revalidate" \
             --content-type "application/json; charset=utf-8"
