@@ -74,6 +74,9 @@
   <!-- Main Content -->
   <main id="main" class="page__content">
 
+    <!-- Announcements / Skip Notices -->
+    <div id="announcements"></div>
+
     <!-- Hero -->
     <section class="hero">
       <div class="hero__inner">
@@ -192,21 +195,33 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderCard, renderTestimonial, renderNextMarket } from '/src/js/components.js';
+    import { renderCard, renderTestimonial, renderNextMarket, renderAnnouncementBanner, renderSkipNotice } from '/src/js/components.js';
+    import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const [config, menuData, testimonialData] = await Promise.all([
-        ContentLoader.siteConfig(),
+      const [marketInfo, menuData, testimonialData] = await Promise.all([
+        getMarketInfo(),
         ContentLoader.menu(),
         ContentLoader.testimonials(),
       ]);
 
-      // Next Market
-      if (config?.nextMarket) {
-        document.getElementById('next-market-panel').innerHTML = renderNextMarket(config.nextMarket);
+      // Announcements and skip notices
+      const announcementEl = document.getElementById('announcements');
+      let bannerHtml = '';
+      if (marketInfo.skippedThisWeek) {
+        bannerHtml += renderSkipNotice(marketInfo.skipReason, marketInfo.nextMarket.date);
       }
+      if (marketInfo.announcements.length > 0) {
+        bannerHtml += marketInfo.announcements.map(renderAnnouncementBanner).join('');
+      }
+      if (bannerHtml) {
+        announcementEl.innerHTML = `<section class="section section--white" style="padding-bottom:0"><div class="container">${bannerHtml}</div></section>`;
+      }
+
+      // Next Market
+      document.getElementById('next-market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
 
       // Top Sellers
       if (menuData?.items) {

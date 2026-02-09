@@ -50,6 +50,27 @@ export class StaticSiteStack extends cdk.Stack {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
 
+    // ── Security Response Headers ──
+    const securityHeaders = new cloudfront.ResponseHeadersPolicy(this, 'SecurityHeaders', {
+      responseHeadersPolicyName: 'KneadBakeSecurityHeaders',
+      securityHeadersBehavior: {
+        contentTypeOptions: { override: true },
+        frameOptions: {
+          frameOption: cloudfront.HeadersFrameOption.DENY,
+          override: true,
+        },
+        strictTransportSecurity: {
+          accessControlMaxAge: cdk.Duration.days(365),
+          includeSubdomains: true,
+          override: true,
+        },
+        referrerPolicy: {
+          referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+          override: true,
+        },
+      },
+    });
+
     // ── CloudFront Distribution ──
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       comment: 'Knead & Bake TX',
@@ -64,6 +85,7 @@ export class StaticSiteStack extends cdk.Stack {
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        responseHeadersPolicy: securityHeaders,
         functionAssociations: [{
           function: urlRewriteFunction,
           eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
@@ -93,6 +115,8 @@ export class StaticSiteStack extends cdk.Stack {
       destinationBucket: this.siteBucket,
       distribution: this.distribution,
       distributionPaths: ['/*'],
+      memoryLimit: 512,
+      ephemeralStorageSize: cdk.Size.mebibytes(1024),
     });
 
     // ── Outputs ──

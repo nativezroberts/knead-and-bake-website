@@ -178,15 +178,44 @@
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
     import { initOrderForm } from '/src/js/order-form.js';
+    import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const config = await ContentLoader.siteConfig();
+      const [config, marketInfo] = await Promise.all([
+        ContentLoader.siteConfig(),
+        getMarketInfo(),
+      ]);
+
+      // Dynamic cutoff banner
+      const cutoffBanner = document.getElementById('cutoff-banner');
+      if (marketInfo.preorderOpen) {
+        cutoffBanner.textContent = `Preorders for ${marketInfo.nextMarket.date} close ${marketInfo.nextMarket.preorderCutoff}.`;
+      } else {
+        cutoffBanner.className = 'banner banner--warning mb-8';
+        cutoffBanner.textContent = `Preorders for ${marketInfo.nextMarket.date} are closed. Check back after the market for next week's preorders!`;
+      }
+
+      // Auto-set pickup date
+      const pickupDateInput = document.getElementById('pickup_date');
+      if (pickupDateInput && marketInfo.nextMarket.dateISO) {
+        pickupDateInput.value = marketInfo.nextMarket.dateISO;
+      }
+
+      // Policies
       if (config?.preorder) {
-        document.getElementById('cutoff-banner').textContent = config.preorder.cutoffText;
         document.getElementById('order-policies').innerHTML =
           config.preorder.policies.map(p => `<li>${p}</li>`).join('');
+      }
+
+      // Disable form if preorders are closed
+      if (!marketInfo.preorderOpen) {
+        const submitBtn = document.getElementById('order-submit');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Preorders Closed';
+        }
       }
 
       initOrderForm();

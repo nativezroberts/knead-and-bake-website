@@ -123,6 +123,24 @@ export function renderDayCard(day) {
   `;
 }
 
+export function renderAnnouncementBanner(announcement) {
+  const levelClass = announcement.level === 'warning' ? 'banner--warning' : 'banner--info';
+  return `
+    <div class="banner ${levelClass} mb-4" role="alert">
+      ${announcement.message}
+    </div>
+  `;
+}
+
+export function renderSkipNotice(reason, nextAvailableDate) {
+  return `
+    <div class="banner banner--warning mb-4" role="alert">
+      <strong>No market this Saturday.</strong> ${reason ? reason + ' ' : ''}
+      Our next market is ${nextAvailableDate}.
+    </div>
+  `;
+}
+
 export function renderOrderItem(item) {
   if (!item.available) return '';
   return `

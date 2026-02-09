@@ -43,6 +43,9 @@
 
   <main id="main" class="page__content">
 
+    <!-- Announcements / Skip Notices -->
+    <div id="announcements"></div>
+
     <section class="section market-page">
       <div class="container">
 
@@ -79,20 +82,32 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderNextMarket } from '/src/js/components.js';
+    import { renderNextMarket, renderAnnouncementBanner, renderSkipNotice } from '/src/js/components.js';
+    import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const [config, menuData] = await Promise.all([
-        ContentLoader.siteConfig(),
+      const [marketInfo, menuData] = await Promise.all([
+        getMarketInfo(),
         ContentLoader.menu(),
       ]);
 
-      // Market panel
-      if (config?.nextMarket) {
-        document.getElementById('market-panel').innerHTML = renderNextMarket(config.nextMarket);
+      // Announcements and skip notices
+      const announcementEl = document.getElementById('announcements');
+      let bannerHtml = '';
+      if (marketInfo.skippedThisWeek) {
+        bannerHtml += renderSkipNotice(marketInfo.skipReason, marketInfo.nextMarket.date);
       }
+      if (marketInfo.announcements.length > 0) {
+        bannerHtml += marketInfo.announcements.map(renderAnnouncementBanner).join('');
+      }
+      if (bannerHtml) {
+        announcementEl.innerHTML = `<div class="container" style="padding-top:var(--space-4)">${bannerHtml}</div>`;
+      }
+
+      // Market panel
+      document.getElementById('market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
 
       // Quick menu — available items only
       if (menuData?.items) {

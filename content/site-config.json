@@ -21,21 +21,14 @@
     "mapLink": "https://maps.google.com/?q=Castell+Street+Market+New+Braunfels+TX",
     "schedule": "Every Saturday, 9 AM – 1 PM"
   },
-  "nextMarket": {
-    "date": "Saturday, February 15, 2026",
-    "time": "9:00 AM – 1:00 PM",
-    "location": "Castell Street Market, New Braunfels",
-    "preorderCutoff": "Thursday, February 13, 2026 at 8:00 PM"
-  },
   "preorder": {
     "enabled": true,
     "cutoffText": "Preorders close Thursday at 8 PM before each Saturday market.",
     "pickupInstructions": "Pick up your order at our booth at Castell Street Market. Look for the Knead & Bake TX banner!",
     "policies": [
-      "All items are baked fresh Friday evening and Saturday morning.",
+      "All items are baked fresh Friday evening for Saturday pickup.",
       "Preorders guarantee your loaf — walk-up availability varies.",
       "Payment is collected at pickup (cash or card).",
-      "Cancellations accepted until Friday at noon.",
       "Allergen info is listed per item — please review before ordering."
     ]
   },
