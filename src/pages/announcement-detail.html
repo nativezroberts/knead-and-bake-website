@@ -3,12 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>News &amp; Announcements | Knead &amp; Bake TX</title>
-  <meta name="description" content="Latest news, updates, and announcements from Knead &amp; Bake TX — new menu items, market updates, and more.">
-  <link rel="canonical" href="https://kneadandbaketx.com/news.html">
-  <meta property="og:title" content="News | Knead &amp; Bake TX">
-  <meta property="og:description" content="Latest updates from Knead &amp; Bake TX.">
-  <meta property="og:url" content="https://kneadandbaketx.com/news.html">
+  <title>Announcement | Knead &amp; Bake TX</title>
+  <meta name="description" content="Announcement from Knead &amp; Bake TX.">
   <link rel="stylesheet" href="/src/css/main.css">
   <link rel="icon" href="/images/favicon.png" type="image/png">
 </head>
@@ -57,15 +53,19 @@
 
     <section class="page-header">
       <div class="container">
-        <h1 class="page-header__title">News &amp; Announcements</h1>
-        <p class="page-header__desc">Updates from the bakery — new items, market news, and more.</p>
+        <nav aria-label="Breadcrumb" style="margin-bottom:var(--space-4)">
+          <a href="/news.html" style="color:var(--text-secondary);font-size:var(--text-sm)">&larr; All News</a>
+        </nav>
+        <time id="post-date" style="font-size:var(--text-sm);color:var(--text-secondary);display:block;margin-bottom:var(--space-2)"></time>
+        <h1 class="page-header__title" id="post-title">Loading...</h1>
       </div>
     </section>
 
-    <section class="section section--cream">
+    <section class="section section--white">
       <div class="container container--md">
-        <div id="news-list" class="news-list">
-          <div class="loading"><div class="loading__spinner"></div></div>
+        <div id="post-content" class="prose"></div>
+        <div class="text-center mt-8">
+          <a href="/news.html" class="btn btn--outline">Back to All News</a>
         </div>
       </div>
     </section>
@@ -84,38 +84,55 @@
     window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
   </script>
   <script type="module">
-    import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderNewsItem } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const [data, marketInfo] = await Promise.all([
-        ContentLoader.news(),
-        getMarketInfo().catch(() => ({ announcements: [] })),
-      ]);
-
-      const newsPosts = (data?.posts || []).map(p => ({ ...p, _type: 'news' }));
-      const announcements = (marketInfo.announcements || []).map(a => ({
-        title: a.title || a.message,
-        date: a.startDate,
-        excerpt: a.excerpt || a.message,
-        detailUrl: `/announcement-detail.html?id=${a.id}`,
-        _type: 'announcement',
-      }));
-
-      const combined = [...newsPosts, ...announcements]
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      const listEl = document.getElementById('news-list');
-      if (combined.length === 0) {
-        listEl.innerHTML = '<p>No news or announcements at this time.</p>';
+      const id = new URLSearchParams(window.location.search).get('id');
+      if (!id) {
+        document.getElementById('post-title').textContent = 'Announcement Not Found';
         return;
       }
 
-      listEl.innerHTML = combined.map(item => renderNewsItem(item)).join('');
+      const marketInfo = await getMarketInfo().catch(() => ({ announcements: [] }));
+      const announcement = (marketInfo.announcements || []).find(a => a.id === id);
+
+      if (!announcement) {
+        document.getElementById('post-title').textContent = 'Announcement Not Found';
+        return;
+      }
+
+      document.title = `${announcement.title || 'Announcement'} | Knead & Bake TX`;
+      document.getElementById('post-title').textContent = announcement.title || announcement.message;
+
+      const d = new Date(announcement.startDate + 'T00:00:00');
+      document.getElementById('post-date').textContent =
+        d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Render content paragraphs (split on double-newlines) with basic markdown support
+      const contentText = announcement.content || announcement.message || '';
+      const paragraphs = contentText.split(/\n\n+/).filter(p => p.trim());
+
+      document.getElementById('post-content').innerHTML =
+        paragraphs.map(p => {
+          const html = p
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+          if (html.startsWith('- ')) {
+            return '';
+          }
+          return `<p>${html}</p>`;
+        }).join('') +
+        (() => {
+          const listItems = paragraphs.filter(p => p.startsWith('- '));
+          if (listItems.length === 0) return '';
+          return '<ul>' + listItems.map(li =>
+            `<li>${li.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`
+          ).join('') + '</ul>';
+        })();
     });
   </script>
 

@@ -196,6 +196,7 @@ async function addAnnouncement(e) {
 
   const title = $('announcement-title').value.trim();
   const excerpt = $('announcement-excerpt').value.trim();
+  const content = $('announcement-content').value.trim();
   const message = $('announcement-message').value.trim();
   const startDate = $('announcement-start').value;
   const endDate = $('announcement-end').value;
@@ -209,7 +210,7 @@ async function addAnnouncement(e) {
   try {
     const res = await authFetch(`${API_BASE}/api/admin/announcements`, {
       method: 'POST',
-      body: JSON.stringify({ title, excerpt, message, startDate, endDate, level, active: true }),
+      body: JSON.stringify({ title, excerpt, content, message, startDate, endDate, level, active: true }),
     });
 
     if (!res.ok) {
@@ -219,6 +220,7 @@ async function addAnnouncement(e) {
 
     $('announcement-title').value = '';
     $('announcement-excerpt').value = '';
+    $('announcement-content').value = '';
     $('announcement-message').value = '';
     $('announcement-start').value = '';
     $('announcement-end').value = '';

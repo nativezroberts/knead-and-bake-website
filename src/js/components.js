@@ -44,14 +44,15 @@ export function renderTestimonial({ text, author, source }) {
   `;
 }
 
-export function renderNewsItem({ slug, title, date, excerpt }) {
+export function renderNewsItem({ slug, title, date, excerpt, detailUrl }) {
   const d = new Date(date + 'T00:00:00');
   const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const titleHtml = slug
-    ? `<a href="/news/${slug}.html">${title}</a>`
+  const url = detailUrl || (slug ? `/news/${slug}.html` : null);
+  const titleHtml = url
+    ? `<a href="${url}">${title}</a>`
     : title;
-  const readMore = slug
-    ? `<a href="/news/${slug}.html" class="btn btn--sm btn--outline mt-4">Read more</a>`
+  const readMore = url
+    ? `<a href="${url}" class="btn btn--sm btn--outline mt-4">Read more</a>`
     : '';
   return `
     <article class="news-item">

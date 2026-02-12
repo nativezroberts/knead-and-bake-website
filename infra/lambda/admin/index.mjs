@@ -67,6 +67,7 @@ async function handlePublicRead() {
       message: a.message,
       title: a.title || '',
       excerpt: a.excerpt || '',
+      content: a.content || '',
       level: a.level || 'info',
       startDate: a.startDate,
     }));
@@ -125,6 +126,7 @@ async function listAnnouncements() {
       id: i.id,
       title: i.title || '',
       excerpt: i.excerpt || '',
+      content: i.content || '',
       message: i.message,
       startDate: i.startDate,
       endDate: i.endDate,
@@ -136,7 +138,7 @@ async function listAnnouncements() {
 }
 
 async function createAnnouncement(body) {
-  const { message, startDate, endDate, level, active, title, excerpt } = body;
+  const { message, startDate, endDate, level, active, title, excerpt, content } = body;
 
   if (!message || typeof message !== 'string' || message.trim().length < 1) {
     return response(400, { message: 'Announcement message is required.' });
@@ -160,6 +162,7 @@ async function createAnnouncement(body) {
     id: randomUUID(),
     title: sanitize(title || '', 200),
     excerpt: sanitize(excerpt || '', 500),
+    content: sanitize(content || '', 5000),
     message: sanitize(message, 500),
     startDate,
     endDate,
@@ -185,6 +188,10 @@ async function updateAnnouncement(id, body) {
   if (body.excerpt !== undefined) {
     setClauses.push('excerpt = :exc');
     expValues[':exc'] = sanitize(body.excerpt, 500);
+  }
+  if (body.content !== undefined) {
+    setClauses.push('content = :cnt');
+    expValues[':cnt'] = sanitize(body.content, 5000);
   }
   if (body.message !== undefined) {
     setClauses.push('#msg = :msg');
