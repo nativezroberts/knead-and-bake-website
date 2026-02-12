@@ -4,7 +4,7 @@
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { randomUUID } from 'crypto';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -50,6 +50,14 @@ async function queryByType(type) {
     ExpressionAttributeValues: { ':type': type },
   }));
   return result.Items || [];
+}
+
+async function getByTypeAndId(type, id) {
+  const result = await ddb.send(new GetCommand({
+    TableName: TABLE_NAME,
+    Key: { type, id },
+  }));
+  return result.Item || null;
 }
 
 // ── Public endpoint ──
@@ -181,8 +189,38 @@ async function createAnnouncement(body) {
 }
 
 async function updateAnnouncement(id, body) {
-  const updates = {};
-  const expNames = {};
+  const existing = await getByTypeAndId('ANNOUNCEMENT', id);
+  if (!existing) {
+    return response(404, { message: 'Announcement not found.' });
+  }
+
+  if (body.startDate !== undefined && !isValidDate(body.startDate)) {
+    return response(400, { message: 'Start date must be a valid date (YYYY-MM-DD).' });
+  }
+
+  if (body.endDate !== undefined && !isValidDate(body.endDate)) {
+    return response(400, { message: 'End date must be a valid date (YYYY-MM-DD).' });
+  }
+
+  if (body.message !== undefined && (typeof body.message !== 'string' || body.message.trim().length < 1)) {
+    return response(400, { message: 'Announcement message is required.' });
+  }
+
+  const nextStartDate = body.startDate !== undefined ? body.startDate : existing.startDate;
+  const nextEndDate = body.endDate !== undefined ? body.endDate : existing.endDate;
+
+  if (!nextStartDate || !isValidDate(nextStartDate) || !nextEndDate || !isValidDate(nextEndDate)) {
+    return response(400, { message: 'Valid start and end dates are required.' });
+  }
+
+  if (nextStartDate > nextEndDate) {
+    return response(400, { message: 'Start date must be before end date.' });
+  }
+
+  const expNames = {
+    '#pkType': 'type',
+    '#pkId': 'id',
+  };
   const expValues = {};
   const setClauses = [];
 
@@ -203,11 +241,11 @@ async function updateAnnouncement(id, body) {
     expNames['#msg'] = 'message';
     expValues[':msg'] = sanitize(body.message, 500);
   }
-  if (body.startDate !== undefined && isValidDate(body.startDate)) {
+  if (body.startDate !== undefined) {
     setClauses.push('startDate = :sd');
     expValues[':sd'] = body.startDate;
   }
-  if (body.endDate !== undefined && isValidDate(body.endDate)) {
+  if (body.endDate !== undefined) {
     setClauses.push('endDate = :ed');
     expValues[':ed'] = body.endDate;
   }
@@ -230,12 +268,16 @@ async function updateAnnouncement(id, body) {
       TableName: TABLE_NAME,
       Key: { type: 'ANNOUNCEMENT', id },
       UpdateExpression: 'SET ' + setClauses.join(', '),
-      ExpressionAttributeNames: Object.keys(expNames).length > 0 ? expNames : undefined,
+      ConditionExpression: 'attribute_exists(#pkType) AND attribute_exists(#pkId)',
+      ExpressionAttributeNames: expNames,
       ExpressionAttributeValues: expValues,
       ReturnValues: 'ALL_NEW',
     }));
     return response(200, { announcement: result.Attributes });
   } catch (e) {
+    if (e.name === 'ConditionalCheckFailedException') {
+      return response(404, { message: 'Announcement not found.' });
+    }
     console.error('Update error:', e);
     return response(500, { message: 'Failed to update announcement.' });
   }
@@ -350,7 +392,36 @@ async function createNewsPost(body) {
 }
 
 async function updateNewsPost(id, body) {
-  const expNames = {};
+  const existing = await getByTypeAndId('NEWS', id);
+  if (!existing) {
+    return response(404, { message: 'News post not found.' });
+  }
+
+  if (body.startDate !== undefined && !isValidDate(body.startDate)) {
+    return response(400, { message: 'Start date must be a valid date (YYYY-MM-DD).' });
+  }
+
+  if (body.endDate !== undefined && body.endDate !== null && body.endDate !== '' && !isValidDate(body.endDate)) {
+    return response(400, { message: 'End date must be a valid date (YYYY-MM-DD).' });
+  }
+
+  const nextStartDate = body.startDate !== undefined ? body.startDate : existing.startDate;
+  const nextEndDate = body.endDate !== undefined
+    ? (body.endDate === null || body.endDate === '' ? null : body.endDate)
+    : (existing.endDate || null);
+
+  if (!nextStartDate || !isValidDate(nextStartDate)) {
+    return response(400, { message: 'A valid start date (YYYY-MM-DD) is required.' });
+  }
+
+  if (nextEndDate && nextStartDate > nextEndDate) {
+    return response(400, { message: 'Start date must be before end date.' });
+  }
+
+  const expNames = {
+    '#pkType': 'type',
+    '#pkId': 'id',
+  };
   const expValues = {};
   const setClauses = [];
 
@@ -372,7 +443,7 @@ async function updateNewsPost(id, body) {
     setClauses.push('content = :cnt');
     expValues[':cnt'] = sanitize(body.content, 10000);
   }
-  if (body.startDate !== undefined && isValidDate(body.startDate)) {
+  if (body.startDate !== undefined) {
     setClauses.push('startDate = :sd');
     expValues[':sd'] = body.startDate;
   }
@@ -399,12 +470,16 @@ async function updateNewsPost(id, body) {
       TableName: TABLE_NAME,
       Key: { type: 'NEWS', id },
       UpdateExpression: 'SET ' + setClauses.join(', '),
-      ExpressionAttributeNames: Object.keys(expNames).length > 0 ? expNames : undefined,
+      ConditionExpression: 'attribute_exists(#pkType) AND attribute_exists(#pkId)',
+      ExpressionAttributeNames: expNames,
       ExpressionAttributeValues: expValues,
       ReturnValues: 'ALL_NEW',
     }));
     return response(200, { post: result.Attributes });
   } catch (e) {
+    if (e.name === 'ConditionalCheckFailedException') {
+      return response(404, { message: 'News post not found.' });
+    }
     console.error('Update error:', e);
     return response(500, { message: 'Failed to update news post.' });
   }

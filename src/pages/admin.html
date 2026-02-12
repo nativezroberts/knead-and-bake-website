@@ -92,7 +92,7 @@
             <div id="announcements-list"></div>
 
             <form id="announcement-form" class="admin-form">
-              <h3 style="font-size:var(--text-base);margin:0">New Announcement</h3>
+              <h3 id="announcement-form-title" style="font-size:var(--text-base);margin:0">New Announcement</h3>
               <div class="form-group">
                 <label for="announcement-title" class="form-label">Title</label>
                 <input type="text" id="announcement-title" class="form-input" required placeholder="e.g. Holiday Schedule Update">
@@ -125,7 +125,8 @@
                     <option value="warning">Warning</option>
                   </select>
                 </div>
-                <button type="submit" class="btn btn--primary btn--sm">Add</button>
+                <button type="submit" id="announcement-submit-btn" class="btn btn--primary btn--sm">Add</button>
+                <button type="button" id="announcement-cancel-edit-btn" class="btn btn--outline btn--sm hidden">Cancel Edit</button>
               </div>
               <div id="announcement-error" class="form-error hidden" role="alert"></div>
             </form>
@@ -138,7 +139,7 @@
             <div id="news-posts-list"></div>
 
             <form id="news-post-form" class="admin-form">
-              <h3 style="font-size:var(--text-base);margin:0">New Post</h3>
+              <h3 id="news-post-form-title" style="font-size:var(--text-base);margin:0">New Post</h3>
               <div class="form-group">
                 <label for="news-post-title" class="form-label">Title</label>
                 <input type="text" id="news-post-title" class="form-input" required placeholder="e.g. Winter Menu is Here!">
@@ -164,7 +165,8 @@
                   <label for="news-post-end" class="form-label">End Date <span style="color:var(--text-secondary);font-weight:normal">(leave blank for indefinite)</span></label>
                   <input type="date" id="news-post-end" class="form-input">
                 </div>
-                <button type="submit" class="btn btn--primary btn--sm">Add</button>
+                <button type="submit" id="news-post-submit-btn" class="btn btn--primary btn--sm">Add</button>
+                <button type="button" id="news-post-cancel-edit-btn" class="btn btn--outline btn--sm hidden">Cancel Edit</button>
               </div>
               <div id="news-post-error" class="form-error hidden" role="alert"></div>
             </form>
