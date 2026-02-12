@@ -85,7 +85,7 @@ async function handlePublicRead() {
       startDate: a.startDate,
     }));
 
-  return response(200, { skipDates, announcements });
+  return response(200, { _nocache: true, skipDates, announcements });
 }
 
 // ── Skip Dates CRUD ──
