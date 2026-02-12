@@ -407,6 +407,13 @@
   color: var(--color-sage-dark);
 }
 
+.news-item__subtitle {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: var(--space-2);
+}
+
 .news-item__excerpt {
   font-size: var(--text-sm);
   color: var(--text-secondary);

@@ -72,7 +72,6 @@ knead-and-bake-website/
 │   ├── menu.json               #   Menu items, categories, seasonal banner
 │   ├── recipes.json            #   Recipe list + full recipe details
 │   ├── starter-kit.json        #   4-day starter plan, supplies, FAQs
-│   ├── news.json               #   Blog/news posts
 │   ├── testimonials.json       #   Customer quotes
 │   └── about.json              #   Story, values, allergen statement
 ├── src/
@@ -98,7 +97,7 @@ knead-and-bake-website/
 │       ├── recipe-detail.html  #   Recipe detail (template)
 │       ├── starter-kit.html    #   4-day starter guide
 │       ├── news.html           #   News list
-│       ├── news-detail.html    #   News detail (template)
+│       ├── news-detail.html    #   News detail (dynamic, API-driven)
 │       ├── social.html         #   Social media links
 │       ├── market.html         #   QR code landing page
 │       └── 404.html            #   Error page
@@ -281,7 +280,7 @@ Edit `content/recipes.json` → add to the `recipes` array. The build script aut
 
 ### Add a News Post
 
-Edit `content/news.json` → add to the `posts` array. Include a unique `slug`. The build script auto-generates a detail page at `/news/YOUR-SLUG.html`.
+News posts are managed via the Admin dashboard at `/admin.html`. Log in, scroll to the "News Posts" section, fill out the form (title, subtitle, excerpt, content, dates), and submit. Posts appear on `/news.html` automatically.
 
 ### Add a Testimonial
 

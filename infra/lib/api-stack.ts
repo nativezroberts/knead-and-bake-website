@@ -220,6 +220,28 @@ export class ApiStack extends cdk.Stack {
       authorizer: jwtAuthorizer,
     });
 
+    // GET /api/news (public — news posts)
+    httpApi.addRoutes({
+      path: '/api/news',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: new apigwv2integrations.HttpLambdaIntegration('NewsPublicIntegration', adminFn),
+    });
+
+    // Admin news routes (protected by JWT authorizer)
+    httpApi.addRoutes({
+      path: '/api/admin/news',
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: '/api/admin/news/{id}',
+      methods: [apigwv2.HttpMethod.PUT, apigwv2.HttpMethod.DELETE],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
     // ── Outputs ──
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: httpApi.apiEndpoint,

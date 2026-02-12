@@ -1,5 +1,5 @@
 /**
- * Admin Page — login, skip date management, announcement management.
+ * Admin Page — login, skip date management, announcement management, news post management.
  */
 
 const API_BASE = window.__API_BASE || '';
@@ -54,6 +54,7 @@ function showAdmin() {
   $('admin-content').classList.remove('hidden');
   loadSkipDates();
   loadAnnouncements();
+  loadNewsPosts();
 }
 
 function showError(el, msg) {
@@ -255,6 +256,113 @@ window.deleteAnnouncement = async function(id) {
   }
 };
 
+// ── News Posts ──
+async function loadNewsPosts() {
+  const container = $('news-posts-list');
+  container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/news`);
+    const data = await res.json();
+    const posts = data.posts || [];
+
+    if (posts.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-secondary)">No news posts.</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>Title</th><th>Start</th><th>End</th><th>Active</th><th></th></tr></thead>
+        <tbody>
+          ${posts.map(p => `
+            <tr>
+              <td>${p.title || '—'}</td>
+              <td>${p.startDate}</td>
+              <td>${p.endDate || 'Indefinite'}</td>
+              <td>${p.active ? 'Yes' : 'No'}</td>
+              <td>
+                <button class="btn btn--sm btn--outline" onclick="toggleNewsPost('${p.id}', ${!p.active})">${p.active ? 'Deactivate' : 'Activate'}</button>
+                <button class="btn btn--sm btn--outline" onclick="deleteNewsPost('${p.id}')">Delete</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) {
+    container.innerHTML = `<p class="form-error">${e.message}</p>`;
+  }
+}
+
+async function addNewsPost(e) {
+  e.preventDefault();
+  const errorEl = $('news-post-error');
+  errorEl.classList.add('hidden');
+
+  const title = $('news-post-title').value.trim();
+  const subtitle = $('news-post-subtitle').value.trim();
+  const excerpt = $('news-post-excerpt').value.trim();
+  const content = $('news-post-content').value.trim();
+  const startDate = $('news-post-start').value;
+  const endDate = $('news-post-end').value;
+
+  if (!title || !excerpt || !content || !startDate) {
+    showError(errorEl, 'Title, excerpt, content, and start date are required.');
+    return;
+  }
+
+  try {
+    const payload = { title, subtitle, excerpt, content, startDate, active: true };
+    if (endDate) payload.endDate = endDate;
+
+    const res = await authFetch(`${API_BASE}/api/admin/news`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || 'Failed to create news post.');
+    }
+
+    $('news-post-title').value = '';
+    $('news-post-subtitle').value = '';
+    $('news-post-excerpt').value = '';
+    $('news-post-content').value = '';
+    $('news-post-start').value = '';
+    $('news-post-end').value = '';
+    loadNewsPosts();
+  } catch (e) {
+    showError(errorEl, e.message);
+  }
+}
+
+window.toggleNewsPost = async function(id, active) {
+  try {
+    await authFetch(`${API_BASE}/api/admin/news/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ active }),
+    });
+    loadNewsPosts();
+  } catch (e) {
+    alert('Failed to update: ' + e.message);
+  }
+};
+
+window.deleteNewsPost = async function(id) {
+  if (!confirm('Delete this news post?')) return;
+
+  try {
+    await authFetch(`${API_BASE}/api/admin/news/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    loadNewsPosts();
+  } catch (e) {
+    alert('Failed to delete: ' + e.message);
+  }
+};
+
 // ── Init ──
 export function initAdmin() {
   // Login form
@@ -278,4 +386,7 @@ export function initAdmin() {
 
   // Announcement form
   $('announcement-form').addEventListener('submit', addAnnouncement);
+
+  // News post form
+  $('news-post-form').addEventListener('submit', addNewsPost);
 }

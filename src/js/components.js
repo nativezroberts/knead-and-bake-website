@@ -44,22 +44,17 @@ export function renderTestimonial({ text, author, source }) {
   `;
 }
 
-export function renderNewsItem({ slug, title, date, excerpt, detailUrl }) {
-  const d = new Date(date + 'T00:00:00');
+export function renderNewsItem({ id, title, subtitle, startDate, excerpt }) {
+  const d = new Date(startDate + 'T00:00:00');
   const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const url = detailUrl || (slug ? `/news/${slug}.html` : null);
-  const titleHtml = url
-    ? `<a href="${url}">${title}</a>`
-    : title;
-  const readMore = url
-    ? `<a href="${url}" class="btn btn--sm btn--outline mt-4">Read more</a>`
-    : '';
+  const url = `/news-detail.html?id=${id}`;
   return `
     <article class="news-item">
-      <time class="news-item__date" datetime="${date}">${formatted}</time>
-      <h3 class="news-item__title">${titleHtml}</h3>
+      <time class="news-item__date" datetime="${startDate}">${formatted}</time>
+      <h3 class="news-item__title"><a href="${url}">${title}</a></h3>
+      ${subtitle ? `<p class="news-item__subtitle">${subtitle}</p>` : ''}
       ${excerpt ? `<p class="news-item__excerpt">${excerpt}</p>` : ''}
-      ${readMore}
+      <a href="${url}" class="btn btn--sm btn--outline mt-4">Read more</a>
     </article>
   `;
 }
@@ -136,18 +131,6 @@ export function renderAnnouncementBanner(announcement) {
     <div class="banner ${levelClass} mb-4" role="alert">
       ${announcement.message}
     </div>
-  `;
-}
-
-export function renderAnnouncementBlurb(announcement) {
-  const d = new Date(announcement.startDate + 'T00:00:00');
-  const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const icon = announcement.level === 'warning' ? 'Important' : 'Announcement';
-  return `
-    <article class="news-item">
-      <time class="news-item__date" datetime="${announcement.startDate}">${formatted}</time>
-      <h3 class="news-item__title">${icon}: ${announcement.message}</h3>
-    </article>
   `;
 }
 

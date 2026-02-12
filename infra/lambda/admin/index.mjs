@@ -1,6 +1,6 @@
 /**
- * Admin Lambda — CRUD for skip dates and announcements.
- * Also serves the public GET /api/market-config endpoint.
+ * Admin Lambda — CRUD for skip dates, announcements, and news posts.
+ * Also serves the public GET /api/market-config and GET /api/news endpoints.
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -11,6 +11,7 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = process.env.CONFIG_TABLE;
 const MAX_SKIP_DATES = 365;
 const MAX_ANNOUNCEMENTS = 50;
+const MAX_NEWS_POSTS = 200;
 
 function response(statusCode, body) {
   return {
@@ -35,6 +36,10 @@ function isValidDate(dateStr) {
 function isSaturday(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return d.getDay() === 6;
+}
+
+function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 }
 
 async function queryByType(type) {
@@ -244,14 +249,187 @@ async function deleteAnnouncement(id) {
   return response(200, { message: 'Announcement deleted.' });
 }
 
+// ── Public news endpoint ──
+async function handlePublicNews() {
+  const items = await queryByType('NEWS');
+  const now = new Date().toISOString().slice(0, 10);
+
+  const posts = items
+    .filter(item =>
+      item.active &&
+      item.startDate <= now &&
+      (!item.endDate || item.endDate >= now)
+    )
+    .map(item => ({
+      id: item.id,
+      title: item.title,
+      subtitle: item.subtitle || '',
+      excerpt: item.excerpt,
+      content: item.content,
+      startDate: item.startDate,
+      endDate: item.endDate || null,
+      slug: item.slug,
+      createdAt: item.createdAt,
+    }))
+    .sort((a, b) => b.startDate.localeCompare(a.startDate));
+
+  return response(200, { posts });
+}
+
+// ── News Posts CRUD ──
+async function listNewsPosts() {
+  const items = await queryByType('NEWS');
+  return response(200, {
+    _nocache: true,
+    posts: items.map(i => ({
+      id: i.id,
+      title: i.title || '',
+      subtitle: i.subtitle || '',
+      excerpt: i.excerpt || '',
+      content: i.content || '',
+      startDate: i.startDate,
+      endDate: i.endDate || null,
+      slug: i.slug || '',
+      active: i.active,
+      createdAt: i.createdAt,
+    })),
+  });
+}
+
+async function createNewsPost(body) {
+  const { title, subtitle, excerpt, content, startDate, endDate, active } = body;
+
+  if (!title || typeof title !== 'string' || title.trim().length < 1) {
+    return response(400, { message: 'Title is required.' });
+  }
+
+  if (!excerpt || typeof excerpt !== 'string' || excerpt.trim().length < 1) {
+    return response(400, { message: 'Excerpt is required.' });
+  }
+
+  if (!content || typeof content !== 'string' || content.trim().length < 1) {
+    return response(400, { message: 'Content is required.' });
+  }
+
+  if (!startDate || !isValidDate(startDate)) {
+    return response(400, { message: 'A valid start date (YYYY-MM-DD) is required.' });
+  }
+
+  if (endDate && !isValidDate(endDate)) {
+    return response(400, { message: 'End date must be a valid date (YYYY-MM-DD).' });
+  }
+
+  if (endDate && startDate > endDate) {
+    return response(400, { message: 'Start date must be before end date.' });
+  }
+
+  const existing = await queryByType('NEWS');
+  if (existing.length >= MAX_NEWS_POSTS) {
+    return response(400, { message: `Maximum of ${MAX_NEWS_POSTS} news posts reached.` });
+  }
+
+  const item = {
+    type: 'NEWS',
+    id: randomUUID(),
+    title: sanitize(title, 200),
+    subtitle: sanitize(subtitle || '', 300),
+    excerpt: sanitize(excerpt, 500),
+    content: sanitize(content, 10000),
+    startDate,
+    slug: slugify(title),
+    active: active !== false,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (endDate) {
+    item.endDate = endDate;
+  }
+
+  await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+  return response(201, { post: item });
+}
+
+async function updateNewsPost(id, body) {
+  const expNames = {};
+  const expValues = {};
+  const setClauses = [];
+
+  if (body.title !== undefined) {
+    setClauses.push('title = :ttl');
+    expValues[':ttl'] = sanitize(body.title, 200);
+    setClauses.push('slug = :slg');
+    expValues[':slg'] = slugify(body.title);
+  }
+  if (body.subtitle !== undefined) {
+    setClauses.push('subtitle = :sub');
+    expValues[':sub'] = sanitize(body.subtitle, 300);
+  }
+  if (body.excerpt !== undefined) {
+    setClauses.push('excerpt = :exc');
+    expValues[':exc'] = sanitize(body.excerpt, 500);
+  }
+  if (body.content !== undefined) {
+    setClauses.push('content = :cnt');
+    expValues[':cnt'] = sanitize(body.content, 10000);
+  }
+  if (body.startDate !== undefined && isValidDate(body.startDate)) {
+    setClauses.push('startDate = :sd');
+    expValues[':sd'] = body.startDate;
+  }
+  if (body.endDate !== undefined) {
+    if (body.endDate === null || body.endDate === '') {
+      setClauses.push('endDate = :ed');
+      expValues[':ed'] = null;
+    } else if (isValidDate(body.endDate)) {
+      setClauses.push('endDate = :ed');
+      expValues[':ed'] = body.endDate;
+    }
+  }
+  if (body.active !== undefined) {
+    setClauses.push('active = :act');
+    expValues[':act'] = !!body.active;
+  }
+
+  if (setClauses.length === 0) {
+    return response(400, { message: 'No valid fields to update.' });
+  }
+
+  try {
+    const result = await ddb.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { type: 'NEWS', id },
+      UpdateExpression: 'SET ' + setClauses.join(', '),
+      ExpressionAttributeNames: Object.keys(expNames).length > 0 ? expNames : undefined,
+      ExpressionAttributeValues: expValues,
+      ReturnValues: 'ALL_NEW',
+    }));
+    return response(200, { post: result.Attributes });
+  } catch (e) {
+    console.error('Update error:', e);
+    return response(500, { message: 'Failed to update news post.' });
+  }
+}
+
+async function deleteNewsPost(id) {
+  await ddb.send(new DeleteCommand({
+    TableName: TABLE_NAME,
+    Key: { type: 'NEWS', id },
+  }));
+  return response(200, { message: 'News post deleted.' });
+}
+
 // ── Router ──
 export async function handler(event) {
   const method = event.requestContext?.http?.method;
   const path = event.rawPath;
 
-  // Public endpoint
+  // Public endpoints
   if (method === 'GET' && path === '/api/market-config') {
     return handlePublicRead();
+  }
+
+  if (method === 'GET' && path === '/api/news') {
+    return handlePublicNews();
   }
 
   // Admin endpoints — auth is handled by the Lambda authorizer at API Gateway level
@@ -285,6 +463,18 @@ export async function handler(event) {
     const id = decodeURIComponent(path.split('/').pop());
     if (method === 'PUT') return updateAnnouncement(id, body);
     if (method === 'DELETE') return deleteAnnouncement(id);
+  }
+
+  // News posts
+  if (path === '/api/admin/news') {
+    if (method === 'GET') return listNewsPosts();
+    if (method === 'POST') return createNewsPost(body);
+  }
+
+  if (path.startsWith('/api/admin/news/')) {
+    const id = decodeURIComponent(path.split('/').pop());
+    if (method === 'PUT') return updateNewsPost(id, body);
+    if (method === 'DELETE') return deleteNewsPost(id);
   }
 
   return response(404, { message: 'Not found' });

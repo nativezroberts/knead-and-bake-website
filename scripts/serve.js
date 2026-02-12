@@ -56,9 +56,6 @@ function resolveFilePath(urlPath) {
   } else if (urlPath.startsWith('/recipes/') && urlPath.endsWith('.html')) {
     // Recipe detail pages
     filePath = path.join(ROOT, 'src', 'pages', 'recipe-detail.html');
-  } else if (urlPath.startsWith('/news/') && urlPath.endsWith('.html')) {
-    // News detail pages
-    filePath = path.join(ROOT, 'src', 'pages', 'news-detail.html');
   } else {
     // Try as a page in /src/pages/
     let pagePath = urlPath;

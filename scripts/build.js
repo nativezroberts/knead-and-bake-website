@@ -87,30 +87,17 @@ if (fs.existsSync(recipeTemplate)) {
   console.log(`  Generated ${recipesData.recipes.length} recipe detail pages`);
 }
 
-// News details
-const newsData = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'news.json'), 'utf-8'));
-const newsTemplate = path.join(DIST, 'news-detail.html');
-if (fs.existsSync(newsTemplate)) {
-  fs.mkdirSync(path.join(DIST, 'news'), { recursive: true });
-  for (const post of newsData.posts) {
-    fs.copyFileSync(newsTemplate, path.join(DIST, 'news', `${post.slug}.html`));
-  }
-  console.log(`  Generated ${newsData.posts.length} news detail pages`);
-}
-
-// 8. Clean up templates (they shouldn't be accessible at root)
+// 8. Clean up templates (recipe-detail shouldn't be accessible at root; news-detail stays as a routable page)
 try { fs.unlinkSync(path.join(DIST, 'recipe-detail.html')); } catch {}
-try { fs.unlinkSync(path.join(DIST, 'news-detail.html')); } catch {}
 
 // 9. Generate sitemap.xml
 const siteUrl = 'https://kneadandbaketx.com';
 const staticPages = [
-  '', 'about', 'menu', 'preorder', 'recipes', 'starter-kit', 'news', 'social', 'market'
+  '', 'about', 'menu', 'preorder', 'recipes', 'starter-kit', 'news', 'news-detail', 'social', 'market'
 ];
 const sitemapEntries = [
   ...staticPages.map(p => `  <url><loc>${siteUrl}/${p ? p + '.html' : ''}</loc><changefreq>weekly</changefreq></url>`),
   ...recipesData.recipes.map(r => `  <url><loc>${siteUrl}/recipes/${r.slug}.html</loc><changefreq>monthly</changefreq></url>`),
-  ...newsData.posts.map(p => `  <url><loc>${siteUrl}/news/${p.slug}.html</loc><changefreq>monthly</changefreq></url>`),
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

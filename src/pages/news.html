@@ -84,38 +84,30 @@
     window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
   </script>
   <script type="module">
-    import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
     import { renderNewsItem } from '/src/js/components.js';
-    import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const [data, marketInfo] = await Promise.all([
-        ContentLoader.news(),
-        getMarketInfo().catch(() => ({ announcements: [] })),
-      ]);
-
-      const newsPosts = (data?.posts || []).map(p => ({ ...p, _type: 'news' }));
-      const announcements = (marketInfo.announcements || []).map(a => ({
-        title: a.title || a.message,
-        date: a.startDate,
-        excerpt: a.excerpt || a.message,
-        detailUrl: `/announcement-detail.html?id=${a.id}`,
-        _type: 'announcement',
-      }));
-
-      const combined = [...newsPosts, ...announcements]
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-
+      const API_BASE = window.__API_BASE || '';
       const listEl = document.getElementById('news-list');
-      if (combined.length === 0) {
-        listEl.innerHTML = '<p>No news or announcements at this time.</p>';
-        return;
-      }
 
-      listEl.innerHTML = combined.map(item => renderNewsItem(item)).join('');
+      try {
+        const res = await fetch(`${API_BASE}/api/news`);
+        const data = await res.json();
+        const posts = data.posts || [];
+
+        if (posts.length === 0) {
+          listEl.innerHTML = '<p>No news at this time. Check back soon!</p>';
+          return;
+        }
+
+        listEl.innerHTML = posts.map(post => renderNewsItem(post)).join('');
+      } catch (err) {
+        console.error('Failed to load news:', err);
+        listEl.innerHTML = '<p>Unable to load news. Please try again later.</p>';
+      }
     });
   </script>
 

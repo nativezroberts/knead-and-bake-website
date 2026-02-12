@@ -25,7 +25,6 @@ const ContentLoader = (() => {
     menu:          () => load('/content/menu.json'),
     recipes:       () => load('/content/recipes.json'),
     starterKit:    () => load('/content/starter-kit.json'),
-    news:          () => load('/content/news.json'),
     testimonials:  () => load('/content/testimonials.json'),
     about:         () => load('/content/about.json'),
     load,

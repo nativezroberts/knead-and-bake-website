@@ -58,6 +58,7 @@
         </nav>
         <time id="post-date" style="font-size:var(--text-sm);color:var(--text-secondary);display:block;margin-bottom:var(--space-2)"></time>
         <h1 class="page-header__title" id="post-title">Loading...</h1>
+        <p id="post-subtitle" class="page-header__desc" style="display:none"></p>
       </div>
     </section>
 
@@ -80,51 +81,72 @@
     </div>
   </footer>
 
+  <script>
+    window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
+  </script>
   <script type="module">
-    import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const slug = window.location.pathname.split('/').pop().replace('.html', '');
-      const data = await ContentLoader.news();
-      if (!data?.posts) return;
-
-      const post = data.posts.find(p => p.slug === slug);
-      if (!post) {
+      const id = new URLSearchParams(window.location.search).get('id');
+      if (!id) {
         document.getElementById('post-title').textContent = 'Post Not Found';
         return;
       }
 
-      document.title = `${post.title} | Knead & Bake TX`;
-      document.getElementById('post-title').textContent = post.title;
+      const API_BASE = window.__API_BASE || '';
+      try {
+        const res = await fetch(`${API_BASE}/api/news`);
+        const data = await res.json();
+        const post = (data.posts || []).find(p => p.id === id);
 
-      const d = new Date(post.date + 'T00:00:00');
-      document.getElementById('post-date').textContent =
-        d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (!post) {
+          document.getElementById('post-title').textContent = 'Post Not Found';
+          return;
+        }
 
-      // Render content paragraphs with basic markdown bold support
-      document.getElementById('post-content').innerHTML =
-        post.content.map(p => {
+        document.title = `${post.title} | Knead & Bake TX`;
+        document.getElementById('post-title').textContent = post.title;
+
+        if (post.subtitle) {
+          const subtitleEl = document.getElementById('post-subtitle');
+          subtitleEl.textContent = post.subtitle;
+          subtitleEl.style.display = '';
+        }
+
+        const d = new Date(post.startDate + 'T00:00:00');
+        document.getElementById('post-date').textContent =
+          d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Render content paragraphs with basic markdown support
+        const paragraphs = (post.content || '').split(/\n\n+/).filter(p => p.trim());
+        const regularParagraphs = [];
+        const listItems = [];
+
+        for (const p of paragraphs) {
           const html = p
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-          // If it starts with "- " treat as list item
           if (html.startsWith('- ')) {
-            return ''; // will be grouped below
+            listItems.push(html.slice(2));
+          } else {
+            regularParagraphs.push(`<p>${html}</p>`);
           }
-          return `<p>${html}</p>`;
-        }).join('') +
-        // Handle list items
-        (() => {
-          const listItems = post.content.filter(p => p.startsWith('- '));
-          if (listItems.length === 0) return '';
-          return '<ul>' + listItems.map(li =>
-            `<li>${li.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`
-          ).join('') + '</ul>';
-        })();
+        }
+
+        let contentHtml = regularParagraphs.join('');
+        if (listItems.length > 0) {
+          contentHtml += '<ul>' + listItems.map(li => `<li>${li}</li>`).join('') + '</ul>';
+        }
+
+        document.getElementById('post-content').innerHTML = contentHtml;
+      } catch (err) {
+        console.error('Failed to load post:', err);
+        document.getElementById('post-title').textContent = 'Failed to load post';
+      }
     });
   </script>
 
