@@ -66,6 +66,7 @@ async function handlePublicRead() {
       id: a.id,
       message: a.message,
       level: a.level || 'info',
+      startDate: a.startDate,
     }));
 
   return response(200, { skipDates, announcements });
