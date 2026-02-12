@@ -88,13 +88,21 @@
           <!-- Announcements -->
           <div class="admin-section">
             <h2>Announcements</h2>
-            <p style="color:var(--text-secondary);font-size:var(--text-sm)">Create banners that appear on the homepage and market page during the specified date range.</p>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm)">Create announcements that appear on the homepage banner, market page, and news page during the specified date range.</p>
             <div id="announcements-list"></div>
 
             <form id="announcement-form" class="admin-form">
               <h3 style="font-size:var(--text-base);margin:0">New Announcement</h3>
               <div class="form-group">
-                <label for="announcement-message" class="form-label">Message</label>
+                <label for="announcement-title" class="form-label">Title</label>
+                <input type="text" id="announcement-title" class="form-input" required placeholder="e.g. Holiday Schedule Update">
+              </div>
+              <div class="form-group">
+                <label for="announcement-excerpt" class="form-label">Excerpt <span style="color:var(--text-secondary);font-weight:normal">(optional — short summary for news page)</span></label>
+                <input type="text" id="announcement-excerpt" class="form-input" placeholder="e.g. We'll be taking a break for the holidays and returning Jan 4th.">
+              </div>
+              <div class="form-group">
+                <label for="announcement-message" class="form-label">Banner Message <span style="color:var(--text-secondary);font-weight:normal">(shown on homepage)</span></label>
                 <textarea id="announcement-message" class="form-textarea" rows="2" required placeholder="e.g. We'll be closed next Saturday for the holidays!"></textarea>
               </div>
               <div class="admin-form-row">

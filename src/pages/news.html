@@ -86,7 +86,7 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderNewsItem, renderAnnouncementBlurb } from '/src/js/components.js';
+    import { renderNewsItem } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -99,8 +99,9 @@
 
       const newsPosts = (data?.posts || []).map(p => ({ ...p, _type: 'news' }));
       const announcements = (marketInfo.announcements || []).map(a => ({
-        ...a,
+        title: a.title || a.message,
         date: a.startDate,
+        excerpt: a.excerpt || a.message,
         _type: 'announcement',
       }));
 
@@ -113,9 +114,7 @@
         return;
       }
 
-      listEl.innerHTML = combined.map(item =>
-        item._type === 'announcement' ? renderAnnouncementBlurb(item) : renderNewsItem(item)
-      ).join('');
+      listEl.innerHTML = combined.map(item => renderNewsItem(item)).join('');
     });
   </script>
 

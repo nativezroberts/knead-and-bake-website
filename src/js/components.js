@@ -47,12 +47,18 @@ export function renderTestimonial({ text, author, source }) {
 export function renderNewsItem({ slug, title, date, excerpt }) {
   const d = new Date(date + 'T00:00:00');
   const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const titleHtml = slug
+    ? `<a href="/news/${slug}.html">${title}</a>`
+    : title;
+  const readMore = slug
+    ? `<a href="/news/${slug}.html" class="btn btn--sm btn--outline mt-4">Read more</a>`
+    : '';
   return `
     <article class="news-item">
       <time class="news-item__date" datetime="${date}">${formatted}</time>
-      <h3 class="news-item__title"><a href="/news/${slug}.html">${title}</a></h3>
-      <p class="news-item__excerpt">${excerpt}</p>
-      <a href="/news/${slug}.html" class="btn btn--sm btn--outline mt-4">Read more</a>
+      <h3 class="news-item__title">${titleHtml}</h3>
+      ${excerpt ? `<p class="news-item__excerpt">${excerpt}</p>` : ''}
+      ${readMore}
     </article>
   `;
 }

@@ -65,6 +65,8 @@ async function handlePublicRead() {
     .map(a => ({
       id: a.id,
       message: a.message,
+      title: a.title || '',
+      excerpt: a.excerpt || '',
       level: a.level || 'info',
       startDate: a.startDate,
     }));
@@ -121,6 +123,8 @@ async function listAnnouncements() {
     _nocache: true,
     announcements: items.map(i => ({
       id: i.id,
+      title: i.title || '',
+      excerpt: i.excerpt || '',
       message: i.message,
       startDate: i.startDate,
       endDate: i.endDate,
@@ -132,7 +136,7 @@ async function listAnnouncements() {
 }
 
 async function createAnnouncement(body) {
-  const { message, startDate, endDate, level, active } = body;
+  const { message, startDate, endDate, level, active, title, excerpt } = body;
 
   if (!message || typeof message !== 'string' || message.trim().length < 1) {
     return response(400, { message: 'Announcement message is required.' });
@@ -154,6 +158,8 @@ async function createAnnouncement(body) {
   const item = {
     type: 'ANNOUNCEMENT',
     id: randomUUID(),
+    title: sanitize(title || '', 200),
+    excerpt: sanitize(excerpt || '', 500),
     message: sanitize(message, 500),
     startDate,
     endDate,
@@ -172,6 +178,14 @@ async function updateAnnouncement(id, body) {
   const expValues = {};
   const setClauses = [];
 
+  if (body.title !== undefined) {
+    setClauses.push('title = :ttl');
+    expValues[':ttl'] = sanitize(body.title, 200);
+  }
+  if (body.excerpt !== undefined) {
+    setClauses.push('excerpt = :exc');
+    expValues[':exc'] = sanitize(body.excerpt, 500);
+  }
   if (body.message !== undefined) {
     setClauses.push('#msg = :msg');
     expNames['#msg'] = 'message';

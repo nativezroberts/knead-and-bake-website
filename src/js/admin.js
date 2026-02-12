@@ -166,10 +166,11 @@ async function loadAnnouncements() {
 
     container.innerHTML = `
       <table class="admin-table">
-        <thead><tr><th>Message</th><th>Dates</th><th>Level</th><th>Active</th><th></th></tr></thead>
+        <thead><tr><th>Title</th><th>Message</th><th>Dates</th><th>Level</th><th>Active</th><th></th></tr></thead>
         <tbody>
           ${announcements.map(a => `
             <tr>
+              <td>${a.title || '—'}</td>
               <td>${a.message}</td>
               <td>${a.startDate} to ${a.endDate}</td>
               <td>${a.level}</td>
@@ -193,20 +194,22 @@ async function addAnnouncement(e) {
   const errorEl = $('announcement-error');
   errorEl.classList.add('hidden');
 
+  const title = $('announcement-title').value.trim();
+  const excerpt = $('announcement-excerpt').value.trim();
   const message = $('announcement-message').value.trim();
   const startDate = $('announcement-start').value;
   const endDate = $('announcement-end').value;
   const level = $('announcement-level').value;
 
-  if (!message || !startDate || !endDate) {
-    showError(errorEl, 'All fields are required.');
+  if (!title || !message || !startDate || !endDate) {
+    showError(errorEl, 'Title, banner message, and dates are required.');
     return;
   }
 
   try {
     const res = await authFetch(`${API_BASE}/api/admin/announcements`, {
       method: 'POST',
-      body: JSON.stringify({ message, startDate, endDate, level, active: true }),
+      body: JSON.stringify({ title, excerpt, message, startDate, endDate, level, active: true }),
     });
 
     if (!res.ok) {
@@ -214,6 +217,8 @@ async function addAnnouncement(e) {
       throw new Error(data.message || 'Failed to create announcement.');
     }
 
+    $('announcement-title').value = '';
+    $('announcement-excerpt').value = '';
     $('announcement-message').value = '';
     $('announcement-start').value = '';
     $('announcement-end').value = '';
