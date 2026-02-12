@@ -99,7 +99,7 @@ jobs:
           aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} \
             --exclude "*" \
             --include "*.html" \
-            --cache-control "public, max-age=300, must-revalidate" \
+            --cache-control "public, max-age=60, stale-while-revalidate=120, must-revalidate" \
             --content-type "text/html; charset=utf-8"
 
           # Sitemap and robots get short cache
@@ -112,7 +112,7 @@ jobs:
 
           # Content JSON gets short cache
           aws s3 sync dist/content/ s3://${{ secrets.S3_BUCKET_NAME }}/content/ \
-            --cache-control "public, max-age=300, must-revalidate" \
+            --cache-control "public, max-age=60, stale-while-revalidate=120, must-revalidate" \
             --content-type "application/json; charset=utf-8"
 
       # Invalidate CloudFront cache

@@ -107,7 +107,8 @@ export async function getMarketInfo() {
   let announcements = [];
 
   try {
-    const res = await fetch(`${API_BASE}/api/market-config`);
+    const cacheBuster = Math.floor(Date.now() / 60000); // changes every minute
+    const res = await fetch(`${API_BASE}/api/market-config?_v=${cacheBuster}`);
     if (res.ok) {
       const data = await res.json();
       skipDates = data.skipDates || [];

@@ -132,6 +132,18 @@ export function renderAnnouncementBanner(announcement) {
   `;
 }
 
+export function renderAnnouncementBlurb(announcement) {
+  const d = new Date(announcement.startDate + 'T00:00:00');
+  const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const icon = announcement.level === 'warning' ? 'Important' : 'Announcement';
+  return `
+    <article class="news-item">
+      <time class="news-item__date" datetime="${announcement.startDate}">${formatted}</time>
+      <h3 class="news-item__title">${icon}: ${announcement.message}</h3>
+    </article>
+  `;
+}
+
 export function renderSkipNotice(reason, nextAvailableDate) {
   return `
     <div class="banner banner--warning mb-4" role="alert">

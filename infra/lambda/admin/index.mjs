@@ -17,7 +17,7 @@ function response(statusCode, body) {
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': statusCode === 200 && !body._nocache ? 'public, max-age=300' : 'no-store',
+      'Cache-Control': statusCode === 200 && !body._nocache ? 'public, max-age=60, stale-while-revalidate=120' : 'no-store',
     },
     body: JSON.stringify(body),
   };

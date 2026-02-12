@@ -83,17 +83,36 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderNewsItem } from '/src/js/components.js';
+    import { renderNewsItem, renderAnnouncementBlurb } from '/src/js/components.js';
+    import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const data = await ContentLoader.news();
-      if (!data?.posts) return;
+      const [data, marketInfo] = await Promise.all([
+        ContentLoader.news(),
+        getMarketInfo().catch(() => ({ announcements: [] })),
+      ]);
 
-      // Sort by date descending
-      const sorted = [...data.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
-      document.getElementById('news-list').innerHTML = sorted.map(renderNewsItem).join('');
+      const newsPosts = (data?.posts || []).map(p => ({ ...p, _type: 'news' }));
+      const announcements = (marketInfo.announcements || []).map(a => ({
+        ...a,
+        date: a.startDate,
+        _type: 'announcement',
+      }));
+
+      const combined = [...newsPosts, ...announcements]
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const listEl = document.getElementById('news-list');
+      if (combined.length === 0) {
+        listEl.innerHTML = '<p>No news or announcements at this time.</p>';
+        return;
+      }
+
+      listEl.innerHTML = combined.map(item =>
+        item._type === 'announcement' ? renderAnnouncementBlurb(item) : renderNewsItem(item)
+      ).join('');
     });
   </script>
 

@@ -71,6 +71,21 @@ export class StaticSiteStack extends cdk.Stack {
       },
     });
 
+    // ── Short-lived cache policy for dynamic content (HTML, JSON) ──
+    const shortCachePolicy = new cloudfront.CachePolicy(this, 'ShortCachePolicy', {
+      cachePolicyName: 'KneadBakeShortCache',
+      defaultTtl: cdk.Duration.seconds(60),
+      maxTtl: cdk.Duration.seconds(180),
+      minTtl: cdk.Duration.seconds(0),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+    });
+
+    // ── S3 origin (shared by all behaviors) ──
+    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket, {
+      originAccessControl: oac,
+    });
+
     // ── CloudFront Distribution ──
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       comment: 'Knead & Bake TX',
@@ -80,9 +95,7 @@ export class StaticSiteStack extends cdk.Stack {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
 
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket, {
-          originAccessControl: oac,
-        }),
+        origin: s3Origin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         responseHeadersPolicy: securityHeaders,
@@ -90,6 +103,15 @@ export class StaticSiteStack extends cdk.Stack {
           function: urlRewriteFunction,
           eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
         }],
+      },
+
+      additionalBehaviors: {
+        '/content/*': {
+          origin: s3Origin,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: shortCachePolicy,
+          responseHeadersPolicy: securityHeaders,
+        },
       },
 
       // Custom error responses for SPA-like behavior
