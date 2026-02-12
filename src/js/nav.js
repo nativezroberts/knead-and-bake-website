@@ -37,6 +37,15 @@ export function initNav() {
   closeBtn?.addEventListener('click', closeMenu);
   backdrop?.addEventListener('click', closeMenu);
 
+  // Close drawer when a mobile nav link is selected.
+  document.querySelectorAll('.mobile-nav__link, .mobile-nav__cta').forEach((link) => {
+    link.addEventListener('click', () => {
+      if (mobileNav?.classList.contains('is-open')) {
+        closeMenu();
+      }
+    });
+  });
+
   // Close on Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && mobileNav?.classList.contains('is-open')) {
@@ -45,9 +54,13 @@ export function initNav() {
   });
 
   // Mark active nav link
-  const currentPath = window.location.pathname;
+  const normalizePath = (path) => {
+    if (!path) return '/';
+    return path === '/index.html' ? '/' : path;
+  };
+  const currentPath = normalizePath(window.location.pathname);
   document.querySelectorAll('.nav__link, .mobile-nav__link').forEach(link => {
-    const href = link.getAttribute('href');
+    const href = normalizePath(link.getAttribute('href'));
     if (href === currentPath || (href !== '/' && currentPath.startsWith(href))) {
       link.classList.add('is-active');
     }
