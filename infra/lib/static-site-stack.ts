@@ -27,6 +27,7 @@ export class StaticSiteStack extends cdk.Stack {
           allowedOrigins: [
             'https://kneadandbaketx.com',
             'https://www.kneadandbaketx.com',
+            'https://d7xgnh51ijjd2.cloudfront.net',
             'http://localhost:3000',
             'http://localhost:8080',
           ],
