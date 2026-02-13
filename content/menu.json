@@ -139,15 +139,15 @@
     },
     {
       "sku": "NL-001",
-      "name": "Sourdough Focaccia (Half Sheet)",
+      "name": "Sourdough Focaccia - Cinnamon Brown Sugar(Half Sheet)",
       "category": "non-loaf",
-      "description": "Crispy-bottomed, olive-oil-drenched focaccia topped with flaky salt and fresh herbs.",
+      "description": "Crispy-bottomed, Cinnamon Brown Sugar focaccia that is to die for! Perfect for breakfast, snacks, or dessert.",
       "price": 15.00,
       "allergens": ["wheat"],
       "available": false,
       "seasonal": false,
       "topSeller": false,
-      "image": "/images/menu/focaccia.jpg"
+      "image": "/images/menu/KnB_Focaccia_CinnamonBrownSugar.png"
     },
     {
       "sku": "NL-002",
