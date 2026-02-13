@@ -572,7 +572,7 @@
 [data-reveal="up"]    { transform: translateY(30px); }
 [data-reveal="left"]  { transform: translateX(-30px); }
 [data-reveal="right"] { transform: translateX(30px); }
-[data-reveal="scale"] { transform: scale(0.95); }
+[data-reveal="scale"] { transform: scale(0.50); }/* was [data-reveal="scale"] { transform: scale(0.95); } */
 
 .reveal {
   transition: opacity 600ms ease, transform 600ms ease;

@@ -301,6 +301,7 @@
 /* ── Hero ── */
 .hero {
   position: relative;
+  z-index: 1;
   padding-block: var(--space-16) var(--space-12);
   background: linear-gradient(135deg, var(--color-cream) 0%, var(--color-wheat-light) 50%, var(--color-cream) 100%);
   overflow: hidden;
