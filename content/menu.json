@@ -153,13 +153,13 @@
       "sku": "NL-002",
       "name": "Sourdough Discard Crackers",
       "category": "non-loaf",
-      "description": "Thin, crispy crackers made from sourdough discard. Perfect with cheese or hummus.",
+      "description": "Various Flavors: Plain, Everything Bagel, Parmesan... Thin, crispy crackers made from sourdough discard. Perfect with cheese or hummus.",
       "price": 7.00,
       "allergens": ["wheat"],
       "available": false,
       "seasonal": false,
       "topSeller": false,
-      "image": "/images/menu/crackers.jpg"
+      "image": "/images/menu/crackers.png"
     },
     {
       "sku": "NL-003",
