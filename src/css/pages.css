@@ -564,18 +564,22 @@
    Scroll-Reveal Animations
    ========================================================================== */
 
-.reveal {
+/* Initial hidden state applied via CSS to prevent flash of content */
+[data-reveal] {
   opacity: 0;
+}
+
+[data-reveal="up"]    { transform: translateY(30px); }
+[data-reveal="left"]  { transform: translateX(-30px); }
+[data-reveal="right"] { transform: translateX(30px); }
+[data-reveal="scale"] { transform: scale(0.95); }
+
+.reveal {
   transition: opacity 600ms ease, transform 600ms ease;
   will-change: opacity, transform;
 }
 
-.reveal-up    { transform: translateY(30px); }
-.reveal-left  { transform: translateX(-30px); }
-.reveal-right { transform: translateX(30px); }
-.reveal-scale { transform: scale(0.95); }
-
-.reveal.is-revealed {
+[data-reveal].is-revealed {
   opacity: 1;
   transform: none;
 }
@@ -590,7 +594,7 @@
 
 /* Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
+  [data-reveal] {
     opacity: 1;
     transform: none;
     transition: none;

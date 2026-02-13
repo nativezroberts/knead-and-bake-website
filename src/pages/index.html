@@ -201,24 +201,26 @@
     import { renderCard, renderTestimonial, renderNextMarket, renderAnnouncementBanner, renderSkipNotice } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      initNav();
+    // Init nav immediately — don't wait for DOMContentLoaded which may
+    // have already fired by the time module imports resolve on slow connections.
+    initNav();
 
-      // Scroll-reveal: observe all [data-reveal] elements
-      const revealEls = document.querySelectorAll('[data-reveal]');
-      const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-revealed');
-            revealObserver.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.15 });
-      revealEls.forEach(el => {
-        el.classList.add('reveal', `reveal-${el.dataset.reveal}`);
-        revealObserver.observe(el);
+    // Scroll-reveal: observe all [data-reveal] elements
+    const revealEls = document.querySelectorAll('[data-reveal]');
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-revealed');
+          revealObserver.unobserve(entry.target);
+        }
       });
+    }, { threshold: 0.15 });
+    revealEls.forEach(el => {
+      el.classList.add('reveal');
+      revealObserver.observe(el);
+    });
 
+    document.addEventListener('DOMContentLoaded', async () => {
       const [marketInfo, menuData, testimonialData] = await Promise.all([
         getMarketInfo(),
         ContentLoader.menu(),
