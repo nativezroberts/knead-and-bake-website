@@ -1,15 +1,20 @@
 /**
- * Admin Page — login, skip date management, announcement management, news post management.
+ * Admin Page - login, skip date management, announcement management, news post management.
  */
 
+import { renderMarkdown } from './markdown.js';
+
 const API_BASE = window.__API_BASE || '';
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 let authToken = null;
 let editingAnnouncementId = null;
 let editingNewsPostId = null;
 let announcementsCache = [];
 let newsPostsCache = [];
 
-// ── Auth ──
+// -- Auth --
 async function login(password) {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
@@ -44,7 +49,7 @@ async function authFetch(url, options = {}) {
   return res;
 }
 
-// ── DOM Helpers ──
+// -- DOM Helpers --
 function $(id) { return document.getElementById(id); }
 
 function showLogin() {
@@ -66,6 +71,76 @@ function showAdmin() {
 function showError(el, msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
+}
+
+function setUploadStatus(msg, isError = false) {
+  const el = $('news-post-upload-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.color = isError ? 'var(--color-error)' : 'var(--text-secondary)';
+}
+
+function updateNewsPreview() {
+  const contentEl = $('news-post-content');
+  const previewEl = $('news-post-preview');
+  if (!contentEl || !previewEl) return;
+  previewEl.innerHTML = renderMarkdown(contentEl.value || '');
+}
+
+function insertAtCursor(textarea, text) {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  textarea.setRangeText(text, start, end, 'end');
+  textarea.focus();
+  updateNewsPreview();
+}
+
+function wrapSelection(textarea, before, after, placeholder) {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  const selected = textarea.value.slice(start, end);
+  const inner = selected || placeholder;
+  const replacement = `${before}${inner}${after}`;
+  textarea.setRangeText(replacement, start, end, 'end');
+
+  if (!selected) {
+    const cursorStart = start + before.length;
+    const cursorEnd = cursorStart + inner.length;
+    textarea.setSelectionRange(cursorStart, cursorEnd);
+  }
+
+  textarea.focus();
+  updateNewsPreview();
+}
+
+function prefixSelectedLines(textarea, prefixFn) {
+  const value = textarea.value;
+  const selectionStart = textarea.selectionStart ?? 0;
+  const selectionEnd = textarea.selectionEnd ?? value.length;
+  const blockStart = value.lastIndexOf('\n', Math.max(0, selectionStart - 1)) + 1;
+  const blockEndIdx = value.indexOf('\n', selectionEnd);
+  const blockEnd = blockEndIdx === -1 ? value.length : blockEndIdx;
+  const block = value.slice(blockStart, blockEnd);
+
+  const prefixed = block
+    .split('\n')
+    .map((line, idx) => {
+      if (!line.trim()) return line;
+      return prefixFn(line, idx);
+    })
+    .join('\n');
+
+  textarea.setRangeText(prefixed, blockStart, blockEnd, 'select');
+  textarea.focus();
+  updateNewsPreview();
+}
+
+function getSafeAltFromFileName(fileName) {
+  return fileName
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || 'News image';
 }
 
 function resetAnnouncementForm() {
@@ -110,6 +185,10 @@ function resetNewsPostForm() {
   $('news-post-content').value = '';
   $('news-post-start').value = '';
   $('news-post-end').value = '';
+  const imageInput = $('news-post-image-file');
+  if (imageInput) imageInput.value = '';
+  setUploadStatus('');
+  updateNewsPreview();
 }
 
 function startNewsPostEdit(post) {
@@ -124,9 +203,13 @@ function startNewsPostEdit(post) {
   $('news-post-content').value = post.content || '';
   $('news-post-start').value = post.startDate || '';
   $('news-post-end').value = post.endDate || '';
+  const imageInput = $('news-post-image-file');
+  if (imageInput) imageInput.value = '';
+  setUploadStatus('');
+  updateNewsPreview();
 }
 
-// ── Skip Dates ──
+// -- Skip Dates --
 async function loadSkipDates() {
   const container = $('skip-dates-list');
   container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
@@ -148,7 +231,7 @@ async function loadSkipDates() {
           ${skipDates.map(s => `
             <tr>
               <td>${s.date}</td>
-              <td>${s.reason || '—'}</td>
+              <td>${s.reason || '-'}</td>
               <td><button class="btn btn--sm btn--outline" onclick="deleteSkipDate('${s.date}')">Delete</button></td>
             </tr>
           `).join('')}
@@ -175,7 +258,7 @@ async function addSkipDate(e) {
     return;
   }
 
-  // Validate it's a Saturday
+  // Validate it is a Saturday
   const d = new Date(date + 'T12:00:00');
   if (d.getDay() !== 6) {
     showError(errorEl, 'Date must be a Saturday.');
@@ -214,7 +297,7 @@ window.deleteSkipDate = async function(date) {
   }
 };
 
-// ── Announcements ──
+// -- Announcements --
 async function loadAnnouncements() {
   const container = $('announcements-list');
   container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
@@ -241,7 +324,7 @@ async function loadAnnouncements() {
         <tbody>
           ${announcements.map(a => `
             <tr>
-              <td>${a.title || '—'}</td>
+              <td>${a.title || '-'}</td>
               <td>${a.message}</td>
               <td>${a.startDate} to ${a.endDate}</td>
               <td>${a.level}</td>
@@ -351,7 +434,7 @@ window.deleteAnnouncement = async function(id) {
   }
 };
 
-// ── News Posts ──
+// -- News Posts --
 async function loadNewsPosts() {
   const container = $('news-posts-list');
   container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
@@ -378,7 +461,7 @@ async function loadNewsPosts() {
         <tbody>
           ${posts.map(p => `
             <tr>
-              <td>${p.title || '—'}</td>
+              <td>${p.title || '-'}</td>
               <td>${p.startDate}</td>
               <td>${p.endDate || 'Indefinite'}</td>
               <td>${p.active ? 'Yes' : 'No'}</td>
@@ -492,7 +575,138 @@ window.deleteNewsPost = async function(id) {
   }
 };
 
-// ── Init ──
+async function uploadNewsImage(file) {
+  const contentEl = $('news-post-content');
+  if (!contentEl) return;
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error('Please upload PNG, JPG, WEBP, or GIF images only.');
+  }
+
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error('Image is too large. Maximum file size is 5 MB.');
+  }
+
+  const prepareRes = await authFetch(`${API_BASE}/api/admin/news/upload-url`, {
+    method: 'POST',
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    }),
+  });
+
+  const prepareData = await prepareRes.json();
+  if (!prepareRes.ok) {
+    throw new Error(prepareData.message || 'Failed to prepare image upload.');
+  }
+
+  const putRes = await fetch(prepareData.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  });
+
+  if (!putRes.ok) {
+    throw new Error('Image upload failed. Please try again.');
+  }
+
+  const altText = getSafeAltFromFileName(file.name);
+  const markdown = `\n\n![${altText}](${prepareData.publicUrl})\n\n`;
+  insertAtCursor(contentEl, markdown);
+}
+
+function handleMarkdownAction(action) {
+  const textarea = $('news-post-content');
+  if (!textarea) return;
+
+  if (action === 'bold') {
+    wrapSelection(textarea, '**', '**', 'bold text');
+    return;
+  }
+
+  if (action === 'italic') {
+    wrapSelection(textarea, '*', '*', 'italic text');
+    return;
+  }
+
+  if (action === 'heading') {
+    prefixSelectedLines(textarea, (line) => {
+      if (line.startsWith('## ')) return line;
+      return `## ${line}`;
+    });
+    return;
+  }
+
+  if (action === 'ul') {
+    prefixSelectedLines(textarea, (line) => {
+      if (line.startsWith('- ')) return line;
+      return `- ${line}`;
+    });
+    return;
+  }
+
+  if (action === 'ol') {
+    prefixSelectedLines(textarea, (line, idx) => {
+      const clean = line.replace(/^\d+\.\s+/, '');
+      return `${idx + 1}. ${clean}`;
+    });
+    return;
+  }
+
+  if (action === 'link') {
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    const selected = textarea.value.slice(start, end).trim();
+    const text = selected || 'link text';
+    const url = window.prompt('Enter URL (https://... or /path):', 'https://');
+    if (!url) return;
+    const markdown = `[${text}](${url.trim()})`;
+    textarea.setRangeText(markdown, start, end, 'end');
+    textarea.focus();
+    updateNewsPreview();
+  }
+}
+
+function initNewsEditor() {
+  const form = $('news-post-form');
+  const contentEl = $('news-post-content');
+  const uploadBtn = $('news-post-upload-btn');
+  const fileInput = $('news-post-image-file');
+
+  if (!form || !contentEl || !uploadBtn || !fileInput) return;
+
+  form.querySelectorAll('[data-md-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleMarkdownAction(btn.getAttribute('data-md-action')));
+  });
+
+  contentEl.addEventListener('input', updateNewsPreview);
+
+  uploadBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async () => {
+    if (!fileInput.files || fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+
+    setUploadStatus('Uploading image...');
+    try {
+      await uploadNewsImage(file);
+      setUploadStatus('Image uploaded and inserted into content.');
+    } catch (err) {
+      setUploadStatus(err.message || 'Upload failed.', true);
+    } finally {
+      fileInput.value = '';
+    }
+  });
+
+  updateNewsPreview();
+}
+
+// -- Init --
 export function initAdmin() {
   // Login form
   const loginForm = $('login-form');
@@ -520,4 +734,6 @@ export function initAdmin() {
   // News post form
   $('news-post-form').addEventListener('submit', addNewsPost);
   $('news-post-cancel-edit-btn').addEventListener('click', window.cancelNewsPostEdit);
+
+  initNewsEditor();
 }

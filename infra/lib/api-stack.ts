@@ -6,11 +6,16 @@ import * as apigwv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations'
 import * as apigwv2authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
+interface ApiStackProps extends cdk.StackProps {
+  siteBucket: s3.IBucket;
+}
+
 export class ApiStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
     // ── Orders DynamoDB Table ──
@@ -129,11 +134,14 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       environment: {
         CONFIG_TABLE: configTable.tableName,
+        SITE_BUCKET: props.siteBucket.bucketName,
+        SITE_UPLOAD_PREFIX: 'news-images',
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
     configTable.grantReadWriteData(adminFn);
+    props.siteBucket.grantPut(adminFn, 'news-images/*');
 
     // ── API Gateway HTTP API ──
     const httpApi = new apigwv2.HttpApi(this, 'OrderApi', {
@@ -231,6 +239,13 @@ export class ApiStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/api/admin/news',
       methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: '/api/admin/news/upload-url',
+      methods: [apigwv2.HttpMethod.POST],
       integration: adminIntegration,
       authorizer: jwtAuthorizer,
     });

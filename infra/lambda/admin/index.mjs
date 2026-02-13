@@ -5,13 +5,20 @@
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const s3 = new S3Client({});
 const TABLE_NAME = process.env.CONFIG_TABLE;
+const SITE_BUCKET = process.env.SITE_BUCKET;
+const SITE_UPLOAD_PREFIX = process.env.SITE_UPLOAD_PREFIX || 'news-images';
 const MAX_SKIP_DATES = 365;
 const MAX_ANNOUNCEMENTS = 50;
 const MAX_NEWS_POSTS = 200;
+const MAX_NEWS_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_NEWS_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 function response(statusCode, body) {
   return {
@@ -40,6 +47,14 @@ function isSaturday(dateStr) {
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+}
+
+function extensionFromContentType(contentType) {
+  if (contentType === 'image/jpeg') return 'jpg';
+  if (contentType === 'image/png') return 'png';
+  if (contentType === 'image/webp') return 'webp';
+  if (contentType === 'image/gif') return 'gif';
+  return null;
 }
 
 async function queryByType(type) {
@@ -493,6 +508,56 @@ async function deleteNewsPost(id) {
   return response(200, { message: 'News post deleted.' });
 }
 
+async function createNewsImageUploadUrl(body) {
+  if (!SITE_BUCKET) {
+    return response(500, { message: 'Upload bucket is not configured.' });
+  }
+
+  const contentType = typeof body.contentType === 'string' ? body.contentType : '';
+  const fileName = typeof body.fileName === 'string' ? body.fileName : '';
+  const size = Number(body.size);
+
+  if (!ALLOWED_NEWS_IMAGE_TYPES.has(contentType)) {
+    return response(400, { message: 'Invalid image type. Allowed: JPG, PNG, WEBP, GIF.' });
+  }
+
+  if (!Number.isFinite(size) || size < 1 || size > MAX_NEWS_IMAGE_SIZE_BYTES) {
+    return response(400, { message: 'Invalid image size. Max 5 MB.' });
+  }
+
+  if (!fileName || fileName.trim().length < 1) {
+    return response(400, { message: 'File name is required.' });
+  }
+
+  const ext = extensionFromContentType(contentType);
+  if (!ext) {
+    return response(400, { message: 'Unsupported image type.' });
+  }
+
+  const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+  const safeBaseName = slugify(nameWithoutExt) || 'image';
+  const datePrefix = new Date().toISOString().slice(0, 10);
+  const key = `${SITE_UPLOAD_PREFIX}/${datePrefix}/${randomUUID()}-${safeBaseName}.${ext}`;
+
+  try {
+    const putCommand = new PutObjectCommand({
+      Bucket: SITE_BUCKET,
+      Key: key,
+      ContentType: contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
+    });
+
+    const uploadUrl = await getSignedUrl(s3, putCommand, { expiresIn: 300 });
+    return response(200, {
+      uploadUrl,
+      publicUrl: `/${key}`,
+    });
+  } catch (e) {
+    console.error('Failed to create upload URL:', e);
+    return response(500, { message: 'Failed to prepare image upload.' });
+  }
+}
+
 // ── Router ──
 export async function handler(event) {
   const method = event.requestContext?.http?.method;
@@ -541,6 +606,10 @@ export async function handler(event) {
   }
 
   // News posts
+  if (path === '/api/admin/news/upload-url' && method === 'POST') {
+    return createNewsImageUploadUrl(body);
+  }
+
   if (path === '/api/admin/news') {
     if (method === 'GET') return listNewsPosts();
     if (method === 'POST') return createNewsPost(body);

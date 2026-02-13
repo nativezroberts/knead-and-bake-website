@@ -86,6 +86,7 @@
   </script>
   <script type="module">
     import { initNav } from '/src/js/nav.js';
+    import { renderMarkdown } from '/src/js/markdown.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
@@ -120,29 +121,7 @@
         document.getElementById('post-date').textContent =
           d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Render content paragraphs with basic markdown support
-        const paragraphs = (post.content || '').split(/\n\n+/).filter(p => p.trim());
-        const regularParagraphs = [];
-        const listItems = [];
-
-        for (const p of paragraphs) {
-          const html = p
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-          if (html.startsWith('- ')) {
-            listItems.push(html.slice(2));
-          } else {
-            regularParagraphs.push(`<p>${html}</p>`);
-          }
-        }
-
-        let contentHtml = regularParagraphs.join('');
-        if (listItems.length > 0) {
-          contentHtml += '<ul>' + listItems.map(li => `<li>${li}</li>`).join('') + '</ul>';
-        }
-
-        document.getElementById('post-content').innerHTML = contentHtml;
+        document.getElementById('post-content').innerHTML = renderMarkdown(post.content || '');
       } catch (err) {
         console.error('Failed to load post:', err);
         document.getElementById('post-title').textContent = 'Failed to load post';

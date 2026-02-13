@@ -13,13 +13,14 @@ const env = {
 // Static site: S3 + CloudFront (+ optional Route 53 + ACM)
 const site = new StaticSiteStack(app, 'KneadBakeSite', {
   env,
-  description: 'Knead & Bake TX — static site (S3 + CloudFront)',
+  description: 'Knead & Bake TX - static site (S3 + CloudFront)',
 });
 
 // API: API Gateway + Lambda + DynamoDB (+ optional SES + WAF)
-const api = new ApiStack(app, 'KneadBakeApi', {
+new ApiStack(app, 'KneadBakeApi', {
   env,
-  description: 'Knead & Bake TX — order API (APIGW + Lambda + DynamoDB)',
+  siteBucket: site.siteBucket,
+  description: 'Knead & Bake TX - order API (APIGW + Lambda + DynamoDB)',
 });
 
 app.synth();

@@ -21,6 +21,20 @@ export class StaticSiteStack extends cdk.Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       autoDeleteObjects: false,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.HEAD, s3.HttpMethods.PUT],
+          allowedOrigins: [
+            'https://kneadandbaketx.com',
+            'https://www.kneadandbaketx.com',
+            'http://localhost:3000',
+            'http://localhost:8080',
+          ],
+          allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
+          maxAge: 3000,
+        },
+      ],
     });
 
     // ── CloudFront Origin Access Control ──
@@ -135,6 +149,7 @@ export class StaticSiteStack extends cdk.Stack {
     new s3deploy.BucketDeployment(this, 'DeploySite', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '..', '..', 'dist'))],
       destinationBucket: this.siteBucket,
+      prune: false, // keep admin-uploaded assets (e.g. /news-images/*) between deploys
       distribution: this.distribution,
       distributionPaths: ['/*'],
       memoryLimit: 512,
