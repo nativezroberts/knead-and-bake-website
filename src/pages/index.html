@@ -80,7 +80,7 @@
     <!-- Hero -->
     <section class="hero">
       <div class="hero__inner">
-        <div>
+        <div data-reveal="up">
           <span class="hero__kicker">Castell Street Market · New Braunfels, TX</span>
           <h1 class="hero__title">Small-batch sourdough,<br>made by hand.</h1>
           <p class="hero__desc">Slow-fermented artisan bread baked fresh every Saturday. Simple ingredients, no shortcuts, incredible flavor.</p>
@@ -89,7 +89,7 @@
             <a href="/menu.html" class="btn btn--outline btn--lg">View Menu</a>
           </div>
         </div>
-        <div>
+        <div data-reveal="right">
           <img class="hero__image" src="/images/home-sourdough.jpg" alt="Fresh sourdough loaf with golden crust" width="600" height="450" loading="eager">
         </div>
       </div>
@@ -98,18 +98,18 @@
     <!-- Next Market Panel -->
     <section class="section section--white">
       <div class="container">
-        <div id="next-market-panel"></div>
+        <div id="next-market-panel" data-reveal="up"></div>
       </div>
     </section>
 
     <!-- Top Sellers -->
     <section class="section section--cream">
       <div class="container">
-        <div class="section__header">
+        <div class="section__header" data-reveal="up">
           <h2 class="section__title">Customer Favorites</h2>
           <p class="section__subtitle">Our most-loved loaves — the ones that sell out first every Saturday.</p>
         </div>
-        <div id="top-sellers" class="top-sellers"></div>
+        <div id="top-sellers" class="top-sellers reveal-stagger" data-reveal="up"></div>
         <div class="text-center mt-8">
           <a href="/menu.html" class="btn btn--outline">See Full Menu</a>
         </div>
@@ -119,26 +119,26 @@
     <!-- Seasonal Spotlight -->
     <section class="section section--white">
       <div class="container">
-        <div class="section__header">
+        <div class="section__header" data-reveal="up">
           <h2 class="section__title">Seasonal Spotlight</h2>
         </div>
-        <div id="seasonal-spotlight" class="spotlight"></div>
+        <div id="seasonal-spotlight" class="spotlight" data-reveal="up"></div>
       </div>
     </section>
 
     <!-- Social Proof -->
     <section class="section section--cream">
       <div class="container">
-        <div class="section__header">
+        <div class="section__header" data-reveal="up">
           <h2 class="section__title">What Our Customers Say</h2>
         </div>
-        <div id="testimonials" class="testimonials"></div>
+        <div id="testimonials" class="testimonials reveal-stagger" data-reveal="up"></div>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="section section--brown">
-      <div class="container text-center">
+      <div class="container text-center" data-reveal="up">
         <h2 class="section__title">Ready to Try Real Sourdough?</h2>
         <p class="section__subtitle mb-8">Preorder your loaves now and pick them up fresh at the market this Saturday.</p>
         <a href="/preorder.html" class="btn btn--wheat btn--lg">Place Your Preorder</a>
@@ -203,6 +203,21 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
+
+      // Scroll-reveal: observe all [data-reveal] elements
+      const revealEls = document.querySelectorAll('[data-reveal]');
+      const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      revealEls.forEach(el => {
+        el.classList.add('reveal', `reveal-${el.dataset.reveal}`);
+        revealObserver.observe(el);
+      });
 
       const [marketInfo, menuData, testimonialData] = await Promise.all([
         getMarketInfo(),
