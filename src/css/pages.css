@@ -395,6 +395,19 @@
   margin-bottom: var(--space-2);
 }
 
+.news-item__badge {
+  display: inline-block;
+  background: var(--color-primary, #E8C872);
+  color: var(--color-brown, #5C3D2E);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  padding: 0.1em 0.5em;
+  border-radius: var(--radius-sm, 4px);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-right: var(--space-2);
+}
+
 .news-item__title {
   font-family: var(--font-heading);
   font-size: var(--text-xl);

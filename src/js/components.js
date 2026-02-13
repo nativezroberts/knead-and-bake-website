@@ -44,13 +44,14 @@ export function renderTestimonial({ text, author, source }) {
   `;
 }
 
-export function renderNewsItem({ id, title, subtitle, startDate, excerpt }) {
+export function renderNewsItem({ id, title, subtitle, startDate, excerpt, type }) {
   const d = new Date(startDate + 'T00:00:00');
   const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const url = `/news-detail.html?id=${id}`;
+  const badge = type === 'announcement' ? '<span class="news-item__badge">Announcement</span> ' : '';
   return `
     <article class="news-item">
-      <time class="news-item__date" datetime="${startDate}">${formatted}</time>
+      <time class="news-item__date" datetime="${startDate}">${badge}${formatted}</time>
       <h3 class="news-item__title"><a href="${url}">${title}</a></h3>
       ${subtitle ? `<p class="news-item__subtitle">${subtitle}</p>` : ''}
       ${excerpt ? `<p class="news-item__excerpt">${excerpt}</p>` : ''}

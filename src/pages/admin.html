@@ -117,8 +117,24 @@
                 <input type="text" id="announcement-excerpt" class="form-input" placeholder="e.g. We'll be taking a break for the holidays and returning Jan 4th.">
               </div>
               <div class="form-group">
-                <label for="announcement-content" class="form-label">Content <span style="color:var(--text-secondary);font-weight:normal">(full article body — separate paragraphs with blank lines)</span></label>
+                <label for="announcement-content" class="form-label">Content <span style="color:var(--text-secondary);font-weight:normal">(full article body — supports markdown formatting)</span></label>
+                <div class="editor-toolbar" role="toolbar" aria-label="Announcement content formatting">
+                  <button type="button" class="btn btn--outline btn--sm" data-md-action="bold"><strong>B</strong></button>
+                  <button type="button" class="btn btn--outline btn--sm" data-md-action="italic"><em>I</em></button>
+                  <button type="button" class="btn btn--outline btn--sm" data-md-action="heading">H2</button>
+                  <button type="button" class="btn btn--outline btn--sm" data-md-action="link">Link</button>
+                  <button type="button" class="btn btn--outline btn--sm" data-md-action="ul">Bullets</button>
+                  <button type="button" class="btn btn--outline btn--sm" data-md-action="ol">Numbers</button>
+                  <button type="button" id="announcement-upload-btn" class="btn btn--outline btn--sm">Upload Image</button>
+                  <input type="file" id="announcement-image-file" class="hidden" accept="image/png,image/jpeg,image/webp,image/gif">
+                </div>
                 <textarea id="announcement-content" class="form-textarea" rows="6" placeholder="Write the full announcement details here..."></textarea>
+                <div id="announcement-upload-status" class="editor-upload-status" aria-live="polite"></div>
+                <p class="editor-hint">Supported markdown: **bold**, *italic*, # headings, links, lists, and images.</p>
+              </div>
+              <div class="form-group">
+                <label for="announcement-preview" class="form-label">Preview</label>
+                <div id="announcement-preview" class="editor-preview prose"></div>
               </div>
               <div class="form-group">
                 <label for="announcement-message" class="form-label">Banner Message <span style="color:var(--text-secondary);font-weight:normal">(shown on homepage)</span></label>
@@ -222,7 +238,7 @@
     window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
   </script>
   <script type="module">
-    import { initAdmin } from '/src/js/admin.js';
+    import { initAdmin } from '/src/js/admin.js?v=2';
     document.addEventListener('DOMContentLoaded', () => { initAdmin(); });
   </script>
 

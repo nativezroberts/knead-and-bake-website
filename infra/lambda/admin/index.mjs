@@ -190,7 +190,7 @@ async function createAnnouncement(body) {
     id: randomUUID(),
     title: sanitize(title || '', 200),
     excerpt: sanitize(excerpt || '', 500),
-    content: sanitize(content || '', 5000),
+    content: sanitize(content || '', 10000),
     message: sanitize(message, 500),
     startDate,
     endDate,
@@ -249,7 +249,7 @@ async function updateAnnouncement(id, body) {
   }
   if (body.content !== undefined) {
     setClauses.push('content = :cnt');
-    expValues[':cnt'] = sanitize(body.content, 5000);
+    expValues[':cnt'] = sanitize(body.content, 10000);
   }
   if (body.message !== undefined) {
     setClauses.push('#msg = :msg');
@@ -308,10 +308,13 @@ async function deleteAnnouncement(id) {
 
 // ── Public news endpoint ──
 async function handlePublicNews() {
-  const items = await queryByType('NEWS');
+  const [newsItems, announcementItems] = await Promise.all([
+    queryByType('NEWS'),
+    queryByType('ANNOUNCEMENT'),
+  ]);
   const now = new Date().toISOString().slice(0, 10);
 
-  const posts = items
+  const newsPosts = newsItems
     .filter(item =>
       item.active &&
       item.startDate <= now &&
@@ -319,6 +322,7 @@ async function handlePublicNews() {
     )
     .map(item => ({
       id: item.id,
+      type: 'news',
       title: item.title,
       subtitle: item.subtitle || '',
       excerpt: item.excerpt,
@@ -327,7 +331,29 @@ async function handlePublicNews() {
       endDate: item.endDate || null,
       slug: item.slug,
       createdAt: item.createdAt,
-    }))
+    }));
+
+  const announcementPosts = announcementItems
+    .filter(a =>
+      a.active &&
+      a.startDate <= now &&
+      a.endDate >= now &&
+      a.content && a.content.trim()
+    )
+    .map(a => ({
+      id: a.id,
+      type: 'announcement',
+      title: a.title || 'Announcement',
+      subtitle: '',
+      excerpt: a.excerpt || a.message || '',
+      content: a.content,
+      startDate: a.startDate,
+      endDate: a.endDate || null,
+      slug: '',
+      createdAt: a.createdAt,
+    }));
+
+  const posts = [...newsPosts, ...announcementPosts]
     .sort((a, b) => b.startDate.localeCompare(a.startDate));
 
   return response(200, { posts });

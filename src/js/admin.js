@@ -73,29 +73,37 @@ function showError(el, msg) {
   el.classList.remove('hidden');
 }
 
-function setUploadStatus(msg, isError = false) {
-  const el = $('news-post-upload-status');
+function setUploadStatus(statusElId, msg, isError = false) {
+  const el = $(statusElId);
   if (!el) return;
   el.textContent = msg || '';
   el.style.color = isError ? 'var(--color-error)' : 'var(--text-secondary)';
 }
 
-function updateNewsPreview() {
-  const contentEl = $('news-post-content');
-  const previewEl = $('news-post-preview');
+function updatePreview(textareaId, previewId) {
+  const contentEl = $(textareaId);
+  const previewEl = $(previewId);
   if (!contentEl || !previewEl) return;
   previewEl.innerHTML = renderMarkdown(contentEl.value || '');
 }
 
-function insertAtCursor(textarea, text) {
+function updateNewsPreview() {
+  updatePreview('news-post-content', 'news-post-preview');
+}
+
+function updateAnnouncementPreview() {
+  updatePreview('announcement-content', 'announcement-preview');
+}
+
+function insertAtCursor(textarea, text, onUpdate) {
   const start = textarea.selectionStart ?? textarea.value.length;
   const end = textarea.selectionEnd ?? textarea.value.length;
   textarea.setRangeText(text, start, end, 'end');
   textarea.focus();
-  updateNewsPreview();
+  if (onUpdate) onUpdate();
 }
 
-function wrapSelection(textarea, before, after, placeholder) {
+function wrapSelection(textarea, before, after, placeholder, onUpdate) {
   const start = textarea.selectionStart ?? textarea.value.length;
   const end = textarea.selectionEnd ?? textarea.value.length;
   const selected = textarea.value.slice(start, end);
@@ -110,10 +118,10 @@ function wrapSelection(textarea, before, after, placeholder) {
   }
 
   textarea.focus();
-  updateNewsPreview();
+  if (onUpdate) onUpdate();
 }
 
-function prefixSelectedLines(textarea, prefixFn) {
+function prefixSelectedLines(textarea, prefixFn, onUpdate) {
   const value = textarea.value;
   const selectionStart = textarea.selectionStart ?? 0;
   const selectionEnd = textarea.selectionEnd ?? value.length;
@@ -132,7 +140,7 @@ function prefixSelectedLines(textarea, prefixFn) {
 
   textarea.setRangeText(prefixed, blockStart, blockEnd, 'select');
   textarea.focus();
-  updateNewsPreview();
+  if (onUpdate) onUpdate();
 }
 
 function getSafeAltFromFileName(fileName) {
@@ -156,6 +164,10 @@ function resetAnnouncementForm() {
   $('announcement-start').value = '';
   $('announcement-end').value = '';
   $('announcement-level').value = 'info';
+  const imageInput = $('announcement-image-file');
+  if (imageInput) imageInput.value = '';
+  setUploadStatus('announcement-upload-status', '');
+  updateAnnouncementPreview();
 }
 
 function startAnnouncementEdit(announcement) {
@@ -171,6 +183,10 @@ function startAnnouncementEdit(announcement) {
   $('announcement-start').value = announcement.startDate || '';
   $('announcement-end').value = announcement.endDate || '';
   $('announcement-level').value = announcement.level === 'warning' ? 'warning' : 'info';
+  const imageInput = $('announcement-image-file');
+  if (imageInput) imageInput.value = '';
+  setUploadStatus('announcement-upload-status', '');
+  updateAnnouncementPreview();
 }
 
 function resetNewsPostForm() {
@@ -187,7 +203,7 @@ function resetNewsPostForm() {
   $('news-post-end').value = '';
   const imageInput = $('news-post-image-file');
   if (imageInput) imageInput.value = '';
-  setUploadStatus('');
+  setUploadStatus('news-post-upload-status', '');
   updateNewsPreview();
 }
 
@@ -205,7 +221,7 @@ function startNewsPostEdit(post) {
   $('news-post-end').value = post.endDate || '';
   const imageInput = $('news-post-image-file');
   if (imageInput) imageInput.value = '';
-  setUploadStatus('');
+  setUploadStatus('news-post-upload-status', '');
   updateNewsPreview();
 }
 
@@ -575,8 +591,8 @@ window.deleteNewsPost = async function(id) {
   }
 };
 
-async function uploadNewsImage(file) {
-  const contentEl = $('news-post-content');
+async function uploadImage(file, textareaId, onUpdate) {
+  const contentEl = $(textareaId);
   if (!contentEl) return;
 
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
@@ -615,20 +631,20 @@ async function uploadNewsImage(file) {
 
   const altText = getSafeAltFromFileName(file.name);
   const markdown = `\n\n![${altText}](${prepareData.publicUrl})\n\n`;
-  insertAtCursor(contentEl, markdown);
+  insertAtCursor(contentEl, markdown, onUpdate);
 }
 
-function handleMarkdownAction(action) {
-  const textarea = $('news-post-content');
+function handleMarkdownAction(action, textareaId, onUpdate) {
+  const textarea = $(textareaId);
   if (!textarea) return;
 
   if (action === 'bold') {
-    wrapSelection(textarea, '**', '**', 'bold text');
+    wrapSelection(textarea, '**', '**', 'bold text', onUpdate);
     return;
   }
 
   if (action === 'italic') {
-    wrapSelection(textarea, '*', '*', 'italic text');
+    wrapSelection(textarea, '*', '*', 'italic text', onUpdate);
     return;
   }
 
@@ -636,7 +652,7 @@ function handleMarkdownAction(action) {
     prefixSelectedLines(textarea, (line) => {
       if (line.startsWith('## ')) return line;
       return `## ${line}`;
-    });
+    }, onUpdate);
     return;
   }
 
@@ -644,7 +660,7 @@ function handleMarkdownAction(action) {
     prefixSelectedLines(textarea, (line) => {
       if (line.startsWith('- ')) return line;
       return `- ${line}`;
-    });
+    }, onUpdate);
     return;
   }
 
@@ -652,7 +668,7 @@ function handleMarkdownAction(action) {
     prefixSelectedLines(textarea, (line, idx) => {
       const clean = line.replace(/^\d+\.\s+/, '');
       return `${idx + 1}. ${clean}`;
-    });
+    }, onUpdate);
     return;
   }
 
@@ -666,7 +682,7 @@ function handleMarkdownAction(action) {
     const markdown = `[${text}](${url.trim()})`;
     textarea.setRangeText(markdown, start, end, 'end');
     textarea.focus();
-    updateNewsPreview();
+    if (onUpdate) onUpdate();
   }
 }
 
@@ -679,7 +695,7 @@ function initNewsEditor() {
   if (!form || !contentEl || !uploadBtn || !fileInput) return;
 
   form.querySelectorAll('[data-md-action]').forEach(btn => {
-    btn.addEventListener('click', () => handleMarkdownAction(btn.getAttribute('data-md-action')));
+    btn.addEventListener('click', () => handleMarkdownAction(btn.getAttribute('data-md-action'), 'news-post-content', updateNewsPreview));
   });
 
   contentEl.addEventListener('input', updateNewsPreview);
@@ -692,18 +708,54 @@ function initNewsEditor() {
     if (!fileInput.files || fileInput.files.length === 0) return;
     const file = fileInput.files[0];
 
-    setUploadStatus('Uploading image...');
+    setUploadStatus('news-post-upload-status', 'Uploading image...');
     try {
-      await uploadNewsImage(file);
-      setUploadStatus('Image uploaded and inserted into content.');
+      await uploadImage(file, 'news-post-content', updateNewsPreview);
+      setUploadStatus('news-post-upload-status', 'Image uploaded and inserted into content.');
     } catch (err) {
-      setUploadStatus(err.message || 'Upload failed.', true);
+      setUploadStatus('news-post-upload-status', err.message || 'Upload failed.', true);
     } finally {
       fileInput.value = '';
     }
   });
 
   updateNewsPreview();
+}
+
+function initAnnouncementEditor() {
+  const form = $('announcement-form');
+  const contentEl = $('announcement-content');
+  const uploadBtn = $('announcement-upload-btn');
+  const fileInput = $('announcement-image-file');
+
+  if (!form || !contentEl || !uploadBtn || !fileInput) return;
+
+  form.querySelectorAll('[data-md-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleMarkdownAction(btn.getAttribute('data-md-action'), 'announcement-content', updateAnnouncementPreview));
+  });
+
+  contentEl.addEventListener('input', updateAnnouncementPreview);
+
+  uploadBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async () => {
+    if (!fileInput.files || fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+
+    setUploadStatus('announcement-upload-status', 'Uploading image...');
+    try {
+      await uploadImage(file, 'announcement-content', updateAnnouncementPreview);
+      setUploadStatus('announcement-upload-status', 'Image uploaded and inserted into content.');
+    } catch (err) {
+      setUploadStatus('announcement-upload-status', err.message || 'Upload failed.', true);
+    } finally {
+      fileInput.value = '';
+    }
+  });
+
+  updateAnnouncementPreview();
 }
 
 // -- Init --
@@ -736,4 +788,5 @@ export function initAdmin() {
   $('news-post-cancel-edit-btn').addEventListener('click', window.cancelNewsPostEdit);
 
   initNewsEditor();
+  initAnnouncementEditor();
 }
