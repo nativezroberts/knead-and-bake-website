@@ -1,20 +1,22 @@
 /**
  * Order submission Lambda — API Gateway HTTP API handler.
- * Validates input, writes to DynamoDB, optionally sends SES emails.
+ * Validates input, deducts inventory atomically, writes to DynamoDB, sends SES emails.
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { randomUUID } from 'crypto';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ses = new SESClient({});
 
-const TABLE_NAME = process.env.ORDERS_TABLE;
-const OWNER_EMAIL = process.env.OWNER_EMAIL || 'orders@kneadandbaketx.com';
+const ORDERS_TABLE = process.env.ORDERS_TABLE;
+const CONFIG_TABLE = process.env.CONFIG_TABLE;
+const OWNER_EMAIL = process.env.OWNER_EMAIL || 'allyson.m.roberts@gmail.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
 const SEND_EMAILS = process.env.SEND_EMAILS === 'true';
+const SES_SANDBOX = process.env.SES_SANDBOX === 'true';
 
 // Simple in-memory rate limiter (per Lambda instance)
 const rateLimiter = new Map();
@@ -50,6 +52,12 @@ function sanitize(str) {
   return str.replace(/[<>]/g, '').trim().slice(0, 500);
 }
 
+function validatePhone(phone) {
+  if (!phone || typeof phone !== 'string') return false;
+  const digits = phone.replace(/\D/g, '');
+  return digits.length >= 10;
+}
+
 export async function handler(event) {
   // Rate limit by source IP
   const ip = event.requestContext?.http?.sourceIp || 'unknown';
@@ -76,8 +84,13 @@ export async function handler(event) {
     return response(400, { message: 'Name is required (min 2 characters).' });
   }
 
-  if (!email || !validateEmail(email)) {
-    return response(400, { message: 'A valid email address is required.' });
+  if (!validatePhone(phone)) {
+    return response(400, { message: 'A valid phone number is required (at least 10 digits).' });
+  }
+
+  // Email is optional, but validate format if provided
+  if (email && !validateEmail(email)) {
+    return response(400, { message: 'Please enter a valid email address or leave it blank.' });
   }
 
   if (!pickupDate || !/^\d{4}-\d{2}-\d{2}$/.test(pickupDate)) {
@@ -90,8 +103,36 @@ export async function handler(event) {
 
   // Validate each item
   for (const item of items) {
-    if (!item.sku || !item.name || typeof item.qty !== 'number' || item.qty < 1 || item.qty > 10) {
-      return response(400, { message: 'Each item must have a sku, name, and qty (1-10).' });
+    if (!item.sku || !item.name || typeof item.qty !== 'number' || item.qty < 1 || item.qty > 99) {
+      return response(400, { message: 'Each item must have a sku, name, and qty (1-99).' });
+    }
+  }
+
+  // Check inventory availability for each item
+  if (CONFIG_TABLE) {
+    for (const item of items) {
+      const result = await ddb.send(new GetCommand({
+        TableName: CONFIG_TABLE,
+        Key: { type: 'PRODUCT_INVENTORY', id: item.sku },
+      }));
+
+      const inv = result.Item;
+      if (!inv || !inv.available) {
+        return response(400, {
+          message: `${item.name} is not available for preorder.`,
+          unavailableItems: [item.sku],
+        });
+      }
+
+      if (inv.currentQty < item.qty) {
+        return response(400, {
+          message: inv.currentQty === 0
+            ? `${item.name} is sold out for this week.`
+            : `Only ${inv.currentQty} of ${item.name} available. Please reduce quantity.`,
+          unavailableItems: [item.sku],
+          available: inv.currentQty,
+        });
+      }
     }
   }
 
@@ -100,26 +141,58 @@ export async function handler(event) {
   const order = {
     orderId,
     name: sanitize(name),
-    email: sanitize(email),
-    phone: sanitize(phone || ''),
+    email: sanitize(email || ''),
+    phone: sanitize(phone),
     pickupDate: sanitize(pickupDate),
     items: items.map(i => ({
       sku: sanitize(i.sku),
       name: sanitize(i.name),
-      qty: Math.min(Math.max(Math.round(i.qty), 1), 10),
+      qty: Math.min(Math.max(Math.round(i.qty), 1), 99),
     })),
     notes: sanitize(notes || ''),
     status: 'NEW',
     createdAt: new Date().toISOString(),
   };
 
-  // Write to DynamoDB
+  // Atomically write order + deduct inventory using DynamoDB transaction
   try {
-    await ddb.send(new PutCommand({
-      TableName: TABLE_NAME,
-      Item: order,
-    }));
+    const transactItems = [
+      {
+        Put: {
+          TableName: ORDERS_TABLE,
+          Item: order,
+        },
+      },
+    ];
+
+    // Add inventory decrements if config table is available
+    if (CONFIG_TABLE) {
+      const now = new Date().toISOString();
+      for (const item of order.items) {
+        transactItems.push({
+          Update: {
+            TableName: CONFIG_TABLE,
+            Key: { type: 'PRODUCT_INVENTORY', id: item.sku },
+            UpdateExpression: 'SET currentQty = currentQty - :qty, updatedAt = :now',
+            ConditionExpression: 'currentQty >= :qty AND available = :t',
+            ExpressionAttributeValues: {
+              ':qty': item.qty,
+              ':now': now,
+              ':t': true,
+            },
+          },
+        });
+      }
+    }
+
+    await ddb.send(new TransactWriteCommand({ TransactItems: transactItems }));
   } catch (err) {
+    if (err.name === 'TransactionCanceledException') {
+      console.error('Transaction canceled (inventory conflict):', err);
+      return response(409, {
+        message: 'Some items may have sold out while you were ordering. Please refresh the page and try again.',
+      });
+    }
     console.error('DynamoDB write error:', err);
     return response(500, { message: 'Failed to save order. Please try again.' });
   }
@@ -129,34 +202,7 @@ export async function handler(event) {
     const itemList = order.items.map(i => `  ${i.qty}x ${i.name}`).join('\n');
 
     try {
-      // Customer confirmation
-      await ses.send(new SendEmailCommand({
-        Source: FROM_EMAIL,
-        Destination: { ToAddresses: [order.email] },
-        Message: {
-          Subject: { Data: `Order Confirmation — Knead & Bake TX (#${orderId.slice(0, 8)})` },
-          Body: {
-            Text: { Data:
-`Hi ${order.name},
-
-Thanks for your preorder! Here's what we have for you:
-
-${itemList}
-
-Pickup: ${order.pickupDate} at the Castell Street Market, New Braunfels
-${order.notes ? `Notes: ${order.notes}\n` : ''}
-Payment will be collected at pickup (cash or card).
-
-If you need to make changes, reply to this email or contact us at ${OWNER_EMAIL}.
-
-See you Saturday!
-— Knead & Bake TX`
-            },
-          },
-        },
-      }));
-
-      // Owner notification
+      // Owner notification (always send — works in SES sandbox since owner email is verified)
       await ses.send(new SendEmailCommand({
         Source: FROM_EMAIL,
         Destination: { ToAddresses: [OWNER_EMAIL] },
@@ -167,14 +213,14 @@ See you Saturday!
 `New preorder received:
 
 Name: ${order.name}
-Email: ${order.email}
-Phone: ${order.phone || 'N/A'}
+Phone: ${order.phone}
+Email: ${order.email || 'Not provided'}
 Pickup: ${order.pickupDate}
 
 Items:
 ${itemList}
 
-Notes: ${order.notes || 'None'}
+Comments: ${order.notes || 'None'}
 
 Order ID: ${orderId}
 Created: ${order.createdAt}`
@@ -182,13 +228,42 @@ Created: ${order.createdAt}`
           },
         },
       }));
+
+      // Customer confirmation (only if email provided and NOT in SES sandbox mode)
+      if (order.email && !SES_SANDBOX) {
+        await ses.send(new SendEmailCommand({
+          Source: FROM_EMAIL,
+          Destination: { ToAddresses: [order.email] },
+          Message: {
+            Subject: { Data: `Order Confirmation — Knead & Bake TX (#${orderId.slice(0, 8)})` },
+            Body: {
+              Text: { Data:
+`Hi ${order.name},
+
+Thanks for your preorder! Here's what we have for you:
+
+${itemList}
+
+Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
+${order.notes ? `Comments: ${order.notes}\n` : ''}
+Payment will be collected at pickup (cash or card).
+
+We'll text you at ${order.phone} to confirm closer to pickup day.
+
+See you Saturday!
+— Knead & Bake TX`
+              },
+            },
+          },
+        }));
+      }
     } catch (emailErr) {
       console.error('SES email error (non-fatal):', emailErr);
     }
   }
 
   return response(201, {
-    message: 'Order received! Check your email for confirmation.',
+    message: 'Order received! We\'ll text you to confirm.',
     orderId,
   });
 }

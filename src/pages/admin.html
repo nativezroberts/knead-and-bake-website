@@ -52,7 +52,7 @@
     <section class="page-header">
       <div class="container">
         <h1 class="page-header__title">Admin Dashboard</h1>
-        <p class="page-header__desc">Manage market skip dates, announcements, and news posts.</p>
+        <p class="page-header__desc">Manage market skip dates, announcements, news posts, and product inventory.</p>
       </div>
     </section>
 
@@ -219,6 +219,20 @@
               </div>
               <div id="news-post-error" class="form-error hidden" role="alert"></div>
             </form>
+          </div>
+
+          <!-- Product Inventory -->
+          <div class="admin-section">
+            <h2>Product Inventory</h2>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm)">Manage weekly production quantities for each product. When current quantity reaches 0, the item cannot be preordered. Reset inventory at the start of each week.</p>
+
+            <div style="margin-bottom:var(--space-6);display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap">
+              <button id="reset-inventory-btn" class="btn btn--primary btn--sm">Reset All to Weekly Defaults</button>
+              <span style="color:var(--text-secondary);font-size:var(--text-sm)">Use this at the start of each preorder week.</span>
+            </div>
+
+            <div id="inventory-list"></div>
+            <div id="inventory-error" class="form-error hidden" role="alert"></div>
           </div>
 
         </div>

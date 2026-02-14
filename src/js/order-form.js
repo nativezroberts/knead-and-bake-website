@@ -1,5 +1,6 @@
 /**
  * Order Form — handles item selection, form validation, and submission.
+ * Fetches inventory availability and enforces per-item quantity limits.
  */
 
 import ContentLoader from './content-loader.js';
@@ -17,14 +18,48 @@ export async function initOrderForm() {
 
   if (!container || !form) return;
 
-  // Load menu items
-  const menuData = await ContentLoader.menu();
+  // Load menu items and inventory in parallel
+  let menuData, inventoryData;
+  try {
+    const [menuResult, inventoryRes] = await Promise.all([
+      ContentLoader.menu(),
+      fetch(`${API_BASE}/api/inventory`),
+    ]);
+    menuData = menuResult;
+    inventoryData = inventoryRes.ok ? await inventoryRes.json() : { products: [] };
+  } catch {
+    menuData = await ContentLoader.menu();
+    inventoryData = { products: [] };
+  }
+
   if (!menuData) {
     container.innerHTML = '<p>Unable to load menu. Please try again later.</p>';
     return;
   }
 
-  const availableItems = menuData.items.filter(i => i.available);
+  // Build inventory lookup by SKU
+  const inventoryMap = new Map(
+    (inventoryData.products || []).map(p => [p.sku, p])
+  );
+
+  // Merge menu with inventory: use menu for display, inventory for qty/availability
+  const availableItems = menuData.items
+    .map(item => {
+      const inv = inventoryMap.get(item.sku);
+      return {
+        ...item,
+        currentQty: inv ? inv.currentQty : 0,
+        // Item is available only if both menu says available AND inventory says available with qty > 0
+        available: item.available && (inv ? inv.available && inv.currentQty > 0 : false),
+      };
+    })
+    .filter(i => i.available);
+
+  if (availableItems.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary)">No items available for preorder right now. Check back soon!</p>';
+    return;
+  }
+
   container.innerHTML = availableItems.map(renderOrderItem).join('');
 
   // Track quantities
@@ -38,11 +73,12 @@ export async function initOrderForm() {
 
     const row = btn.closest('.order-item');
     const sku = row.dataset.sku;
+    const maxQty = parseInt(row.dataset.maxQty, 10) || 10;
     const action = btn.dataset.action;
     const qtyEl = row.querySelector('[data-qty]');
 
     if (action === 'increment') {
-      quantities[sku] = Math.min((quantities[sku] || 0) + 1, 10);
+      quantities[sku] = Math.min((quantities[sku] || 0) + 1, maxQty);
     } else if (action === 'decrement') {
       quantities[sku] = Math.max((quantities[sku] || 0) - 1, 0);
     }
@@ -108,7 +144,7 @@ export async function initOrderForm() {
     const formData = new FormData(form);
     const payload = {
       name: formData.get('name')?.trim(),
-      email: formData.get('email')?.trim(),
+      email: formData.get('email')?.trim() || '',
       phone: formData.get('phone')?.trim() || '',
       pickupDate: formData.get('pickup_date')?.trim(),
       items,
@@ -116,13 +152,21 @@ export async function initOrderForm() {
     };
 
     // Basic client-side validation
-    if (!payload.name || !payload.email || !payload.pickupDate) {
+    if (!payload.name || !payload.pickupDate) {
       showError('Please fill in all required fields.');
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-      showError('Please enter a valid email address.');
+    // Phone is required (min 10 digits)
+    const phoneDigits = payload.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      showError('Please enter a valid phone number (at least 10 digits).');
+      return;
+    }
+
+    // Email is optional but validate format if provided
+    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      showError('Please enter a valid email address or leave it blank.');
       return;
     }
 
@@ -140,6 +184,14 @@ export async function initOrderForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+
+        // Handle inventory conflict (409)
+        if (res.status === 409 || data.unavailableItems) {
+          showError(data.message || 'Some items sold out. Please refresh and try again.');
+          setTimeout(() => window.location.reload(), 3000);
+          return;
+        }
+
         throw new Error(data.message || 'Something went wrong. Please try again.');
       }
 

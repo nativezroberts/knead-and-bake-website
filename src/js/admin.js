@@ -1,5 +1,5 @@
 /**
- * Admin Page - login, skip date management, announcement management, news post management.
+ * Admin Page - login, skip date management, announcement management, news post management, product inventory.
  */
 
 import { renderMarkdown } from './markdown.js';
@@ -13,6 +13,7 @@ let editingAnnouncementId = null;
 let editingNewsPostId = null;
 let announcementsCache = [];
 let newsPostsCache = [];
+let inventoryCache = [];
 
 // -- Auth --
 async function login(password) {
@@ -66,6 +67,7 @@ function showAdmin() {
   loadSkipDates();
   loadAnnouncements();
   loadNewsPosts();
+  loadInventory();
 }
 
 function showError(el, msg) {
@@ -758,6 +760,154 @@ function initAnnouncementEditor() {
   updateAnnouncementPreview();
 }
 
+// -- Product Inventory --
+async function loadInventory() {
+  const container = $('inventory-list');
+  container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/inventory`);
+    const data = await res.json();
+    const products = data.products || [];
+    inventoryCache = products;
+
+    if (products.length === 0) {
+      container.innerHTML = `
+        <p style="color:var(--text-secondary)">
+          No inventory configured yet.
+          <button class="btn btn--sm btn--outline" style="margin-left:var(--space-4)" id="init-inventory-inline-btn">Initialize from Menu</button>
+        </p>
+      `;
+      const initBtn = $('init-inventory-inline-btn');
+      if (initBtn) initBtn.addEventListener('click', initInventory);
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>SKU</th>
+            <th>Weekly Qty</th>
+            <th>Current Qty</th>
+            <th>Available</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr data-inv-sku="${p.sku}">
+              <td>${p.name}</td>
+              <td>${p.sku}</td>
+              <td><input type="number" min="0" value="${p.weeklyQty}" data-field="weeklyQty" style="width:80px;padding:4px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:var(--text-sm)"></td>
+              <td><input type="number" min="0" value="${p.currentQty}" data-field="currentQty" style="width:80px;padding:4px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:var(--text-sm)"></td>
+              <td><input type="checkbox" ${p.available ? 'checked' : ''} data-field="available"></td>
+              <td><button class="btn btn--sm btn--primary" onclick="saveInventoryItem('${p.sku}')">Save</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) {
+    container.innerHTML = `<p class="form-error">${e.message}</p>`;
+  }
+}
+
+window.saveInventoryItem = async function(sku) {
+  const row = document.querySelector(`tr[data-inv-sku="${sku}"]`);
+  if (!row) return;
+
+  const weeklyInput = row.querySelector('[data-field="weeklyQty"]');
+  const currentInput = row.querySelector('[data-field="currentQty"]');
+  const availableInput = row.querySelector('[data-field="available"]');
+  const errorEl = $('inventory-error');
+  errorEl.classList.add('hidden');
+
+  const payload = {
+    weeklyQty: parseInt(weeklyInput.value, 10),
+    currentQty: parseInt(currentInput.value, 10),
+    available: availableInput.checked,
+  };
+
+  if (isNaN(payload.weeklyQty) || payload.weeklyQty < 0) {
+    showError(errorEl, 'Weekly quantity must be a non-negative number.');
+    return;
+  }
+  if (isNaN(payload.currentQty) || payload.currentQty < 0) {
+    showError(errorEl, 'Current quantity must be a non-negative number.');
+    return;
+  }
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/inventory/${encodeURIComponent(sku)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || 'Failed to update inventory.');
+    }
+
+    loadInventory();
+  } catch (e) {
+    showError(errorEl, e.message);
+  }
+};
+
+async function resetInventory() {
+  if (!confirm('Reset all products to their weekly default quantities? This will overwrite current quantities.')) {
+    return;
+  }
+
+  const errorEl = $('inventory-error');
+  errorEl.classList.add('hidden');
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/inventory/reset`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || 'Failed to reset inventory.');
+    }
+
+    const data = await res.json();
+    alert(data.message || 'Inventory reset successfully.');
+    loadInventory();
+  } catch (e) {
+    showError(errorEl, e.message);
+  }
+}
+
+async function initInventory() {
+  if (!confirm('Initialize inventory from menu? This creates entries for all products with 0 quantities. You can then set weekly quantities.')) {
+    return;
+  }
+
+  const errorEl = $('inventory-error');
+  errorEl.classList.add('hidden');
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/inventory`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || 'Failed to initialize inventory.');
+    }
+
+    loadInventory();
+  } catch (e) {
+    showError(errorEl, e.message);
+  }
+}
+
 // -- Init --
 export function initAdmin() {
   // Login form
@@ -786,6 +936,9 @@ export function initAdmin() {
   // News post form
   $('news-post-form').addEventListener('submit', addNewsPost);
   $('news-post-cancel-edit-btn').addEventListener('click', window.cancelNewsPostEdit);
+
+  // Inventory reset button
+  $('reset-inventory-btn').addEventListener('click', resetInventory);
 
   initNewsEditor();
   initAnnouncementEditor();

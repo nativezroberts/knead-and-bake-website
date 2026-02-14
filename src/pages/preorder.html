@@ -92,24 +92,22 @@
               </div>
 
               <div class="form-group">
-                <label for="email" class="form-label form-label--required">Email</label>
-                <input type="email" id="email" name="email" class="form-input" required autocomplete="email">
-                <p class="form-hint">We'll send your order confirmation here.</p>
+                <label for="phone" class="form-label form-label--required">Phone</label>
+                <input type="tel" id="phone" name="phone" class="form-input" required autocomplete="tel" placeholder="(512) 555-1234">
+                <p class="form-hint">We'll text you to confirm your order.</p>
               </div>
 
               <div class="form-group">
-                <label for="phone" class="form-label">Phone (optional)</label>
-                <input type="tel" id="phone" name="phone" class="form-input" autocomplete="tel">
+                <label for="email" class="form-label">Email (optional)</label>
+                <input type="email" id="email" name="email" class="form-input" autocomplete="email">
+                <p class="form-hint">For order confirmation email if provided.</p>
               </div>
 
-              <div class="form-group">
-                <label for="pickup_date" class="form-label form-label--required">Pickup Date</label>
-                <input type="date" id="pickup_date" name="pickup_date" class="form-input" required>
-              </div>
+              <input type="hidden" id="pickup_date" name="pickup_date">
 
               <div class="form-group">
-                <label for="notes" class="form-label">Special Requests / Notes</label>
-                <textarea id="notes" name="notes" class="form-textarea" rows="3" placeholder="Anything we should know?"></textarea>
+                <label for="notes" class="form-label">Comments</label>
+                <textarea id="notes" name="notes" class="form-textarea" rows="3" placeholder="Any comments?"></textarea>
               </div>
 
               <div id="order-error" class="form-error mb-4 hidden" role="alert"></div>
@@ -121,7 +119,7 @@
             <div id="order-success" class="hidden" style="text-align:center;padding:var(--space-12)">
               <div style="font-size:var(--text-4xl);margin-bottom:var(--space-4)">&#10003;</div>
               <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-3)">Order Received!</h2>
-              <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">We'll send a confirmation email shortly. See you at the market!</p>
+              <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">We'll text you to confirm your order. See you at the market on Saturday!</p>
               <a href="/" class="btn btn--outline">Back to Home</a>
             </div>
           </div>

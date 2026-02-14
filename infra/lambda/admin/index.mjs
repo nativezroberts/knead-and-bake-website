@@ -1,10 +1,10 @@
 /**
- * Admin Lambda — CRUD for skip dates, announcements, and news posts.
- * Also serves the public GET /api/market-config and GET /api/news endpoints.
+ * Admin Lambda — CRUD for skip dates, announcements, news posts, and product inventory.
+ * Also serves the public GET /api/market-config, GET /api/news, and GET /api/inventory endpoints.
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
@@ -584,6 +584,175 @@ async function createNewsImageUploadUrl(body) {
   }
 }
 
+// ── Public inventory endpoint ──
+async function handlePublicInventory() {
+  const items = await queryByType('PRODUCT_INVENTORY');
+  const products = items
+    .filter(i => i.available)
+    .map(i => ({
+      sku: i.id,
+      name: i.name,
+      price: i.price,
+      currentQty: i.currentQty,
+      available: i.available && i.currentQty > 0,
+    }));
+  return response(200, { products });
+}
+
+// ── Product Inventory CRUD ──
+async function listProductInventory() {
+  const items = await queryByType('PRODUCT_INVENTORY');
+  return response(200, {
+    _nocache: true,
+    products: items.map(i => ({
+      sku: i.id,
+      name: i.name,
+      weeklyQty: i.weeklyQty,
+      currentQty: i.currentQty,
+      price: i.price,
+      category: i.category || '',
+      available: i.available,
+      updatedAt: i.updatedAt,
+      createdAt: i.createdAt,
+    })),
+  });
+}
+
+async function updateProductInventory(sku, body) {
+  const existing = await getByTypeAndId('PRODUCT_INVENTORY', sku);
+  if (!existing) {
+    return response(404, { message: 'Product inventory not found.' });
+  }
+
+  const expNames = {
+    '#pkType': 'type',
+    '#pkId': 'id',
+  };
+  const expValues = {};
+  const setClauses = ['updatedAt = :now'];
+  expValues[':now'] = new Date().toISOString();
+
+  if (body.weeklyQty !== undefined) {
+    const qty = parseInt(body.weeklyQty, 10);
+    if (!Number.isFinite(qty) || qty < 0) {
+      return response(400, { message: 'Weekly quantity must be a non-negative integer.' });
+    }
+    setClauses.push('weeklyQty = :wq');
+    expValues[':wq'] = qty;
+  }
+
+  if (body.currentQty !== undefined) {
+    const qty = parseInt(body.currentQty, 10);
+    if (!Number.isFinite(qty) || qty < 0) {
+      return response(400, { message: 'Current quantity must be a non-negative integer.' });
+    }
+    setClauses.push('currentQty = :cq');
+    expValues[':cq'] = qty;
+  }
+
+  if (body.available !== undefined) {
+    setClauses.push('available = :avl');
+    expValues[':avl'] = !!body.available;
+  }
+
+  try {
+    const result = await ddb.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { type: 'PRODUCT_INVENTORY', id: sku },
+      UpdateExpression: 'SET ' + setClauses.join(', '),
+      ConditionExpression: 'attribute_exists(#pkType) AND attribute_exists(#pkId)',
+      ExpressionAttributeNames: expNames,
+      ExpressionAttributeValues: expValues,
+      ReturnValues: 'ALL_NEW',
+    }));
+    return response(200, { product: result.Attributes });
+  } catch (e) {
+    if (e.name === 'ConditionalCheckFailedException') {
+      return response(404, { message: 'Product inventory not found.' });
+    }
+    console.error('Update error:', e);
+    return response(500, { message: 'Failed to update product inventory.' });
+  }
+}
+
+async function resetAllInventory() {
+  const items = await queryByType('PRODUCT_INVENTORY');
+  if (items.length === 0) {
+    return response(200, { message: 'No inventory items to reset.', updated: 0 });
+  }
+
+  const now = new Date().toISOString();
+  // Update each item: set currentQty = weeklyQty
+  const updatePromises = items.map(item =>
+    ddb.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { type: 'PRODUCT_INVENTORY', id: item.id },
+      UpdateExpression: 'SET currentQty = weeklyQty, updatedAt = :now',
+      ExpressionAttributeValues: { ':now': now },
+    }))
+  );
+
+  await Promise.all(updatePromises);
+  return response(200, { message: 'Inventory reset to weekly defaults.', updated: items.length });
+}
+
+// Menu items to seed inventory from (matches content/menu.json)
+const MENU_ITEMS = [
+  { sku: 'CL-001', name: 'Classic Plain Sourdough', price: 10.00, category: 'standard-loaves' },
+  { sku: 'CL-002', name: 'Classic Plain Sourdough Sandwich Loaf', price: 10.00, category: 'standard-loaves' },
+  { sku: 'CL-003', name: 'Jalapeño Cheddar Sourdough', price: 13.00, category: 'standard-loaves' },
+  { sku: 'CL-004', name: 'Roasted Garlic, Olive & Rosemary Sourdough', price: 13.00, category: 'standard-loaves' },
+  { sku: 'CL-005', name: 'Italian Parmesan Sourdough', price: 13.00, category: 'standard-loaves' },
+  { sku: 'CL-006', name: 'Cinnamon Brown Sugar Sourdough', price: 13.00, category: 'standard-loaves' },
+  { sku: 'CL-007', name: 'Chocolate Chip Sourdough', price: 13.00, category: 'standard-loaves' },
+  { sku: 'SL-001', name: 'Orange Cranberry Walnut Sourdough', price: 13.00, category: 'seasonal-loaves' },
+  { sku: 'SL-002', name: 'Lemon Blueberry Sourdough', price: 13.00, category: 'seasonal-loaves' },
+  { sku: 'SL-003', name: 'Pumpkin Spice Sourdough', price: 13.00, category: 'seasonal-loaves' },
+  { sku: 'NL-001', name: 'Sourdough Focaccia - Cinnamon Brown Sugar(Half Sheet)', price: 15.00, category: 'non-loaf' },
+  { sku: 'NL-002', name: 'Sourdough Discard Crackers', price: 7.00, category: 'non-loaf' },
+  { sku: 'NL-003', name: 'Sourdough English Muffins (Pack of 6)', price: 5.00, category: 'non-loaf' },
+  { sku: 'NL-004', name: 'Sourdough Starter (Jar)', price: 15.00, category: 'non-loaf' },
+];
+
+async function initProductInventory() {
+  const existing = await queryByType('PRODUCT_INVENTORY');
+  const existingSkus = new Set(existing.map(i => i.id));
+
+  const now = new Date().toISOString();
+  const toCreate = MENU_ITEMS.filter(m => !existingSkus.has(m.sku));
+
+  if (toCreate.length === 0) {
+    return response(200, { message: 'All products already initialized.', created: 0 });
+  }
+
+  // Write in batches of 25 (DynamoDB BatchWrite limit)
+  for (let i = 0; i < toCreate.length; i += 25) {
+    const batch = toCreate.slice(i, i + 25);
+    await ddb.send(new BatchWriteCommand({
+      RequestItems: {
+        [TABLE_NAME]: batch.map(m => ({
+          PutRequest: {
+            Item: {
+              type: 'PRODUCT_INVENTORY',
+              id: m.sku,
+              name: m.name,
+              weeklyQty: 0,
+              currentQty: 0,
+              price: m.price,
+              category: m.category,
+              available: false,
+              createdAt: now,
+              updatedAt: now,
+            },
+          },
+        })),
+      },
+    }));
+  }
+
+  return response(201, { message: `Initialized ${toCreate.length} product(s).`, created: toCreate.length });
+}
+
 // ── Router ──
 export async function handler(event) {
   const method = event.requestContext?.http?.method;
@@ -596,6 +765,10 @@ export async function handler(event) {
 
   if (method === 'GET' && path === '/api/news') {
     return handlePublicNews();
+  }
+
+  if (method === 'GET' && path === '/api/inventory') {
+    return handlePublicInventory();
   }
 
   // Admin endpoints — auth is handled by the Lambda authorizer at API Gateway level
@@ -645,6 +818,21 @@ export async function handler(event) {
     const id = decodeURIComponent(path.split('/').pop());
     if (method === 'PUT') return updateNewsPost(id, body);
     if (method === 'DELETE') return deleteNewsPost(id);
+  }
+
+  // Product inventory
+  if (path === '/api/admin/inventory') {
+    if (method === 'GET') return listProductInventory();
+    if (method === 'POST') return initProductInventory();
+  }
+
+  if (path === '/api/admin/inventory/reset' && method === 'POST') {
+    return resetAllInventory();
+  }
+
+  if (path.startsWith('/api/admin/inventory/') && !path.includes('/reset')) {
+    const sku = decodeURIComponent(path.split('/').pop());
+    if (method === 'PUT') return updateProductInventory(sku, body);
   }
 
   return response(404, { message: 'Not found' });

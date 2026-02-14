@@ -146,10 +146,20 @@ export function renderSkipNotice(reason, nextAvailableDate) {
 
 export function renderOrderItem(item) {
   if (!item.available) return '';
+
+  const qtyLabel = item.currentQty !== undefined
+    ? item.currentQty <= 5
+      ? `<span style="color:var(--color-warning, #b45309);font-size:var(--text-xs)">Only ${item.currentQty} left</span>`
+      : `<span style="color:var(--text-secondary);font-size:var(--text-xs)">${item.currentQty} available</span>`
+    : '';
+
   return `
-    <div class="order-item" data-sku="${item.sku}">
+    <div class="order-item" data-sku="${item.sku}" data-max-qty="${item.currentQty || 10}">
       <div class="order-item__info">
-        <div class="order-item__name">${item.name}</div>
+        <div>
+          <div class="order-item__name">${item.name}</div>
+          ${qtyLabel}
+        </div>
         <div class="order-item__price">$${item.price.toFixed(2)}</div>
       </div>
       <div class="order-item__qty">
