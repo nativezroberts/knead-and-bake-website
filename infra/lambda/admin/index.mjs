@@ -588,13 +588,12 @@ async function createNewsImageUploadUrl(body) {
 async function handlePublicInventory() {
   const items = await queryByType('PRODUCT_INVENTORY');
   const products = items
-    .filter(i => i.available)
     .map(i => ({
       sku: i.id,
       name: i.name,
       price: i.price,
       currentQty: i.currentQty,
-      available: i.available && i.currentQty > 0,
+      available: i.available,
     }));
   return response(200, { products });
 }
