@@ -306,16 +306,16 @@
   background: linear-gradient(135deg, var(--color-cream) 0%, var(--color-wheat-light) 50%, var(--color-cream) 100%);
   overflow: hidden;
 }
-
+/*
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("/images/favicon.png") 25% center / auto 75% no-repeat;
+  background: url("/images/favicon.png") 30% center / auto 75% no-repeat;
   opacity: 0.25;
   pointer-events: none;
 }
-
+*/
 .hero::before {
   content: '';
   position: absolute;
