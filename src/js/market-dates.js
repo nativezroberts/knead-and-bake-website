@@ -6,8 +6,8 @@
 const API_BASE = window.__API_BASE || '';
 const MARKET_TIMEZONE = 'America/Chicago';
 const MARKET_END_HOUR = 13; // 1 PM CST
-const CUTOFF_DAY_OFFSET = -2; // Thursday (Saturday - 2)
-const CUTOFF_HOUR = 20; // 8 PM CST
+const CUTOFF_DAY_OFFSET = 0; // Saturday (market day)
+const CUTOFF_HOUR = 9; // 9 AM CST
 
 function getCSTDate(date = new Date()) {
   const str = date.toLocaleString('en-US', { timeZone: MARKET_TIMEZONE });
@@ -84,7 +84,7 @@ function formatCutoffDate(date) {
     month: 'long',
     day: 'numeric',
     timeZone: MARKET_TIMEZONE,
-  }) + ' at 8:00 PM';
+  }) + ' at 9:00 AM';
 }
 
 function getSkipReason(skipDates, dateStr) {

@@ -23,7 +23,7 @@
   },
   "preorder": {
     "enabled": true,
-    "cutoffText": "Preorders close Thursday at 8 PM before each Saturday market.",
+    "cutoffText": "Preorders close Saturday at 9 AM on market day.",
     "pickupInstructions": "Pick up your order at our booth at Castell Street Market. Look for the Knead & Bake TX banner!",
     "policies": [
       "All items are baked fresh Friday evening for Saturday pickup.",
