@@ -970,16 +970,14 @@ function formatWeekRange(startDate, endDate) {
 }
 
 function buildWeekOptions(currentWeekStart) {
-  const options = [];
-  for (let offset = -12; offset <= 4; offset++) {
-    const start = addDays(currentWeekStart, offset * 7);
-    const end = addDays(start, 6);
-    options.push({
-      value: toYMD(start),
-      label: formatWeekRange(start, end),
-    });
-  }
-  return options;
+  return [
+    { offset: -1, label: 'Last week' },
+    { offset: 0, label: 'Current Week' },
+    { offset: 1, label: 'Next week' },
+  ].map(({ offset, label }) => ({
+    value: toYMD(addDays(currentWeekStart, offset * 7)),
+    label,
+  }));
 }
 
 function setPreordersError(message = '') {
