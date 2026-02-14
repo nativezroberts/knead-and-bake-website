@@ -15,6 +15,148 @@ let announcementsCache = [];
 let newsPostsCache = [];
 let inventoryCache = [];
 
+// -- Tabs --
+const TAB_KEYS = ['skipDates', 'announcements', 'news', 'inventory'];
+const TAB_STORAGE_KEY = 'admin_active_tab';
+const loadedTabs = new Set();
+let isDirty = false;
+
+function markDirty() { isDirty = true; }
+function clearDirty() { isDirty = false; }
+
+function confirmIfDirty() {
+  if (!isDirty) return true;
+  return confirm('You have unsaved changes. Switch tabs anyway?');
+}
+
+function getInitialTab() {
+  const params = new URLSearchParams(window.location.search);
+  const urlTab = params.get('tab');
+  if (urlTab && TAB_KEYS.includes(urlTab)) return urlTab;
+  const stored = localStorage.getItem(TAB_STORAGE_KEY);
+  if (stored && TAB_KEYS.includes(stored)) return stored;
+  return TAB_KEYS[0];
+}
+
+function activateTab(key, pushState = true) {
+  if (!TAB_KEYS.includes(key)) return;
+  if (!confirmIfDirty()) return;
+  clearDirty();
+
+  TAB_KEYS.forEach(k => {
+    const tab = $(`tab-${k}`);
+    const panel = $(`panel-${k}`);
+    const selected = k === key;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    panel.classList.toggle('hidden', !selected);
+  });
+
+  if (pushState) {
+    const url = new URL(window.location);
+    url.searchParams.set('tab', key);
+    history.replaceState(null, '', url);
+  }
+  localStorage.setItem(TAB_STORAGE_KEY, key);
+
+  if (!loadedTabs.has(key)) {
+    loadedTabs.add(key);
+    loadTabData(key);
+  }
+}
+
+function loadTabData(key) {
+  switch (key) {
+    case 'skipDates': loadSkipDates(); break;
+    case 'announcements': loadAnnouncements(); break;
+    case 'news': loadNewsPosts(); break;
+    case 'inventory': loadInventory(); break;
+  }
+}
+
+function initTabs() {
+  const tablist = document.querySelector('[role="tablist"]');
+  if (!tablist) return;
+
+  tablist.addEventListener('click', (e) => {
+    const tab = e.target.closest('[role="tab"]');
+    if (!tab) return;
+    const key = tab.id.replace('tab-', '');
+    activateTab(key);
+    tab.focus();
+  });
+
+  tablist.addEventListener('keydown', (e) => {
+    const tab = e.target.closest('[role="tab"]');
+    if (!tab) return;
+    const idx = TAB_KEYS.indexOf(tab.id.replace('tab-', ''));
+    let newIdx = idx;
+
+    if (e.key === 'ArrowRight') newIdx = (idx + 1) % TAB_KEYS.length;
+    else if (e.key === 'ArrowLeft') newIdx = (idx - 1 + TAB_KEYS.length) % TAB_KEYS.length;
+    else if (e.key === 'Home') newIdx = 0;
+    else if (e.key === 'End') newIdx = TAB_KEYS.length - 1;
+    else return;
+
+    e.preventDefault();
+    const newTab = $(`tab-${TAB_KEYS[newIdx]}`);
+    newTab.focus();
+  });
+
+  // Enter/Space activate focused tab
+  tablist.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const tab = e.target.closest('[role="tab"]');
+      if (!tab) return;
+      e.preventDefault();
+      const key = tab.id.replace('tab-', '');
+      activateTab(key);
+    }
+  });
+
+  // Dirty guard on page unload
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) { e.preventDefault(); }
+  });
+}
+
+// -- Toast --
+function showToast(msg, type = 'success', duration = 2500) {
+  let el = document.getElementById('admin-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'admin-toast';
+    el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = `toast toast--${type}`;
+  requestAnimationFrame(() => { el.classList.add('is-visible'); });
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.classList.remove('is-visible'); }, duration);
+}
+
+// -- Low-stock badge --
+function updateInventoryBadge() {
+  const tab = $('tab-inventory');
+  if (!tab) return;
+  let badge = tab.querySelector('.tab-badge');
+  const lowCount = inventoryCache.filter(p => p.available && p.currentQty <= 3).length;
+  if (lowCount > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'tab-badge';
+      badge.setAttribute('aria-label', 'low stock items');
+      tab.appendChild(badge);
+    }
+    badge.textContent = lowCount;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
 // -- Auth --
 async function login(password) {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -64,10 +206,8 @@ function showAdmin() {
   $('admin-content').classList.remove('hidden');
   resetAnnouncementForm();
   resetNewsPostForm();
-  loadSkipDates();
-  loadAnnouncements();
-  loadNewsPosts();
-  loadInventory();
+  const initial = getInitialTab();
+  activateTab(initial, true);
 }
 
 function showError(el, msg) {
@@ -296,6 +436,8 @@ async function addSkipDate(e) {
 
     dateInput.value = '';
     reasonInput.value = '';
+    clearDirty();
+    showToast('Skip date added');
     loadSkipDates();
   } catch (e) {
     showError(errorEl, e.message);
@@ -404,6 +546,8 @@ async function addAnnouncement(e) {
       throw new Error(data.message || (isEditing ? 'Failed to update announcement.' : 'Failed to create announcement.'));
     }
 
+    clearDirty();
+    showToast(isEditing ? 'Announcement updated' : 'Announcement added');
     resetAnnouncementForm();
     loadAnnouncements();
   } catch (e) {
@@ -545,6 +689,8 @@ async function addNewsPost(e) {
       throw new Error(data.message || (isEditing ? 'Failed to update news post.' : 'Failed to create news post.'));
     }
 
+    clearDirty();
+    showToast(isEditing ? 'Post updated' : 'Post added');
     resetNewsPostForm();
     loadNewsPosts();
   } catch (e) {
@@ -809,6 +955,7 @@ async function loadInventory() {
         </tbody>
       </table>
     `;
+    updateInventoryBadge();
   } catch (e) {
     container.innerHTML = `<p class="form-error">${e.message}</p>`;
   }
@@ -850,6 +997,7 @@ window.saveInventoryItem = async function(sku) {
       throw new Error(data.message || 'Failed to update inventory.');
     }
 
+    showToast('Inventory saved');
     loadInventory();
   } catch (e) {
     showError(errorEl, e.message);
@@ -942,4 +1090,11 @@ export function initAdmin() {
 
   initNewsEditor();
   initAnnouncementEditor();
+  initTabs();
+
+  // Dirty tracking on all admin form inputs
+  document.querySelectorAll('#admin-content input, #admin-content textarea, #admin-content select').forEach(el => {
+    el.addEventListener('input', markDirty);
+    el.addEventListener('change', markDirty);
+  });
 }

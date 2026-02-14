@@ -32,6 +32,18 @@
       color: var(--text-secondary);
       font-size: var(--text-sm);
     }
+    /* Tab Navigation */
+    .admin-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-8); border-bottom: 2px solid var(--border-color); padding-bottom: 0; }
+    .admin-tabs [role="tab"] { padding: var(--space-3) var(--space-5); min-height: 44px; min-width: 44px; font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-secondary); background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; white-space: nowrap; transition: color var(--transition-fast), border-color var(--transition-fast); position: relative; }
+    .admin-tabs [role="tab"]:hover { color: var(--text-primary); }
+    .admin-tabs [role="tab"][aria-selected="true"] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+    .admin-tabs [role="tab"]:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: var(--radius-sm); }
+    .admin-tabs .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; font-size: 11px; font-weight: var(--weight-bold); border-radius: 10px; background: var(--color-error); color: var(--color-white); }
+    [role="tabpanel"].hidden { display: none; }
+    @media (max-width: 600px) {
+      .admin-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .admin-tabs::-webkit-scrollbar { display: none; }
+    }
   </style>
 </head>
 <body class="page">
@@ -77,7 +89,15 @@
         <!-- Admin Content (hidden until logged in) -->
         <div id="admin-content" class="hidden">
 
+          <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
+            <button role="tab" id="tab-skipDates" aria-controls="panel-skipDates" aria-selected="true" tabindex="0">Skip Dates</button>
+            <button role="tab" id="tab-announcements" aria-controls="panel-announcements" aria-selected="false" tabindex="-1">Announcements</button>
+            <button role="tab" id="tab-news" aria-controls="panel-news" aria-selected="false" tabindex="-1">News</button>
+            <button role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
+          </nav>
+
           <!-- Skip Dates -->
+          <div role="tabpanel" id="panel-skipDates" aria-labelledby="tab-skipDates">
           <div class="admin-section">
             <h2>Market Skip Dates</h2>
             <p style="color:var(--text-secondary);font-size:var(--text-sm)">Mark Saturdays where you won't be at the market. The website will automatically show the next available date.</p>
@@ -100,7 +120,10 @@
             </form>
           </div>
 
+          </div><!-- /panel-skipDates -->
+
           <!-- Announcements -->
+          <div role="tabpanel" id="panel-announcements" aria-labelledby="tab-announcements" class="hidden">
           <div class="admin-section">
             <h2>Announcements</h2>
             <p style="color:var(--text-secondary);font-size:var(--text-sm)">Create announcements that appear on the homepage banner, market page, and news page during the specified date range.</p>
@@ -163,8 +186,10 @@
               <div id="announcement-error" class="form-error hidden" role="alert"></div>
             </form>
           </div>
+          </div><!-- /panel-announcements -->
 
           <!-- News Posts -->
+          <div role="tabpanel" id="panel-news" aria-labelledby="tab-news" class="hidden">
           <div class="admin-section">
             <h2>News Posts</h2>
             <p style="color:var(--text-secondary);font-size:var(--text-sm)">Create news posts that appear on the News page. Posts are visible during the specified date range, or indefinitely if no end date is set. Content supports markdown formatting and uploaded images.</p>
@@ -220,8 +245,10 @@
               <div id="news-post-error" class="form-error hidden" role="alert"></div>
             </form>
           </div>
+          </div><!-- /panel-news -->
 
           <!-- Product Inventory -->
+          <div role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" class="hidden">
           <div class="admin-section">
             <h2>Product Inventory</h2>
             <p style="color:var(--text-secondary);font-size:var(--text-sm)">Manage weekly production quantities for each product. When current quantity reaches 0, the item cannot be preordered. Reset inventory at the start of each week.</p>
@@ -234,6 +261,7 @@
             <div id="inventory-list"></div>
             <div id="inventory-error" class="form-error hidden" role="alert"></div>
           </div>
+          </div><!-- /panel-inventory -->
 
         </div>
 
