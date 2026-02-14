@@ -49,12 +49,32 @@
     .preorders-card__label { font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--space-1); }
     .preorders-card__value { font-size: var(--text-2xl); font-weight: var(--weight-bold); font-family: var(--font-heading); color: var(--text-primary); line-height: 1.1; }
     .preorders-grid { display: grid; gap: var(--space-6); }
+    .preorders-orders-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+    .preorders-orders-table { min-width: 920px; margin-top: 0; table-layout: fixed; }
+    .preorders-orders-table th,
+    .preorders-orders-table td { vertical-align: top; }
+    .preorders-orders-table td { white-space: normal; overflow-wrap: anywhere; }
+    .preorders-orders-table .preorders-orders-col--customer { width: 19%; }
+    .preorders-orders-table .preorders-orders-col--contact { width: 20%; }
+    .preorders-orders-table .preorders-orders-col--items { width: 30%; }
+    .preorders-orders-table .preorders-orders-col--pickup { width: 12%; }
+    .preorders-orders-table .preorders-orders-col--notes { width: 19%; }
+    .preorders-orders-table td.preorders-orders-cell--pickup { white-space: nowrap; }
+    .preorders-line-items { display: grid; gap: 2px; }
+    .preorders-line-item { line-height: 1.35; }
+    .preorders-meta { color: var(--text-secondary); font-size: var(--text-xs); }
     .preorders-block h3 { font-size: var(--text-lg); margin-bottom: var(--space-3); }
     .preorders-items { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
-    .preorders-items li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-color); font-size: var(--text-sm); }
+    .preorders-items li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-color); font-size: var(--text-sm); }
+    .preorders-items li span { min-width: 0; overflow-wrap: anywhere; }
+    .preorders-items li strong { white-space: nowrap; }
     .preorders-items li:last-child { border-bottom: none; }
     .print-heading { font-family: var(--font-heading); font-size: var(--text-lg); margin-bottom: var(--space-2); }
+    #preorders-week-label { overflow-wrap: anywhere; }
     [role="tabpanel"].hidden { display: none; }
+    @media (min-width: 1000px) {
+      .preorders-grid { grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.5fr); }
+    }
     @media print {
       body * { visibility: hidden !important; }
       #panel-preorders, #panel-preorders * { visibility: visible !important; }
@@ -66,6 +86,8 @@
     @media (max-width: 600px) {
       .admin-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
       .admin-tabs::-webkit-scrollbar { display: none; }
+      .admin-section { padding: var(--space-6); }
+      .preorders-toolbar .form-group, .preorders-email-row .form-group { min-width: 100%; }
     }
   </style>
 </head>
@@ -92,7 +114,7 @@
     </section>
 
     <section class="section section--cream">
-      <div class="container container--md">
+      <div class="container">
 
         <!-- Login Section -->
         <div id="login-section">

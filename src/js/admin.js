@@ -1050,38 +1050,51 @@ function renderPreorderOrders(summary) {
   }
 
   container.innerHTML = `
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Customer</th>
-          <th>Contact</th>
-          <th>Items</th>
-          <th>Pickup</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${orders.map(order => `
+    <div class="preorders-orders-table-wrap">
+      <table class="admin-table preorders-orders-table">
+        <colgroup>
+          <col class="preorders-orders-col--customer">
+          <col class="preorders-orders-col--contact">
+          <col class="preorders-orders-col--items">
+          <col class="preorders-orders-col--pickup">
+          <col class="preorders-orders-col--notes">
+        </colgroup>
+        <thead>
           <tr>
-            <td>
-              <strong>${escapeHtml(order.name || '-')}</strong><br>
-              <span style="color:var(--text-secondary);font-size:var(--text-xs)">Placed ${escapeHtml(formatDateTime(order.createdAt))}</span>
-            </td>
-            <td>
-              <div>${escapeHtml(order.phone || '-')}</div>
-              <div style="color:var(--text-secondary);font-size:var(--text-xs)">${escapeHtml(order.email || 'No email')}</div>
-            </td>
-            <td>
-              ${(Array.isArray(order.items) && order.items.length > 0)
-                ? order.items.map(item => `${Number(item.qty || 0)}x ${escapeHtml(item.name || '')}`).join('<br>')
-                : '-'}
-            </td>
-            <td>${escapeHtml(order.pickupDate || '-')}</td>
-            <td>${order.notes ? escapeHtml(order.notes) : '<span style="color:var(--text-secondary)">None</span>'}</td>
+            <th>Customer</th>
+            <th>Contact</th>
+            <th>Items</th>
+            <th>Pickup</th>
+            <th>Notes</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${orders.map(order => `
+            <tr>
+              <td class="preorders-orders-cell--customer">
+                <strong>${escapeHtml(order.name || '-')}</strong><br>
+                <span class="preorders-meta">Placed ${escapeHtml(formatDateTime(order.createdAt))}</span>
+              </td>
+              <td class="preorders-orders-cell--contact">
+                <div>${escapeHtml(order.phone || '-')}</div>
+                <div class="preorders-meta">${escapeHtml(order.email || 'No email')}</div>
+              </td>
+              <td class="preorders-orders-cell--items">
+                ${(Array.isArray(order.items) && order.items.length > 0)
+                  ? `<div class="preorders-line-items">${order.items.map(item => `
+                    <div class="preorders-line-item">
+                      <strong>${Number(item.qty || 0)}x</strong> ${escapeHtml(item.name || '')}
+                    </div>
+                  `).join('')}</div>`
+                  : '-'}
+              </td>
+              <td class="preorders-orders-cell--pickup">${escapeHtml(order.pickupDate || '-')}</td>
+              <td class="preorders-orders-cell--notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
