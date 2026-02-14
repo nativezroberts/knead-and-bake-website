@@ -1,4 +1,4 @@
-{
+﻿{
   "siteName": "Knead & Bake TX",
   "tagline": "Small-batch sourdough in New Braunfels",
   "description": "Handcrafted artisan sourdough bread made with love in New Braunfels, Texas. Preorder for farmers market pickup.",
@@ -9,9 +9,9 @@
     "phone": ""
   },
   "social": {
-    "instagram": "https://instagram.com/kneadandbaketx",
+    "instagram": "https://www.instagram.com/knead_and_baketx",
     "instagramHandle": "@kneadandbaketx",
-    "facebook": "https://facebook.com/kneadandbaketx",
+    "facebook": "https://www.facebook.com/profile.php?id=61557154273182",
     "facebookHandle": "Knead & Bake TX"
   },
   "market": {
@@ -19,7 +19,7 @@
     "location": "New Braunfels, TX",
     "address": "Castell Street, New Braunfels, TX 78130",
     "mapLink": "https://maps.google.com/?q=Castell+Street+Market+New+Braunfels+TX",
-    "schedule": "Every Saturday, 9 AM – 1 PM"
+    "schedule": "Every Saturday, 9 AM â€“ 1 PM"
   },
   "preorder": {
     "enabled": true,
@@ -27,9 +27,9 @@
     "pickupInstructions": "Pick up your order at our booth at Castell Street Market. Look for the Knead & Bake TX banner!",
     "policies": [
       "All items are baked fresh Friday evening for Saturday pickup.",
-      "Preorders guarantee your loaf — walk-up availability varies.",
+      "Preorders guarantee your loaf â€” walk-up availability varies.",
       "Payment is collected at pickup (cash or card).",
-      "Allergen info is listed per item — please review before ordering."
+      "Allergen info is listed per item â€” please review before ordering."
     ]
   },
   "seo": {
@@ -39,3 +39,4 @@
     "keywords": "sourdough, artisan bread, New Braunfels, farmers market, Texas bakery, handmade bread"
   }
 }
+
