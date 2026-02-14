@@ -1058,6 +1058,7 @@ function renderPreorderOrders(summary) {
           <col class="preorders-orders-col--items">
           <col class="preorders-orders-col--pickup">
           <col class="preorders-orders-col--notes">
+          <col class="preorders-orders-col--actions">
         </colgroup>
         <thead>
           <tr>
@@ -1066,6 +1067,7 @@ function renderPreorderOrders(summary) {
             <th>Items</th>
             <th>Pickup</th>
             <th>Notes</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -1090,12 +1092,53 @@ function renderPreorderOrders(summary) {
               </td>
               <td class="preorders-orders-cell--pickup" data-label="Pickup">${escapeHtml(order.pickupDate || '-')}</td>
               <td class="preorders-orders-cell--notes" data-label="Notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
+              <td class="preorders-orders-cell--actions" data-label="Actions">
+                <button class="btn btn--reject" data-order-id="${escapeHtml(order.orderId || '')}" data-order-name="${escapeHtml(order.name || 'this customer')}">Reject</button>
+              </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     </div>
   `;
+
+  // Attach reject button handlers
+  container.querySelectorAll('.btn--reject').forEach(btn => {
+    btn.addEventListener('click', () => handleRejectOrder(btn));
+  });
+}
+
+async function handleRejectOrder(btn) {
+  const orderId = btn.dataset.orderId;
+  const customerName = btn.dataset.orderName;
+  if (!orderId) return;
+
+  const confirmed = confirm(`Are you sure you want to reject ${customerName}'s order?\n\nThis will cancel the order, restore inventory, and notify the customer.`);
+  if (!confirmed) return;
+
+  const originalText = btn.textContent;
+  btn.textContent = 'Rejecting...';
+  btn.disabled = true;
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/reject`, {
+      method: 'POST',
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to reject order.');
+    }
+    showToast(data.message || 'Order rejected successfully.');
+    // Reload the summary to reflect updated totals and remove the cancelled order
+    const weekSelect = $('preorders-week-select');
+    if (weekSelect) {
+      loadPreorderSummary(weekSelect.value);
+    }
+  } catch (e) {
+    setPreordersError(e.message || 'Failed to reject order.');
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
 function renderPreorderSummary(summary) {

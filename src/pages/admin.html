@@ -50,16 +50,20 @@
     .preorders-card__value { font-size: var(--text-2xl); font-weight: var(--weight-bold); font-family: var(--font-heading); color: var(--text-primary); line-height: 1.1; }
     .preorders-grid { display: grid; gap: var(--space-6); }
     .preorders-orders-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
-    .preorders-orders-table { min-width: 920px; margin-top: 0; table-layout: fixed; }
+    .preorders-orders-table { min-width: 1020px; margin-top: 0; table-layout: fixed; }
     .preorders-orders-table th,
     .preorders-orders-table td { vertical-align: top; }
     .preorders-orders-table td { white-space: normal; overflow-wrap: anywhere; }
     .preorders-orders-table td:last-child { white-space: normal; }
-    .preorders-orders-table .preorders-orders-col--customer { width: 19%; }
-    .preorders-orders-table .preorders-orders-col--contact { width: 20%; }
-    .preorders-orders-table .preorders-orders-col--items { width: 30%; }
-    .preorders-orders-table .preorders-orders-col--pickup { width: 12%; }
-    .preorders-orders-table .preorders-orders-col--notes { width: 19%; }
+    .preorders-orders-table .preorders-orders-col--customer { width: 17%; }
+    .preorders-orders-table .preorders-orders-col--contact { width: 18%; }
+    .preorders-orders-table .preorders-orders-col--items { width: 27%; }
+    .preorders-orders-table .preorders-orders-col--pickup { width: 10%; }
+    .preorders-orders-table .preorders-orders-col--notes { width: 18%; }
+    .preorders-orders-table .preorders-orders-col--actions { width: 10%; }
+    .btn--reject { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; }
+    .btn--reject:hover { background: #dc3545; color: #fff; }
+    .btn--reject:disabled { opacity: 0.5; cursor: not-allowed; }
     .preorders-orders-table td.preorders-orders-cell--pickup { white-space: nowrap; }
     .preorders-line-items { display: grid; gap: 2px; }
     .preorders-line-item { line-height: 1.35; }

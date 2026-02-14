@@ -5,7 +5,7 @@
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand, BatchWriteCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -1048,6 +1048,118 @@ async function emailPreorderSummary(body) {
   }
 }
 
+// ── Reject / Cancel Order ──
+async function rejectOrder(orderId) {
+  if (!ORDERS_TABLE) {
+    return response(500, { message: 'Orders table is not configured.' });
+  }
+
+  if (!orderId || typeof orderId !== 'string') {
+    return response(400, { message: 'A valid orderId is required.' });
+  }
+
+  // Fetch the order
+  const result = await ddb.send(new GetCommand({
+    TableName: ORDERS_TABLE,
+    Key: { orderId },
+  }));
+
+  const order = result.Item;
+  if (!order) {
+    return response(404, { message: 'Order not found.' });
+  }
+
+  if (String(order.status || '').toUpperCase() === 'CANCELLED') {
+    return response(200, { message: 'Order is already cancelled.', orderId });
+  }
+
+  const now = new Date().toISOString();
+  const transactItems = [
+    {
+      Update: {
+        TableName: ORDERS_TABLE,
+        Key: { orderId },
+        UpdateExpression: 'SET #status = :cancelled, cancelledAt = :now',
+        ConditionExpression: '#status <> :cancelled',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':cancelled': 'CANCELLED',
+          ':now': now,
+        },
+      },
+    },
+  ];
+
+  // Restore inventory for each item
+  if (TABLE_NAME && Array.isArray(order.items)) {
+    for (const item of order.items) {
+      if (item.sku && typeof item.qty === 'number' && item.qty > 0) {
+        transactItems.push({
+          Update: {
+            TableName: TABLE_NAME,
+            Key: { type: 'PRODUCT_INVENTORY', id: item.sku },
+            UpdateExpression: 'SET currentQty = currentQty + :qty, updatedAt = :now',
+            ExpressionAttributeValues: {
+              ':qty': item.qty,
+              ':now': now,
+            },
+          },
+        });
+      }
+    }
+  }
+
+  try {
+    await ddb.send(new TransactWriteCommand({ TransactItems: transactItems }));
+  } catch (err) {
+    if (err.name === 'TransactionCanceledException') {
+      return response(409, { message: 'Order was already cancelled or inventory conflict.' });
+    }
+    console.error('Failed to reject order:', err);
+    return response(500, { message: 'Failed to reject order.' });
+  }
+
+  // Send cancellation email to customer if they provided an email
+  if (SEND_EMAILS && order.email && EMAIL_REGEX.test(order.email)) {
+    try {
+      const itemsList = (order.items || [])
+        .map(i => `  - ${i.qty}x ${i.name}`)
+        .join('\n');
+
+      await ses.send(new SendEmailCommand({
+        Source: FROM_EMAIL,
+        Destination: { ToAddresses: [order.email] },
+        Message: {
+          Subject: { Data: 'Knead & Bake TX - Order Cancelled' },
+          Body: {
+            Text: {
+              Data: [
+                `Hi ${order.name || 'there'},`,
+                '',
+                'Your preorder with Knead & Bake TX has been cancelled.',
+                '',
+                'Order details:',
+                itemsList,
+                `Pickup date: ${order.pickupDate || 'N/A'}`,
+                '',
+                'If you believe this was a mistake, please contact us to place a new order.',
+                '',
+                'Thank you,',
+                'Knead & Bake TX',
+              ].join('\n'),
+            },
+          },
+        },
+      }));
+    } catch (emailErr) {
+      console.error('Failed to send cancellation email:', emailErr);
+      // Don't fail the rejection if email fails
+    }
+  }
+
+  return response(200, { message: 'Order cancelled successfully.', orderId });
+}
+
 export async function handler(event) {
   const method = event.requestContext?.http?.method;
   const path = event.rawPath;
@@ -1112,6 +1224,13 @@ export async function handler(event) {
     const id = decodeURIComponent(path.split('/').pop());
     if (method === 'PUT') return updateNewsPost(id, body);
     if (method === 'DELETE') return deleteNewsPost(id);
+  }
+
+  // Reject order
+  if (path.startsWith('/api/admin/orders/') && path.endsWith('/reject') && method === 'POST') {
+    const segments = path.split('/');
+    const orderId = decodeURIComponent(segments[segments.length - 2]);
+    return rejectOrder(orderId);
   }
 
   // Preorder summary
