@@ -211,16 +211,47 @@ Add these GitHub repository secrets:
 | `S3_BUCKET_NAME` | From CDK output `KneadBakeSite.BucketName` |
 | `CLOUDFRONT_DISTRIBUTION_ID` | From CDK output `KneadBakeSite.DistributionId` |
 
-### Step 6 (Optional): Enable Email Notifications
+### Step 6: Enable Email Notifications
 
-1. Verify your domain or email in SES:
+Email is handled by SES. Two emails are sent per order:
+- **Owner notification** (always) — to `allyson.m.roberts@gmail.com`
+- **Customer confirmation** (when email provided) — requires SES production mode
+
+#### SES Setup
+
+1. **Verify sending domain** (one-time):
    ```bash
-   aws ses verify-email-identity --email-address orders@kneadandbaketx.com
-   aws ses verify-email-identity --email-address noreply@kneadandbaketx.com
+   aws ses verify-domain-identity --domain kneadandbaketx.com --region us-east-1
    ```
-2. Update the Lambda environment variable:
-   - Set `SEND_EMAILS=true` in the CDK stack or Lambda console
-3. If in SES sandbox, request production access
+   Then add the returned TXT record to Route 53 / your DNS provider.
+
+2. **Verify owner email** (one-time, for sandbox):
+   ```bash
+   aws ses verify-email-identity --email-address allyson.m.roberts@gmail.com --region us-east-1
+   ```
+   Click the verification link sent to that address.
+
+3. **Request SES production access** (one-time):
+   - Open the [SES console](https://console.aws.amazon.com/ses/home?region=us-east-1#/account)
+   - Click "Request production access"
+   - Fill in use case: "Transactional order confirmations for small bakery"
+   - Approval usually takes < 24 hours
+
+4. **Enable customer emails in CDK** (already done if you're on main):
+   In `infra/bin/app.ts`, `sesSandbox` is set to `false`. This means customer
+   confirmation emails are sent when the customer provides an email address.
+   To disable customer emails (sandbox mode), change to `sesSandbox: true`
+   and redeploy.
+
+5. **Deploy**:
+   ```bash
+   cd infra && npx cdk deploy --all
+   ```
+
+#### Rollback to Sandbox Mode
+
+Change `sesSandbox: true` in `infra/bin/app.ts` and redeploy. Owner emails
+continue working; only customer confirmation emails are suppressed.
 
 ### Step 7 (Future): Add Custom Domain
 

@@ -12,6 +12,13 @@ import * as path from 'path';
 
 interface ApiStackProps extends cdk.StackProps {
   siteBucket: s3.IBucket;
+  /**
+   * When true, customer confirmation emails are suppressed (only owner
+   * receives notifications). Set to false once SES is in production mode
+   * and the sending domain is verified.
+   * @default true
+   */
+  sesSandbox?: boolean;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -66,7 +73,7 @@ export class ApiStack extends cdk.Stack {
         OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
         FROM_EMAIL: 'noreply@kneadandbaketx.com',
         SEND_EMAILS: 'true',
-        SES_SANDBOX: 'true',
+        SES_SANDBOX: (props.sesSandbox ?? true).toString(),
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });

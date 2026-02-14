@@ -16,10 +16,13 @@ const site = new StaticSiteStack(app, 'KneadBakeSite', {
   description: 'Knead & Bake TX - static site (S3 + CloudFront)',
 });
 
-// API: API Gateway + Lambda + DynamoDB (+ optional SES + WAF)
+// API: API Gateway + Lambda + DynamoDB (+ SES + WAF)
+// Set sesSandbox to false once SES is out of sandbox and domain is verified.
+// To switch back to sandbox mode: change to true and redeploy.
 new ApiStack(app, 'KneadBakeApi', {
   env,
   siteBucket: site.siteBucket,
+  sesSandbox: false,
   description: 'Knead & Bake TX - order API (APIGW + Lambda + DynamoDB)',
 });
 
