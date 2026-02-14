@@ -1,17 +1,24 @@
 /**
- * Admin Lambda — CRUD for skip dates, announcements, news posts, and product inventory.
+ * Admin Lambda — CRUD for skip dates, announcements, news posts, product inventory,
+ * and weekly preorder summaries.
  * Also serves the public GET /api/market-config, GET /api/news, and GET /api/inventory endpoints.
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand, GetCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const s3 = new S3Client({});
+const ses = new SESClient({});
 const TABLE_NAME = process.env.CONFIG_TABLE;
+const ORDERS_TABLE = process.env.ORDERS_TABLE;
+const OWNER_EMAIL = process.env.OWNER_EMAIL || 'allyson.m.roberts@gmail.com';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
+const SEND_EMAILS = process.env.SEND_EMAILS !== 'false';
 const SITE_BUCKET = process.env.SITE_BUCKET;
 const SITE_UPLOAD_PREFIX = process.env.SITE_UPLOAD_PREFIX || 'news-images';
 const MAX_SKIP_DATES = 365;
@@ -19,6 +26,7 @@ const MAX_ANNOUNCEMENTS = 50;
 const MAX_NEWS_POSTS = 200;
 const MAX_NEWS_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_NEWS_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function response(statusCode, body) {
   return {
@@ -55,6 +63,49 @@ function extensionFromContentType(contentType) {
   if (contentType === 'image/webp') return 'webp';
   if (contentType === 'image/gif') return 'gif';
   return null;
+}
+
+function validateEmail(email) {
+  return EMAIL_REGEX.test(email);
+}
+
+function parseYmdUtc(dateStr) {
+  if (!isValidDate(dateStr)) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+function toYmdUtc(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDaysUtc(date, days) {
+  const next = new Date(date.getTime());
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function getStartOfWeekUtc(date) {
+  const day = date.getUTCDay(); // Sunday-based week.
+  return addDaysUtc(date, -day);
+}
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+function getCustomerKey(order) {
+  const nameKey = String(order.name || '').trim().toLowerCase();
+  const phoneKey = normalizePhone(order.phone || '');
+  const emailKey = String(order.email || '').trim().toLowerCase();
+  return `${nameKey}|${phoneKey}|${emailKey}`;
+}
+
+function formatOrderCreatedAt(createdAt) {
+  if (!createdAt) return '';
+  const d = new Date(createdAt);
+  if (isNaN(d.getTime())) return String(createdAt);
+  return d.toISOString();
 }
 
 async function queryByType(type) {
@@ -753,6 +804,250 @@ async function initProductInventory() {
 }
 
 // ── Router ──
+// Weekly preorder summary and email
+async function queryOrdersByPickupDate(pickupDate) {
+  if (!ORDERS_TABLE) {
+    throw new Error('Orders table is not configured.');
+  }
+
+  let lastEvaluatedKey = undefined;
+  const orders = [];
+
+  do {
+    const result = await ddb.send(new QueryCommand({
+      TableName: ORDERS_TABLE,
+      IndexName: 'by-pickup-date',
+      KeyConditionExpression: '#pickupDate = :pickupDate',
+      ExpressionAttributeNames: {
+        '#pickupDate': 'pickupDate',
+      },
+      ExpressionAttributeValues: {
+        ':pickupDate': pickupDate,
+      },
+      ExclusiveStartKey: lastEvaluatedKey,
+    }));
+    orders.push(...(result.Items || []));
+    lastEvaluatedKey = result.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  return orders;
+}
+
+function resolveWeekStartDate(weekStartInput) {
+  if (!weekStartInput) {
+    const now = new Date();
+    return getStartOfWeekUtc(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 0, 0)));
+  }
+
+  const parsed = parseYmdUtc(weekStartInput);
+  if (!parsed) return null;
+  return getStartOfWeekUtc(parsed);
+}
+
+function buildPreorderSummary(orders, weekStart, weekEnd) {
+  const activeOrders = orders
+    .filter(order => String(order.status || 'NEW').toUpperCase() !== 'CANCELLED')
+    .map(order => {
+      const items = Array.isArray(order.items)
+        ? order.items
+            .filter(item => item && typeof item.qty === 'number' && item.qty > 0)
+            .map(item => ({
+              name: sanitize(item.name || '', 200),
+              qty: Math.round(item.qty),
+            }))
+        : [];
+
+      const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+
+      return {
+        orderId: sanitize(order.orderId || '', 100),
+        name: sanitize(order.name || '', 200),
+        phone: sanitize(order.phone || '', 50),
+        email: sanitize(order.email || '', 320),
+        pickupDate: sanitize(order.pickupDate || '', 20),
+        notes: sanitize(order.notes || '', 500),
+        status: sanitize(order.status || 'NEW', 40),
+        createdAt: formatOrderCreatedAt(order.createdAt),
+        items,
+        totalQty,
+      };
+    });
+
+  activeOrders.sort((a, b) => {
+    const pickupCmp = (a.pickupDate || '').localeCompare(b.pickupDate || '');
+    if (pickupCmp !== 0) return pickupCmp;
+    return (a.createdAt || '').localeCompare(b.createdAt || '');
+  });
+
+  const productTotalsMap = new Map();
+  const uniqueCustomers = new Set();
+  let totalQty = 0;
+
+  for (const order of activeOrders) {
+    uniqueCustomers.add(getCustomerKey(order));
+    totalQty += order.totalQty;
+
+    for (const item of order.items) {
+      productTotalsMap.set(item.name, (productTotalsMap.get(item.name) || 0) + item.qty);
+    }
+  }
+
+  const productTotals = Array.from(productTotalsMap.entries())
+    .map(([name, qty]) => ({ name, qty }))
+    .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name));
+
+  return {
+    weekStart,
+    weekEnd,
+    generatedAt: new Date().toISOString(),
+    totals: {
+      orderCount: activeOrders.length,
+      totalQty,
+      uniqueCustomers: uniqueCustomers.size,
+      productTypeCount: productTotals.length,
+    },
+    productTotals,
+    orders: activeOrders,
+  };
+}
+
+async function generateWeeklyPreorderSummary(weekStartInput) {
+  const weekStartDate = resolveWeekStartDate(weekStartInput);
+  if (!weekStartDate) return null;
+
+  const weekStart = toYmdUtc(weekStartDate);
+  const weekEnd = toYmdUtc(addDaysUtc(weekStartDate, 6));
+  const pickupDates = Array.from({ length: 7 }, (_, idx) => toYmdUtc(addDaysUtc(weekStartDate, idx)));
+
+  const ordersByDay = await Promise.all(pickupDates.map(queryOrdersByPickupDate));
+  return buildPreorderSummary(ordersByDay.flat(), weekStart, weekEnd);
+}
+
+function buildPreorderSummaryEmailText(summary) {
+  const lines = [
+    'Knead & Bake TX - Weekly Preorder Summary',
+    `Week: ${summary.weekStart} to ${summary.weekEnd}`,
+    `Generated: ${summary.generatedAt}`,
+    '',
+    'Totals',
+    `- Orders: ${summary.totals.orderCount}`,
+    `- Total Quantity: ${summary.totals.totalQty}`,
+    `- Unique Customers: ${summary.totals.uniqueCustomers}`,
+    `- Product Types Ordered: ${summary.totals.productTypeCount}`,
+    '',
+    'Loaf/Product Totals',
+  ];
+
+  if (summary.productTotals.length === 0) {
+    lines.push('- No products ordered.');
+  } else {
+    summary.productTotals.forEach(product => {
+      lines.push(`- ${product.name}: ${product.qty}`);
+    });
+  }
+
+  lines.push('', 'Order Details');
+
+  if (summary.orders.length === 0) {
+    lines.push('- No preorders for this week.');
+  } else {
+    summary.orders.forEach((order, idx) => {
+      lines.push(
+        '',
+        `${idx + 1}. ${order.name || 'Customer'} (${order.orderId || 'No ID'})`,
+        `   Pickup: ${order.pickupDate || '-'}`,
+        `   Phone: ${order.phone || '-'}`,
+        `   Email: ${order.email || 'Not provided'}`,
+        `   Created: ${order.createdAt || '-'}`,
+        `   Items: ${order.items.map(item => `${item.qty}x ${item.name}`).join(', ') || '-'}`,
+        `   Notes: ${order.notes || 'None'}`,
+      );
+    });
+  }
+
+  return lines.join('\n');
+}
+
+async function getPreorderSummary(weekStartInput) {
+  if (!ORDERS_TABLE) {
+    return response(500, { message: 'Orders table is not configured.' });
+  }
+
+  if (weekStartInput && !isValidDate(weekStartInput)) {
+    return response(400, { message: 'A valid weekStart date (YYYY-MM-DD) is required.' });
+  }
+
+  try {
+    const summary = await generateWeeklyPreorderSummary(weekStartInput);
+    if (!summary) {
+      return response(400, { message: 'A valid weekStart date (YYYY-MM-DD) is required.' });
+    }
+    return response(200, { _nocache: true, summary });
+  } catch (e) {
+    console.error('Failed to load preorder summary:', e);
+    return response(500, { message: 'Failed to load preorder summary.' });
+  }
+}
+
+async function emailPreorderSummary(body) {
+  if (!ORDERS_TABLE) {
+    return response(500, { message: 'Orders table is not configured.' });
+  }
+
+  if (!SEND_EMAILS) {
+    return response(503, { message: 'Email sending is currently disabled.' });
+  }
+
+  const weekStartInput = typeof body.weekStart === 'string' ? body.weekStart : '';
+  if (weekStartInput && !isValidDate(weekStartInput)) {
+    return response(400, { message: 'A valid weekStart date (YYYY-MM-DD) is required.' });
+  }
+
+  const requestedRecipient = sanitize(body.toEmail || '', 320).toLowerCase();
+  if (requestedRecipient && !validateEmail(requestedRecipient)) {
+    return response(400, { message: 'Please enter a valid email address.' });
+  }
+
+  const recipient = requestedRecipient || OWNER_EMAIL;
+  if (!recipient || !validateEmail(recipient)) {
+    return response(400, { message: 'A valid destination email address is required.' });
+  }
+
+  if (!FROM_EMAIL) {
+    return response(500, { message: 'Sender email is not configured.' });
+  }
+
+  try {
+    const summary = await generateWeeklyPreorderSummary(weekStartInput);
+    if (!summary) {
+      return response(400, { message: 'A valid weekStart date (YYYY-MM-DD) is required.' });
+    }
+
+    await ses.send(new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: { ToAddresses: [recipient] },
+      Message: {
+        Subject: {
+          Data: `Preorder Summary: ${summary.weekStart} to ${summary.weekEnd}`,
+        },
+        Body: {
+          Text: { Data: buildPreorderSummaryEmailText(summary) },
+        },
+      },
+    }));
+
+    return response(200, {
+      message: `Summary email sent to ${recipient}.`,
+      recipient,
+      weekStart: summary.weekStart,
+      weekEnd: summary.weekEnd,
+    });
+  } catch (e) {
+    console.error('Failed to email preorder summary:', e);
+    return response(500, { message: 'Failed to email preorder summary.' });
+  }
+}
+
 export async function handler(event) {
   const method = event.requestContext?.http?.method;
   const path = event.rawPath;
@@ -817,6 +1112,16 @@ export async function handler(event) {
     const id = decodeURIComponent(path.split('/').pop());
     if (method === 'PUT') return updateNewsPost(id, body);
     if (method === 'DELETE') return deleteNewsPost(id);
+  }
+
+  // Preorder summary
+  if (path === '/api/admin/preorders/summary' && method === 'GET') {
+    const weekStart = event.queryStringParameters?.weekStart || '';
+    return getPreorderSummary(weekStart);
+  }
+
+  if (path === '/api/admin/preorders/email-summary' && method === 'POST') {
+    return emailPreorderSummary(body);
   }
 
   // Product inventory

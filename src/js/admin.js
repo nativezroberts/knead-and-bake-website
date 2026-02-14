@@ -1,5 +1,6 @@
 /**
- * Admin Page - login, skip date management, announcement management, news post management, product inventory.
+ * Admin Page - login, skip date management, announcement management, news post management,
+ * product inventory, and weekly preorder summaries.
  */
 
 import { renderMarkdown } from './markdown.js';
@@ -7,6 +8,8 @@ import { renderMarkdown } from './markdown.js';
 const API_BASE = window.__API_BASE || '';
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEFAULT_SUMMARY_EMAIL = 'allyson.m.roberts@gmail.com';
 
 let authToken = null;
 let editingAnnouncementId = null;
@@ -14,9 +17,11 @@ let editingNewsPostId = null;
 let announcementsCache = [];
 let newsPostsCache = [];
 let inventoryCache = [];
+let preordersReady = false;
+let preorderSummaryCache = null;
 
 // -- Tabs --
-const TAB_KEYS = ['skipDates', 'announcements', 'news', 'inventory'];
+const TAB_KEYS = ['skipDates', 'announcements', 'news', 'inventory', 'preorders'];
 const TAB_STORAGE_KEY = 'admin_active_tab';
 const loadedTabs = new Set();
 let isDirty = false;
@@ -71,6 +76,7 @@ function loadTabData(key) {
     case 'announcements': loadAnnouncements(); break;
     case 'news': loadNewsPosts(); break;
     case 'inventory': loadInventory(); break;
+    case 'preorders': loadPreorderSummary(); break;
   }
 }
 
@@ -213,6 +219,15 @@ function showAdmin() {
 function showError(el, msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function setUploadStatus(statusElId, msg, isError = false) {
@@ -906,6 +921,299 @@ function initAnnouncementEditor() {
   updateAnnouncementPreview();
 }
 
+// -- Weekly Preorders --
+function toYMD(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function parseYMD(ymd) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd || '')) return null;
+  const parsed = new Date(`${ymd}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getWeekStartSunday(date = new Date()) {
+  const start = new Date(date);
+  start.setHours(12, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  return start;
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatWeekRange(startDate, endDate) {
+  const sameYear = startDate.getFullYear() === endDate.getFullYear();
+  const startLabel = startDate.toLocaleDateString('en-US', sameYear
+    ? { month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' });
+  const endLabel = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${startLabel} - ${endLabel}`;
+}
+
+function buildWeekOptions(currentWeekStart) {
+  const options = [];
+  for (let offset = -12; offset <= 4; offset++) {
+    const start = addDays(currentWeekStart, offset * 7);
+    const end = addDays(start, 6);
+    options.push({
+      value: toYMD(start),
+      label: formatWeekRange(start, end),
+    });
+  }
+  return options;
+}
+
+function setPreordersError(message = '') {
+  const errorEl = $('preorders-error');
+  if (!errorEl) return;
+  if (!message) {
+    errorEl.classList.add('hidden');
+    errorEl.textContent = '';
+    return;
+  }
+  showError(errorEl, message);
+}
+
+function setPreordersLoading(isLoading) {
+  const loadingEl = $('preorders-loading');
+  if (!loadingEl) return;
+  loadingEl.classList.toggle('hidden', !isLoading);
+}
+
+function renderPreorderAnalytics(summary) {
+  const container = $('preorders-analytics');
+  if (!container) return;
+  const totals = summary?.totals || {};
+  const cards = [
+    { label: 'Orders', value: totals.orderCount ?? 0 },
+    { label: 'Total Qty', value: totals.totalQty ?? 0 },
+    { label: 'Customers', value: totals.uniqueCustomers ?? 0 },
+    { label: 'Product Types', value: totals.productTypeCount ?? 0 },
+  ];
+  container.innerHTML = cards.map(card => `
+    <div class="preorders-card">
+      <div class="preorders-card__label">${escapeHtml(card.label)}</div>
+      <div class="preorders-card__value">${Number(card.value).toLocaleString('en-US')}</div>
+    </div>
+  `).join('');
+}
+
+function renderPreorderProductTotals(summary) {
+  const container = $('preorders-product-totals');
+  if (!container) return;
+  const rows = summary?.productTotals || [];
+
+  if (rows.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary)">No preorders for this week.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <ul class="preorders-items">
+      ${rows.map(row => `
+        <li>
+          <span>${escapeHtml(row.name)}</span>
+          <strong>${Number(row.qty || 0).toLocaleString('en-US')}</strong>
+        </li>
+      `).join('')}
+    </ul>
+  `;
+}
+
+function renderPreorderOrders(summary) {
+  const container = $('preorders-orders');
+  if (!container) return;
+  const orders = summary?.orders || [];
+
+  if (orders.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary)">No customer orders for this week.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Contact</th>
+          <th>Items</th>
+          <th>Pickup</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orders.map(order => `
+          <tr>
+            <td>
+              <strong>${escapeHtml(order.name || '-')}</strong><br>
+              <span style="color:var(--text-secondary);font-size:var(--text-xs)">Placed ${escapeHtml(formatDateTime(order.createdAt))}</span>
+            </td>
+            <td>
+              <div>${escapeHtml(order.phone || '-')}</div>
+              <div style="color:var(--text-secondary);font-size:var(--text-xs)">${escapeHtml(order.email || 'No email')}</div>
+            </td>
+            <td>
+              ${(Array.isArray(order.items) && order.items.length > 0)
+                ? order.items.map(item => `${Number(item.qty || 0)}x ${escapeHtml(item.name || '')}`).join('<br>')
+                : '-'}
+            </td>
+            <td>${escapeHtml(order.pickupDate || '-')}</td>
+            <td>${order.notes ? escapeHtml(order.notes) : '<span style="color:var(--text-secondary)">None</span>'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderPreorderSummary(summary) {
+  preorderSummaryCache = summary;
+  const summaryEl = $('preorders-summary');
+  const weekLabelEl = $('preorders-week-label');
+  if (!summaryEl || !weekLabelEl) return;
+
+  const start = parseYMD(summary?.weekStart || '');
+  const end = parseYMD(summary?.weekEnd || '');
+  const weekLabel = (start && end)
+    ? formatWeekRange(start, end)
+    : `${summary?.weekStart || ''} - ${summary?.weekEnd || ''}`;
+  weekLabelEl.textContent = `Preorders for ${weekLabel} (Generated ${formatDateTime(summary?.generatedAt)})`;
+
+  renderPreorderAnalytics(summary);
+  renderPreorderProductTotals(summary);
+  renderPreorderOrders(summary);
+  summaryEl.classList.remove('hidden');
+}
+
+function initPreordersTab() {
+  if (preordersReady) return;
+
+  const weekSelect = $('preorders-week-select');
+  const refreshBtn = $('preorders-refresh-btn');
+  const printBtn = $('preorders-print-btn');
+  const emailBtn = $('preorders-email-btn');
+  const emailInput = $('preorders-email-input');
+
+  if (!weekSelect || !refreshBtn || !printBtn || !emailBtn || !emailInput) return;
+
+  const currentWeekStart = getWeekStartSunday(new Date());
+  const options = buildWeekOptions(currentWeekStart);
+  weekSelect.innerHTML = options
+    .map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`)
+    .join('');
+  weekSelect.value = toYMD(currentWeekStart);
+
+  if (!emailInput.value.trim()) {
+    emailInput.value = DEFAULT_SUMMARY_EMAIL;
+  }
+
+  weekSelect.addEventListener('change', () => {
+    loadPreorderSummary(weekSelect.value);
+  });
+  refreshBtn.addEventListener('click', () => {
+    loadPreorderSummary(weekSelect.value);
+  });
+  printBtn.addEventListener('click', () => {
+    window.print();
+  });
+  emailBtn.addEventListener('click', sendPreorderSummaryEmail);
+
+  preordersReady = true;
+}
+
+async function loadPreorderSummary(weekStartOverride = '') {
+  initPreordersTab();
+  const weekSelect = $('preorders-week-select');
+  const summaryEl = $('preorders-summary');
+  if (!weekSelect || !summaryEl) return;
+
+  const weekStart = weekStartOverride || weekSelect.value || toYMD(getWeekStartSunday(new Date()));
+  if (weekSelect.value !== weekStart) {
+    weekSelect.value = weekStart;
+  }
+
+  setPreordersError('');
+  setPreordersLoading(true);
+  summaryEl.classList.add('hidden');
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/preorders/summary?weekStart=${encodeURIComponent(weekStart)}`);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to load preorder summary.');
+    }
+    renderPreorderSummary(data.summary || {
+      weekStart,
+      weekEnd: toYMD(addDays(parseYMD(weekStart) || getWeekStartSunday(new Date()), 6)),
+      generatedAt: new Date().toISOString(),
+      totals: { orderCount: 0, totalQty: 0, uniqueCustomers: 0, productTypeCount: 0 },
+      productTotals: [],
+      orders: [],
+    });
+  } catch (e) {
+    setPreordersError(e.message || 'Failed to load preorder summary.');
+  } finally {
+    setPreordersLoading(false);
+  }
+}
+
+async function sendPreorderSummaryEmail() {
+  const emailInput = $('preorders-email-input');
+  const emailBtn = $('preorders-email-btn');
+  const weekSelect = $('preorders-week-select');
+  if (!emailInput || !emailBtn || !weekSelect) return;
+
+  const toEmail = emailInput.value.trim();
+  if (toEmail && !EMAIL_REGEX.test(toEmail)) {
+    setPreordersError('Please enter a valid email address.');
+    return;
+  }
+
+  setPreordersError('');
+  const originalText = emailBtn.textContent;
+  emailBtn.textContent = 'Sending...';
+  emailBtn.disabled = true;
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/preorders/email-summary`, {
+      method: 'POST',
+      body: JSON.stringify({
+        weekStart: weekSelect.value,
+        toEmail,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to send summary email.');
+    }
+    showToast(data.message || `Summary emailed to ${toEmail || DEFAULT_SUMMARY_EMAIL}`);
+  } catch (e) {
+    setPreordersError(e.message || 'Failed to send summary email.');
+  } finally {
+    emailBtn.textContent = originalText;
+    emailBtn.disabled = false;
+  }
+}
+
 // -- Product Inventory --
 async function loadInventory() {
   const container = $('inventory-list');
@@ -1093,7 +1401,7 @@ export function initAdmin() {
   initTabs();
 
   // Dirty tracking on all admin form inputs
-  document.querySelectorAll('#admin-content input, #admin-content textarea, #admin-content select').forEach(el => {
+  document.querySelectorAll('#admin-content input:not([data-no-dirty]), #admin-content textarea:not([data-no-dirty]), #admin-content select:not([data-no-dirty])').forEach(el => {
     el.addEventListener('input', markDirty);
     el.addEventListener('change', markDirty);
   });

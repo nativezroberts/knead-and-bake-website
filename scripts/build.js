@@ -59,9 +59,16 @@ for (const file of fs.readdirSync(pagesDir)) {
 }
 console.log('  Copied HTML pages');
 
-// 3. Copy CSS
-copyDir(path.join(ROOT, 'src', 'css'), path.join(DIST, 'src', 'css'));
-console.log('  Copied CSS');
+// 3. Concatenate CSS into a single main.css (eliminates @import chain at runtime)
+const cssDir = path.join(ROOT, 'src', 'css');
+const cssOrder = ['variables.css', 'reset.css', 'layout.css', 'components.css', 'pages.css'];
+const concatenatedCss = cssOrder
+  .map(f => fs.readFileSync(path.join(cssDir, f), 'utf-8'))
+  .join('\n');
+const distCssDir = path.join(DIST, 'src', 'css');
+fs.mkdirSync(distCssDir, { recursive: true });
+fs.writeFileSync(path.join(distCssDir, 'main.css'), concatenatedCss);
+console.log('  Concatenated CSS into single main.css');
 
 // 4. Copy JS
 copyDir(path.join(ROOT, 'src', 'js'), path.join(DIST, 'src', 'js'));
@@ -113,6 +120,37 @@ Allow: /
 Sitemap: ${siteUrl}/sitemap.xml`;
 fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
 console.log('  Generated robots.txt');
+
+// 11. Minify CSS and JS with esbuild
+const esbuild = require('esbuild');
+
+function getFilesRecursive(dir, ext) {
+  const results = [];
+  if (!fs.existsSync(dir)) return results;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...getFilesRecursive(fullPath, ext));
+    } else if (entry.name.endsWith(ext)) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+const cssFiles = getFilesRecursive(path.join(DIST, 'src', 'css'), '.css');
+const jsFiles = getFilesRecursive(path.join(DIST, 'src', 'js'), '.js');
+
+let totalSaved = 0;
+for (const file of [...cssFiles, ...jsFiles]) {
+  const original = fs.readFileSync(file, 'utf-8');
+  const loader = file.endsWith('.css') ? 'css' : 'js';
+  const { code } = esbuild.transformSync(original, { minify: true, loader });
+  fs.writeFileSync(file, code);
+  const saved = original.length - code.length;
+  totalSaved += saved;
+}
+console.log(`  Minified ${cssFiles.length} CSS + ${jsFiles.length} JS files (saved ~${(totalSaved / 1024).toFixed(1)} KB)`);
 
 console.log('\nBuild complete! Output: /dist');
 console.log(`  ${fs.readdirSync(DIST).length} top-level files/dirs`);

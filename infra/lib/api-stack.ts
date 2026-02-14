@@ -145,6 +145,10 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       environment: {
         CONFIG_TABLE: configTable.tableName,
+        ORDERS_TABLE: ordersTable.tableName,
+        OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
+        FROM_EMAIL: 'noreply@kneadandbaketx.com',
+        SEND_EMAILS: 'true',
         SITE_BUCKET: props.siteBucket.bucketName,
         SITE_UPLOAD_PREFIX: 'news-images',
       },
@@ -152,7 +156,18 @@ export class ApiStack extends cdk.Stack {
     });
 
     configTable.grantReadWriteData(adminFn);
+    ordersTable.grantReadData(adminFn);
     props.siteBucket.grantPut(adminFn, 'news-images/*');
+
+    adminFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['ses:SendEmail'],
+      resources: [
+        `arn:aws:ses:${this.region}:${this.account}:identity/kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/*@kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/allyson.m.roberts@gmail.com`,
+      ],
+    }));
 
     // ── API Gateway HTTP API ──
     const httpApi = new apigwv2.HttpApi(this, 'OrderApi', {
@@ -293,6 +308,21 @@ export class ApiStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/api/admin/inventory/{sku}',
       methods: [apigwv2.HttpMethod.PUT],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Admin preorder summary routes (protected by JWT authorizer)
+    httpApi.addRoutes({
+      path: '/api/admin/preorders/summary',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: '/api/admin/preorders/email-summary',
+      methods: [apigwv2.HttpMethod.POST],
       integration: adminIntegration,
       authorizer: jwtAuthorizer,
     });

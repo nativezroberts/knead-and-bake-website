@@ -20,6 +20,9 @@
   <meta name="twitter:description" content="Handcrafted small-batch sourdough bread at the Castell Street Market in New Braunfels, TX.">
   <meta name="twitter:image" content="/images/og-image.jpg">
   <!-- Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/src/css/main.css">
   <link rel="icon" href="/images/favicon.png" type="image/png">
 </head>
@@ -93,7 +96,10 @@
           </div>
         </div>
         <div data-reveal="right">
-          <img class="hero__image" src="/images/home-sourdough.jpg" alt="Fresh sourdough loaf with golden crust" width="600" height="450" loading="eager">
+          <picture>
+            <source srcset="/images/home-sourdough.webp" type="image/webp">
+            <img class="hero__image" src="/images/home-sourdough.jpg" alt="Fresh sourdough loaf with golden crust" width="600" height="450" loading="eager">
+          </picture>
         </div>
       </div>
     </section>
@@ -224,12 +230,22 @@
       revealObserver.observe(el);
     });
 
+    // Helper: load and render a section once it scrolls near the viewport
+    function lazyLoadSection(elementId, loadFn) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          loadFn(el);
+        }
+      }, { rootMargin: '200px' });
+      observer.observe(el);
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
-      const [marketInfo, menuData, testimonialData] = await Promise.all([
-        getMarketInfo(),
-        loadProducts(),
-        ContentLoader.testimonials(),
-      ]);
+      // Above-the-fold: fetch market info eagerly
+      const marketInfo = await getMarketInfo();
 
       // Announcements and skip notices
       const announcementEl = document.getElementById('announcements');
@@ -247,38 +263,58 @@
       // Next Market
       document.getElementById('next-market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
 
-      // Top Sellers — show all that are topSeller + available (includes sold_out)
-      if (menuData?.items) {
-        const topSellers = menuData.items.filter(i => i.topSeller && i.available);
-        document.getElementById('top-sellers').innerHTML = topSellers.map(renderCard).join('');
+      // Below-the-fold: defer product + testimonial fetches until near viewport
+      let menuDataCache = null;
+      async function getMenuData() {
+        if (!menuDataCache) menuDataCache = await loadProducts();
+        return menuDataCache;
       }
 
-      // Seasonal Spotlight — show first seasonal item that is available (any status except not_available)
-      if (menuData?.items) {
-        const seasonal = menuData.items.find(i => i.seasonal && i.available);
-        if (seasonal) {
-          const isSoldOut = seasonal.status === 'sold_out';
-          document.getElementById('seasonal-spotlight').innerHTML = `
-            <img class="spotlight__image" src="${seasonal.image || '/images/placeholder-bread.svg'}" alt="${seasonal.name}" loading="lazy" width="600" height="450">
-            <div>
-              <span class="card__tag card__tag--seasonal">${seasonal.seasonalLabel || 'Seasonal'}</span>
-              <h3 class="spotlight__title">${seasonal.name}</h3>
-              <p class="spotlight__desc">${seasonal.description}</p>
-              <p class="spotlight__desc"><strong>$${seasonal.price.toFixed(2)}</strong></p>
-              ${isSoldOut
-                ? '<span class="badge badge--sold-out">SOLD OUT</span>'
-                : '<a href="/preorder.html" class="btn btn--secondary mt-4">Preorder This Loaf</a>'
-              }
-            </div>
-          `;
+      // Top Sellers
+      lazyLoadSection('top-sellers', async (el) => {
+        const menuData = await getMenuData();
+        if (menuData?.items) {
+          const topSellers = menuData.items.filter(i => i.topSeller && i.available);
+          el.innerHTML = topSellers.map(renderCard).join('');
         }
-      }
+      });
+
+      // Seasonal Spotlight (shares product data with top sellers)
+      lazyLoadSection('seasonal-spotlight', async (el) => {
+        const menuData = await getMenuData();
+        if (menuData?.items) {
+          const seasonal = menuData.items.find(i => i.seasonal && i.available);
+          if (seasonal) {
+            const isSoldOut = seasonal.status === 'sold_out';
+            const spotImg = seasonal.image || '/images/placeholder-bread.svg';
+            const spotWebp = seasonal.image ? seasonal.image.replace(/\.(png|jpe?g)$/i, '.webp') : '';
+            el.innerHTML = `
+              <picture>
+                ${spotWebp ? `<source srcset="${spotWebp}" type="image/webp">` : ''}
+                <img class="spotlight__image" src="${spotImg}" alt="${seasonal.name}" loading="lazy" width="600" height="450">
+              </picture>
+              <div>
+                <span class="card__tag card__tag--seasonal">${seasonal.seasonalLabel || 'Seasonal'}</span>
+                <h3 class="spotlight__title">${seasonal.name}</h3>
+                <p class="spotlight__desc">${seasonal.description}</p>
+                <p class="spotlight__desc"><strong>$${seasonal.price.toFixed(2)}</strong></p>
+                ${isSoldOut
+                  ? '<span class="badge badge--sold-out">SOLD OUT</span>'
+                  : '<a href="/preorder.html" class="btn btn--secondary mt-4">Preorder This Loaf</a>'
+                }
+              </div>
+            `;
+          }
+        }
+      });
 
       // Testimonials
-      if (testimonialData?.testimonials) {
-        document.getElementById('testimonials').innerHTML =
-          testimonialData.testimonials.map(renderTestimonial).join('');
-      }
+      lazyLoadSection('testimonials', async (el) => {
+        const testimonialData = await ContentLoader.testimonials();
+        if (testimonialData?.testimonials) {
+          el.innerHTML = testimonialData.testimonials.map(renderTestimonial).join('');
+        }
+      });
     });
   </script>
 

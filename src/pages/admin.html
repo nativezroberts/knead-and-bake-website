@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin | Knead &amp; Bake TX</title>
   <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/src/css/main.css">
   <link rel="icon" href="/images/favicon.png" type="image/png">
   <style>
@@ -39,7 +42,27 @@
     .admin-tabs [role="tab"][aria-selected="true"] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
     .admin-tabs [role="tab"]:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: var(--radius-sm); }
     .admin-tabs .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; font-size: 11px; font-weight: var(--weight-bold); border-radius: 10px; background: var(--color-error); color: var(--color-white); }
+    .preorders-toolbar, .preorders-email-row { display: flex; gap: var(--space-4); align-items: end; flex-wrap: wrap; margin-bottom: var(--space-5); }
+    .preorders-toolbar .form-group, .preorders-email-row .form-group { flex: 1; min-width: 220px; margin: 0; }
+    .preorders-analytics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); }
+    .preorders-card { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-cream); }
+    .preorders-card__label { font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--space-1); }
+    .preorders-card__value { font-size: var(--text-2xl); font-weight: var(--weight-bold); font-family: var(--font-heading); color: var(--text-primary); line-height: 1.1; }
+    .preorders-grid { display: grid; gap: var(--space-6); }
+    .preorders-block h3 { font-size: var(--text-lg); margin-bottom: var(--space-3); }
+    .preorders-items { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+    .preorders-items li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-color); font-size: var(--text-sm); }
+    .preorders-items li:last-child { border-bottom: none; }
+    .print-heading { font-family: var(--font-heading); font-size: var(--text-lg); margin-bottom: var(--space-2); }
     [role="tabpanel"].hidden { display: none; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #panel-preorders, #panel-preorders * { visibility: visible !important; }
+      #panel-preorders { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print, .header, .footer, .page-header { display: none !important; }
+      .admin-section { box-shadow: none; border: none; padding: 0; margin: 0; }
+      .admin-table th, .admin-table td { border-color: #d6d6d6; }
+    }
     @media (max-width: 600px) {
       .admin-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
       .admin-tabs::-webkit-scrollbar { display: none; }
@@ -64,7 +87,7 @@
     <section class="page-header">
       <div class="container">
         <h1 class="page-header__title">Admin Dashboard</h1>
-        <p class="page-header__desc">Manage market skip dates, announcements, news posts, and product inventory.</p>
+        <p class="page-header__desc">Manage market skip dates, announcements, news posts, product inventory, and weekly preorder summaries.</p>
       </div>
     </section>
 
@@ -94,6 +117,7 @@
             <button role="tab" id="tab-announcements" aria-controls="panel-announcements" aria-selected="false" tabindex="-1">Announcements</button>
             <button role="tab" id="tab-news" aria-controls="panel-news" aria-selected="false" tabindex="-1">News</button>
             <button role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
+            <button role="tab" id="tab-preorders" aria-controls="panel-preorders" aria-selected="false" tabindex="-1">Preorders</button>
           </nav>
 
           <!-- Skip Dates -->
@@ -263,6 +287,52 @@
           </div>
           </div><!-- /panel-inventory -->
 
+          <!-- Weekly Preorders -->
+          <div role="tabpanel" id="panel-preorders" aria-labelledby="tab-preorders" class="hidden">
+          <div class="admin-section">
+            <h2>Weekly Preorder Summary</h2>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-5)">Review weekly preorders to plan baking totals, print a prep sheet, and email the summary.</p>
+
+            <div class="preorders-toolbar no-print">
+              <div class="form-group">
+                <label for="preorders-week-select" class="form-label">Week</label>
+                <select id="preorders-week-select" class="form-input" data-no-dirty></select>
+              </div>
+              <button id="preorders-refresh-btn" class="btn btn--outline btn--sm">Refresh</button>
+              <button id="preorders-print-btn" class="btn btn--primary btn--sm">Print Summary</button>
+            </div>
+
+            <div class="preorders-email-row no-print">
+              <div class="form-group">
+                <label for="preorders-email-input" class="form-label">Send Summary To</label>
+                <input type="email" id="preorders-email-input" class="form-input" value="allyson.m.roberts@gmail.com" placeholder="name@example.com" data-no-dirty>
+                <p class="editor-hint">Leave blank to send to allyson.m.roberts@gmail.com.</p>
+              </div>
+              <button id="preorders-email-btn" class="btn btn--primary btn--sm">Send Summary Email</button>
+            </div>
+
+            <div id="preorders-error" class="form-error hidden" role="alert"></div>
+            <div id="preorders-loading" style="color:var(--text-secondary)">Loading preorder summary...</div>
+
+            <div id="preorders-summary" class="hidden">
+              <p id="preorders-week-label" class="print-heading"></p>
+              <div id="preorders-analytics" class="preorders-analytics"></div>
+
+              <div class="preorders-grid">
+                <div class="preorders-block">
+                  <h3>Loaf &amp; Product Totals</h3>
+                  <div id="preorders-product-totals"></div>
+                </div>
+
+                <div class="preorders-block">
+                  <h3>Customer Orders</h3>
+                  <div id="preorders-orders"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div><!-- /panel-preorders -->
+
         </div>
 
       </div>
@@ -318,11 +388,9 @@
     window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
   </script>
   <script type="module">
-    import { initAdmin } from '/src/js/admin.js?v=2';
+    import { initAdmin } from '/src/js/admin.js?v=3';
     document.addEventListener('DOMContentLoaded', () => { initAdmin(); });
   </script>
 
 </body>
 </html>
-
-

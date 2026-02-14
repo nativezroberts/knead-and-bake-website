@@ -3,7 +3,7 @@
    Import order matters: tokens → reset → layout → components → pages
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+/* Google Fonts loaded via <link> tags in HTML <head> for non-blocking load */
 
 @import 'variables.css';
 @import 'reset.css';

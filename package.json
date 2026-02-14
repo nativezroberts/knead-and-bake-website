@@ -9,5 +9,8 @@
     "start": "node scripts/serve.js"
   },
   "author": "Knead & Bake TX",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "esbuild": "^0.27.3"
+  }
 }

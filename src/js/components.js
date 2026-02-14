@@ -27,8 +27,11 @@ export function renderCard({ name, description, price, allergens, image, availab
 
   return `
     <article class="card${displayStatus !== 'available' ? ' card--unavailable' : ''}">
-      <img class="card__image" src="${image || '/images/placeholder-bread.svg'}"
-           alt="${name}" loading="lazy" width="400" height="300">
+      <picture>
+        ${image ? `<source srcset="${image.replace(/\.(png|jpe?g)$/i, '.webp')}" type="image/webp">` : ''}
+        <img class="card__image" src="${image || '/images/placeholder-bread.svg'}"
+             alt="${name}" loading="lazy" width="400" height="300">
+      </picture>
       <div class="card__body">
         ${tagHtml}
         <h3 class="card__title">${name}</h3>
@@ -71,8 +74,11 @@ export function renderNewsItem({ id, title, subtitle, startDate, excerpt, type }
 export function renderRecipeCard({ slug, title, description, image, difficulty, bakeTime }) {
   return `
     <a href="/recipes/${slug}.html" class="card" style="text-decoration:none">
-      <img class="card__image" src="${image || '/images/placeholder-bread.svg'}"
-           alt="${title}" loading="lazy" width="400" height="300">
+      <picture>
+        ${image ? `<source srcset="${image.replace(/\.(png|jpe?g)$/i, '.webp')}" type="image/webp">` : ''}
+        <img class="card__image" src="${image || '/images/placeholder-bread.svg'}"
+             alt="${title}" loading="lazy" width="400" height="300">
+      </picture>
       <div class="card__body">
         <span class="card__tag">${difficulty}</span>
         <h3 class="card__title">${title}</h3>
