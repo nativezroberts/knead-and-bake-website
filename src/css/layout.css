@@ -19,7 +19,7 @@
   position: absolute;
   inset: 0;
   background: url("/images/favicon.png") center / contain no-repeat;
-  opacity: 0.08;
+  opacity: 0.50;
   pointer-events: none;
 }
 
