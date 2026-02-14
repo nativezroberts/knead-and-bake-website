@@ -18,7 +18,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: url("/images/favicon.png") center / auto 500% no-repeat;
+  background: url("/images/favicon.png") 35% center / auto 500% no-repeat;
   opacity: 1.00;
   pointer-events: none;
 }
