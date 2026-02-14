@@ -2,23 +2,31 @@
  * Reusable UI Components — render functions that return HTML strings.
  */
 
-export function renderCard({ name, description, price, allergens, image, available, seasonal, seasonalLabel, topSeller }) {
+import { STATUS_LABEL } from './product-model.js';
+
+export function renderCard({ name, description, price, allergens, image, available, seasonal, seasonalLabel, topSeller, status }) {
+  // Compute display status — prefer explicit `status` from product-model,
+  // fall back to legacy `available` boolean for backward compat.
+  const displayStatus = status || (available ? 'available' : 'not_available');
+  const label = STATUS_LABEL[displayStatus] || STATUS_LABEL.not_available;
+
+  const badgeClass =
+    displayStatus === 'available'     ? 'badge--available' :
+    displayStatus === 'sold_out'      ? 'badge--sold-out'  :
+                                        'badge--unavailable';
+
   const tagHtml = seasonal
     ? `<span class="card__tag card__tag--seasonal">${seasonalLabel || 'Seasonal'}</span>`
     : topSeller
       ? `<span class="card__tag">Top Seller</span>`
       : '';
 
-  const availBadge = available
-    ? '<span class="badge badge--available">Available</span>'
-    : '<span class="badge badge--unavailable">Sold Out</span>';
-
   const allergenText = allergens && allergens.length
     ? `<span class="card__allergens">Contains: ${allergens.join(', ')}</span>`
     : '';
 
   return `
-    <article class="card${!available ? ' card--unavailable' : ''}">
+    <article class="card${displayStatus !== 'available' ? ' card--unavailable' : ''}">
       <img class="card__image" src="${image || '/images/placeholder-bread.svg'}"
            alt="${name}" loading="lazy" width="400" height="300">
       <div class="card__body">
@@ -27,7 +35,7 @@ export function renderCard({ name, description, price, allergens, image, availab
         <p class="card__desc">${description}</p>
         <div class="card__meta">
           <span class="card__price">$${price.toFixed(2)}</span>
-          ${availBadge}
+          <span class="badge ${badgeClass}">${label}</span>
         </div>
         ${allergenText ? `<p class="mt-4">${allergenText}</p>` : ''}
       </div>
@@ -145,7 +153,25 @@ export function renderSkipNotice(reason, nextAvailableDate) {
 }
 
 export function renderOrderItem(item) {
-  if (!item.available) return '';
+  const isSoldOut = item.status === 'sold_out';
+
+  // If available=false (not_available), hide entirely from preorder
+  if (item.status === 'not_available') return '';
+
+  // Sold out: show row but disable controls
+  if (isSoldOut) {
+    return `
+      <div class="order-item order-item--sold-out" data-sku="${item.sku}" data-max-qty="0">
+        <div class="order-item__info">
+          <div>
+            <div class="order-item__name">${item.name}</div>
+            <span class="badge badge--sold-out" style="font-size:var(--text-xs)">SOLD OUT</span>
+          </div>
+          <div class="order-item__price">$${item.price.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+  }
 
   const qtyLabel = item.currentQty !== undefined
     ? item.currentQty <= 5

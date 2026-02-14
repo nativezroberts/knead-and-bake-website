@@ -299,6 +299,11 @@
   font-size: var(--text-sm);
 }
 
+.order-item--sold-out {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 /* ── Recipes ── */
 .recipe-meta {
   display: flex;

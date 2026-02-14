@@ -200,6 +200,7 @@
   </script>
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
+    import { loadProducts } from '/src/js/product-model.js';
     import { initNav } from '/src/js/nav.js';
     import { renderCard, renderTestimonial, renderNextMarket, renderAnnouncementBanner, renderSkipNotice } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
@@ -226,7 +227,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       const [marketInfo, menuData, testimonialData] = await Promise.all([
         getMarketInfo(),
-        ContentLoader.menu(),
+        loadProducts(),
         ContentLoader.testimonials(),
       ]);
 
@@ -246,16 +247,17 @@
       // Next Market
       document.getElementById('next-market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
 
-      // Top Sellers
+      // Top Sellers — show all that are topSeller + available (includes sold_out)
       if (menuData?.items) {
         const topSellers = menuData.items.filter(i => i.topSeller && i.available);
         document.getElementById('top-sellers').innerHTML = topSellers.map(renderCard).join('');
       }
 
-      // Seasonal Spotlight
+      // Seasonal Spotlight — show first seasonal item that is available (any status except not_available)
       if (menuData?.items) {
         const seasonal = menuData.items.find(i => i.seasonal && i.available);
         if (seasonal) {
+          const isSoldOut = seasonal.status === 'sold_out';
           document.getElementById('seasonal-spotlight').innerHTML = `
             <img class="spotlight__image" src="${seasonal.image || '/images/placeholder-bread.svg'}" alt="${seasonal.name}" loading="lazy" width="600" height="450">
             <div>
@@ -263,7 +265,10 @@
               <h3 class="spotlight__title">${seasonal.name}</h3>
               <p class="spotlight__desc">${seasonal.description}</p>
               <p class="spotlight__desc"><strong>$${seasonal.price.toFixed(2)}</strong></p>
-              <a href="/preorder.html" class="btn btn--secondary mt-4">Preorder This Loaf</a>
+              ${isSoldOut
+                ? '<span class="badge badge--sold-out">SOLD OUT</span>'
+                : '<a href="/preorder.html" class="btn btn--secondary mt-4">Preorder This Loaf</a>'
+              }
             </div>
           `;
         }

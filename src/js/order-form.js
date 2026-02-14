@@ -1,9 +1,9 @@
 /**
  * Order Form — handles item selection, form validation, and submission.
- * Fetches inventory availability and enforces per-item quantity limits.
+ * Uses product-model.js as single source of truth for availability & status.
  */
 
-import ContentLoader from './content-loader.js';
+import { loadProducts } from './product-model.js';
 import { renderOrderItem } from './components.js';
 
 const API_BASE = window.__API_BASE || '';
@@ -18,53 +18,28 @@ export async function initOrderForm() {
 
   if (!container || !form) return;
 
-  // Load menu items and inventory in parallel
-  let menuData, inventoryData;
-  try {
-    const [menuResult, inventoryRes] = await Promise.all([
-      ContentLoader.menu(),
-      fetch(`${API_BASE}/api/inventory`),
-    ]);
-    menuData = menuResult;
-    inventoryData = inventoryRes.ok ? await inventoryRes.json() : { products: [] };
-  } catch {
-    menuData = await ContentLoader.menu();
-    inventoryData = { products: [] };
-  }
+  const productData = await loadProducts();
 
-  if (!menuData) {
+  if (!productData) {
     container.innerHTML = '<p>Unable to load menu. Please try again later.</p>';
     return;
   }
 
-  // Build inventory lookup by SKU
-  const inventoryMap = new Map(
-    (inventoryData.products || []).map(p => [p.sku, p])
-  );
+  // Preorder shows items where available=true (including sold_out).
+  // Items with available=false (not_available) are hidden by renderOrderItem.
+  const preorderItems = productData.items.filter(i => i.available);
 
-  // Merge menu with inventory: use menu for display, inventory for qty/availability
-  const availableItems = menuData.items
-    .map(item => {
-      const inv = inventoryMap.get(item.sku);
-      return {
-        ...item,
-        currentQty: inv ? inv.currentQty : 0,
-        // Item is available only if both menu says available AND inventory says available with qty > 0
-        available: item.available && (inv ? inv.available && inv.currentQty > 0 : false),
-      };
-    })
-    .filter(i => i.available);
-
-  if (availableItems.length === 0) {
+  if (preorderItems.length === 0) {
     container.innerHTML = '<p style="color:var(--text-secondary)">No items available for preorder right now. Check back soon!</p>';
     return;
   }
 
-  container.innerHTML = availableItems.map(renderOrderItem).join('');
+  container.innerHTML = preorderItems.map(renderOrderItem).join('');
 
-  // Track quantities
+  // Track quantities — only for orderable items (status === 'available')
   const quantities = {};
-  availableItems.forEach(item => { quantities[item.sku] = 0; });
+  const orderableItems = preorderItems.filter(i => i.status === 'available');
+  orderableItems.forEach(item => { quantities[item.sku] = 0; });
 
   // Item click handlers
   container.addEventListener('click', (e) => {
@@ -91,7 +66,7 @@ export async function initOrderForm() {
     const selected = Object.entries(quantities)
       .filter(([, qty]) => qty > 0)
       .map(([sku, qty]) => {
-        const item = availableItems.find(i => i.sku === sku);
+        const item = orderableItems.find(i => i.sku === sku);
         return { sku, name: item.name, qty, subtotal: item.price * qty };
       });
 
@@ -134,7 +109,7 @@ export async function initOrderForm() {
     const items = Object.entries(quantities)
       .filter(([, qty]) => qty > 0)
       .map(([sku, qty]) => {
-        const item = availableItems.find(i => i.sku === sku);
+        const item = orderableItems.find(i => i.sku === sku);
         return { sku, name: item.name, qty };
       });
 
