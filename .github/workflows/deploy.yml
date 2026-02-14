@@ -164,6 +164,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Install project dependencies
+        if: steps.infra-check.outputs.changed == 'true'
+        run: npm ci
+
       - name: Build site for CDK deployment
         if: steps.infra-check.outputs.changed == 'true'
         run: node scripts/build.js
