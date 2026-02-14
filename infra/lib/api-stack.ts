@@ -156,7 +156,7 @@ export class ApiStack extends cdk.Stack {
     });
 
     configTable.grantReadWriteData(adminFn);
-    ordersTable.grantReadData(adminFn);
+    ordersTable.grantReadWriteData(adminFn);
     props.siteBucket.grantPut(adminFn, 'news-images/*');
 
     adminFn.addToRolePolicy(new iam.PolicyStatement({

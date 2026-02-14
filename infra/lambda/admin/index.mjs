@@ -1080,7 +1080,7 @@ async function rejectOrder(orderId) {
         TableName: ORDERS_TABLE,
         Key: { orderId },
         UpdateExpression: 'SET #status = :cancelled, cancelledAt = :now',
-        ConditionExpression: '#status <> :cancelled',
+        ConditionExpression: 'attribute_not_exists(#status) OR #status <> :cancelled',
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: {
           ':cancelled': 'CANCELLED',
@@ -1093,14 +1093,16 @@ async function rejectOrder(orderId) {
   // Restore inventory for each item
   if (TABLE_NAME && Array.isArray(order.items)) {
     for (const item of order.items) {
-      if (item.sku && typeof item.qty === 'number' && item.qty > 0) {
+      const qty = Math.round(Number(item?.qty));
+      if (item?.sku && Number.isFinite(qty) && qty > 0) {
         transactItems.push({
           Update: {
             TableName: TABLE_NAME,
             Key: { type: 'PRODUCT_INVENTORY', id: item.sku },
-            UpdateExpression: 'SET currentQty = currentQty + :qty, updatedAt = :now',
+            UpdateExpression: 'SET currentQty = if_not_exists(currentQty, :zero) + :qty, updatedAt = :now',
             ExpressionAttributeValues: {
-              ':qty': item.qty,
+              ':zero': 0,
+              ':qty': qty,
               ':now': now,
             },
           },
