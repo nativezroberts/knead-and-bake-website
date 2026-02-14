@@ -311,8 +311,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: url("/images/favicon.png") 50% center / auto 80% no-repeat;
-  opacity: 0.06;
+  background: url("/images/favicon.png") 75% center / auto 90% no-repeat;
+  opacity: 0.25;
   pointer-events: none;
 }
 
