@@ -54,6 +54,7 @@
     .preorders-orders-table th,
     .preorders-orders-table td { vertical-align: top; }
     .preorders-orders-table td { white-space: normal; overflow-wrap: anywhere; }
+    .preorders-orders-table td:last-child { white-space: normal; }
     .preorders-orders-table .preorders-orders-col--customer { width: 19%; }
     .preorders-orders-table .preorders-orders-col--contact { width: 20%; }
     .preorders-orders-table .preorders-orders-col--items { width: 30%; }
@@ -88,6 +89,40 @@
       .admin-tabs::-webkit-scrollbar { display: none; }
       .admin-section { padding: var(--space-6); }
       .preorders-toolbar .form-group, .preorders-email-row .form-group { min-width: 100%; }
+      .preorders-toolbar .btn, .preorders-email-row .btn { width: 100%; }
+    }
+    @media (max-width: 860px) {
+      .preorders-orders-table-wrap { overflow: visible; border: none; border-radius: 0; }
+      .preorders-orders-table { min-width: 0; table-layout: auto; }
+      .preorders-orders-table colgroup,
+      .preorders-orders-table thead { display: none; }
+      .preorders-orders-table tbody,
+      .preorders-orders-table tr,
+      .preorders-orders-table td { display: block; width: 100%; }
+      .preorders-orders-table tr {
+        margin-bottom: var(--space-3);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--color-white);
+        overflow: hidden;
+      }
+      .preorders-orders-table tr:last-child { margin-bottom: 0; }
+      .preorders-orders-table td {
+        border-bottom: 1px solid var(--border-color);
+        padding: var(--space-3) var(--space-4);
+      }
+      .preorders-orders-table td:last-child { border-bottom: none; white-space: normal; }
+      .preorders-orders-table td.preorders-orders-cell--pickup { white-space: normal; }
+      .preorders-orders-table td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-secondary);
+        font-size: var(--text-xs);
+        font-weight: var(--weight-semibold);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
     }
   </style>
 </head>

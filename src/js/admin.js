@@ -1071,15 +1071,15 @@ function renderPreorderOrders(summary) {
         <tbody>
           ${orders.map(order => `
             <tr>
-              <td class="preorders-orders-cell--customer">
+              <td class="preorders-orders-cell--customer" data-label="Customer">
                 <strong>${escapeHtml(order.name || '-')}</strong><br>
                 <span class="preorders-meta">Placed ${escapeHtml(formatDateTime(order.createdAt))}</span>
               </td>
-              <td class="preorders-orders-cell--contact">
+              <td class="preorders-orders-cell--contact" data-label="Contact">
                 <div>${escapeHtml(order.phone || '-')}</div>
                 <div class="preorders-meta">${escapeHtml(order.email || 'No email')}</div>
               </td>
-              <td class="preorders-orders-cell--items">
+              <td class="preorders-orders-cell--items" data-label="Items">
                 ${(Array.isArray(order.items) && order.items.length > 0)
                   ? `<div class="preorders-line-items">${order.items.map(item => `
                     <div class="preorders-line-item">
@@ -1088,8 +1088,8 @@ function renderPreorderOrders(summary) {
                   `).join('')}</div>`
                   : '-'}
               </td>
-              <td class="preorders-orders-cell--pickup">${escapeHtml(order.pickupDate || '-')}</td>
-              <td class="preorders-orders-cell--notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
+              <td class="preorders-orders-cell--pickup" data-label="Pickup">${escapeHtml(order.pickupDate || '-')}</td>
+              <td class="preorders-orders-cell--notes" data-label="Notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
             </tr>
           `).join('')}
         </tbody>
