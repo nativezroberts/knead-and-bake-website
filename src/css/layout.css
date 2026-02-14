@@ -11,6 +11,16 @@
   border-bottom: 1px solid var(--border-color);
   height: var(--header-height);
   transition: box-shadow var(--transition-normal);
+  overflow: hidden;
+}
+
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/images/favicon.png") center / contain no-repeat;
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 .header.is-scrolled {
