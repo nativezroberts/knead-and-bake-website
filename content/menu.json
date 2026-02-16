@@ -144,7 +144,7 @@
       "description": "Crispy-bottomed, Cinnamon Brown Sugar focaccia that is to die for! Perfect for breakfast, snacks, or dessert.",
       "price": 15.00,
       "allergens": ["wheat"],
-      "available": false,
+      "available": true,
       "seasonal": false,
       "topSeller": false,
       "image": "/images/menu/KnB_Focaccia_CinnamonBrownSugar.png"
@@ -156,7 +156,7 @@
       "description": "Various flavors: Plain, Everything Bagel, Parmesan... Thin, crispy crackers made from sourdough discard. Perfect with cheese or hummus.",
       "price": 7.00,
       "allergens": ["wheat"],
-      "available": false,
+      "available": true,
       "seasonal": false,
       "topSeller": false,
       "image": "/images/menu/crackers.png"
