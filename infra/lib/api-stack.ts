@@ -335,6 +335,14 @@ export class ApiStack extends cdk.Stack {
       authorizer: jwtAuthorizer,
     });
 
+    // Admin order payment status route (protected by JWT authorizer)
+    httpApi.addRoutes({
+      path: '/api/admin/orders/{orderId}/pay',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
     // ── Outputs ──
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: httpApi.apiEndpoint,

@@ -1091,6 +1091,7 @@ function renderPreorderOrders(summary) {
               <td class="preorders-orders-cell--pickup" data-label="Pickup">${escapeHtml(order.pickupDate || '-')}</td>
               <td class="preorders-orders-cell--notes" data-label="Notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
               <td class="preorders-orders-cell--actions" data-label="Actions">
+                <button class="btn ${order.paid ? 'btn--paid' : 'btn--mark-paid'}" data-order-id="${escapeHtml(order.orderId || '')}" data-paid="${order.paid ? 'true' : 'false'}">${order.paid ? 'Paid' : 'Mark Paid'}</button>
                 <button class="btn btn--reject" data-order-id="${escapeHtml(order.orderId || '')}" data-order-name="${escapeHtml(order.name || 'this customer')}">Reject</button>
               </td>
             </tr>
@@ -1100,10 +1101,49 @@ function renderPreorderOrders(summary) {
     </div>
   `;
 
+  // Attach payment toggle handlers
+  container.querySelectorAll('.btn--mark-paid, .btn--paid').forEach(btn => {
+    btn.addEventListener('click', () => handleTogglePayment(btn));
+  });
+
   // Attach reject button handlers
   container.querySelectorAll('.btn--reject').forEach(btn => {
     btn.addEventListener('click', () => handleRejectOrder(btn));
   });
+}
+
+async function handleTogglePayment(btn) {
+  const orderId = btn.dataset.orderId;
+  if (!orderId) return;
+
+  const currentlyPaid = btn.dataset.paid === 'true';
+  const newPaid = !currentlyPaid;
+
+  const originalText = btn.textContent;
+  btn.textContent = 'Updating...';
+  btn.disabled = true;
+
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/pay`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paid: newPaid }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to update payment status.');
+    }
+    // Update button state
+    btn.dataset.paid = newPaid ? 'true' : 'false';
+    btn.textContent = newPaid ? 'Paid' : 'Mark Paid';
+    btn.className = `btn ${newPaid ? 'btn--paid' : 'btn--mark-paid'}`;
+    btn.disabled = false;
+    showToast(data.message || 'Payment status updated.');
+  } catch (e) {
+    setPreordersError(e.message || 'Failed to update payment status.');
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
 async function handleRejectOrder(btn) {
@@ -1114,6 +1154,10 @@ async function handleRejectOrder(btn) {
   const confirmed = confirm(`Are you sure you want to reject ${customerName}'s order?\n\nThis will cancel the order, restore inventory, and notify the customer.`);
   if (!confirmed) return;
 
+  const reason = prompt('Enter a reason for rejecting this order (optional):');
+  // If user clicks Cancel on the prompt, abort the rejection
+  if (reason === null) return;
+
   const originalText = btn.textContent;
   btn.textContent = 'Rejecting...';
   btn.disabled = true;
@@ -1121,6 +1165,8 @@ async function handleRejectOrder(btn) {
   try {
     const res = await authFetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/reject`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim() || undefined }),
     });
     const data = await res.json();
     if (!res.ok) {

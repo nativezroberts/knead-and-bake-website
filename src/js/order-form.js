@@ -90,7 +90,11 @@ export async function initOrderForm() {
         <span>Estimated Total</span>
         <span>$${total.toFixed(2)}</span>
       </div>
-      <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:var(--space-2)">Payment collected at pickup.</p>
+      <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:var(--space-2)">
+        <p style="margin-bottom:var(--space-1)"><strong>Payment Options:</strong></p>
+        <p>Pre-pay via Venmo: <a href="https://venmo.com/Allyson-Roberts1" target="_blank" rel="noopener" style="color:var(--accent)">@Allyson-Roberts1</a></p>
+        <p>Or pay at pickup (cash or card)</p>
+      </div>
     `;
     submitBtn.disabled = false;
   }

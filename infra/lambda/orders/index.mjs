@@ -246,7 +246,9 @@ ${itemList}
 
 Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
 ${order.notes ? `Comments: ${order.notes}\n` : ''}
-Payment will be collected at pickup (cash or card).
+Payment Options:
+- Pre-pay via Venmo: @Allyson-Roberts1 (https://venmo.com/Allyson-Roberts1)
+- Or pay at pickup (cash or card)
 
 We'll text you at ${order.phone} to confirm closer to pickup day.
 

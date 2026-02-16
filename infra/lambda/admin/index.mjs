@@ -1048,8 +1048,46 @@ async function emailPreorderSummary(body) {
   }
 }
 
+// ── Toggle Payment Status ──
+async function togglePaymentStatus(orderId, body = {}) {
+  if (!ORDERS_TABLE) {
+    return response(500, { message: 'Orders table is not configured.' });
+  }
+  if (!orderId || typeof orderId !== 'string') {
+    return response(400, { message: 'A valid orderId is required.' });
+  }
+
+  const paid = body.paid === true;
+  const now = new Date().toISOString();
+
+  const updateExpr = paid
+    ? 'SET paid = :paid, paidAt = :now'
+    : 'SET paid = :paid REMOVE paidAt';
+  const exprValues = paid
+    ? { ':paid': true, ':now': now }
+    : { ':paid': false };
+
+  try {
+    await ddb.send(new UpdateCommand({
+      TableName: ORDERS_TABLE,
+      Key: { orderId },
+      UpdateExpression: updateExpr,
+      ExpressionAttributeValues: exprValues,
+      ConditionExpression: 'attribute_exists(orderId)',
+    }));
+  } catch (err) {
+    if (err.name === 'ConditionalCheckFailedException') {
+      return response(404, { message: 'Order not found.' });
+    }
+    console.error('Failed to update payment status:', err);
+    return response(500, { message: 'Failed to update payment status.' });
+  }
+
+  return response(200, { message: paid ? 'Order marked as paid.' : 'Order marked as unpaid.', orderId, paid });
+}
+
 // ── Reject / Cancel Order ──
-async function rejectOrder(orderId) {
+async function rejectOrder(orderId, body = {}) {
   if (!ORDERS_TABLE) {
     return response(500, { message: 'Orders table is not configured.' });
   }
@@ -1074,18 +1112,26 @@ async function rejectOrder(orderId) {
   }
 
   const now = new Date().toISOString();
+  const rejectReason = typeof body.reason === 'string' ? body.reason.trim() : '';
+
+  const updateExpr = rejectReason
+    ? 'SET #status = :cancelled, cancelledAt = :now, rejectReason = :reason'
+    : 'SET #status = :cancelled, cancelledAt = :now';
+  const exprValues = {
+    ':cancelled': 'CANCELLED',
+    ':now': now,
+  };
+  if (rejectReason) exprValues[':reason'] = rejectReason;
+
   const transactItems = [
     {
       Update: {
         TableName: ORDERS_TABLE,
         Key: { orderId },
-        UpdateExpression: 'SET #status = :cancelled, cancelledAt = :now',
+        UpdateExpression: updateExpr,
         ConditionExpression: 'attribute_not_exists(#status) OR #status <> :cancelled',
         ExpressionAttributeNames: { '#status': 'status' },
-        ExpressionAttributeValues: {
-          ':cancelled': 'CANCELLED',
-          ':now': now,
-        },
+        ExpressionAttributeValues: exprValues,
       },
     },
   ];
@@ -1139,6 +1185,7 @@ async function rejectOrder(orderId) {
                 `Hi ${order.name || 'there'},`,
                 '',
                 'Your preorder with Knead & Bake TX has been cancelled.',
+                ...(rejectReason ? ['', `Reason: ${rejectReason}`] : []),
                 '',
                 'Order details:',
                 itemsList,
@@ -1228,11 +1275,18 @@ export async function handler(event) {
     if (method === 'DELETE') return deleteNewsPost(id);
   }
 
+  // Toggle payment status
+  if (path.startsWith('/api/admin/orders/') && path.endsWith('/pay') && method === 'POST') {
+    const segments = path.split('/');
+    const orderId = decodeURIComponent(segments[segments.length - 2]);
+    return togglePaymentStatus(orderId, body);
+  }
+
   // Reject order
   if (path.startsWith('/api/admin/orders/') && path.endsWith('/reject') && method === 'POST') {
     const segments = path.split('/');
     const orderId = decodeURIComponent(segments[segments.length - 2]);
-    return rejectOrder(orderId);
+    return rejectOrder(orderId, body);
   }
 
   // Preorder summary
