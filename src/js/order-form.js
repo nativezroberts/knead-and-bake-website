@@ -8,7 +8,7 @@ import { renderOrderItem } from './components.js';
 
 const API_BASE = window.__API_BASE || '';
 
-export async function initOrderForm() {
+export async function initOrderForm({ preorderOpen = true } = {}) {
   const container = document.getElementById('order-items');
   const form = document.getElementById('order-form');
   const summaryEl = document.getElementById('order-summary');
@@ -96,7 +96,7 @@ export async function initOrderForm() {
         <p>Or pay at pickup (cash or card)</p>
       </div>
     `;
-    submitBtn.disabled = false;
+    submitBtn.disabled = !preorderOpen;
   }
 
   updateSummary();
@@ -104,6 +104,12 @@ export async function initOrderForm() {
   // Form submission
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Block submission if preorders are closed (defense-in-depth)
+    if (!preorderOpen) {
+      showError('Preorders are currently closed.');
+      return;
+    }
 
     // Check honeypot
     const hp = form.querySelector('[name="website"]');

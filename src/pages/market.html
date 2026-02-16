@@ -146,9 +146,11 @@
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const [marketInfo, menuData] = await Promise.all([
+      const API_BASE = window.__API_BASE || '';
+      const [marketInfo, menuData, inventoryRes] = await Promise.all([
         getMarketInfo(),
         ContentLoader.menu(),
+        fetch(`${API_BASE}/api/inventory`).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
 
       // Announcements and skip notices
@@ -167,15 +169,32 @@
       // Market panel
       document.getElementById('market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
 
-      // Quick menu &mdash; available items only
+      // Quick menu — merge static menu with live inventory for real-time availability
       if (menuData?.items) {
-        const available = menuData.items.filter(i => i.available);
-        document.getElementById('market-items').innerHTML = available.map(item => `
-          <div class="market-quick-menu__item">
-            <span>${item.name}${item.seasonal ? ' <span class="badge badge--seasonal">Seasonal</span>' : ''}</span>
-            <span style="font-weight:var(--weight-bold);color:var(--color-sage-dark)">$${item.price.toFixed(2)}</span>
-          </div>
-        `).join('');
+        // Build lookup from live inventory (sku → {available, currentQty})
+        const invMap = new Map();
+        if (inventoryRes?.products) {
+          for (const p of inventoryRes.products) {
+            invMap.set(p.sku, { available: p.available, currentQty: p.currentQty });
+          }
+        }
+
+        const available = menuData.items.filter(item => {
+          const inv = invMap.get(item.sku);
+          // If live inventory is available, use it; otherwise fall back to static
+          return inv ? inv.available : item.available;
+        });
+
+        document.getElementById('market-items').innerHTML = available.map(item => {
+          const inv = invMap.get(item.sku);
+          const soldOut = inv && inv.available && inv.currentQty <= 0;
+          return `
+            <div class="market-quick-menu__item${soldOut ? ' market-quick-menu__item--sold-out' : ''}">
+              <span>${item.name}${item.seasonal ? ' <span class="badge badge--seasonal">Seasonal</span>' : ''}${soldOut ? ' <span class="badge badge--sold-out">Sold Out</span>' : ''}</span>
+              <span style="font-weight:var(--weight-bold);color:var(--color-sage-dark)">$${item.price.toFixed(2)}</span>
+            </div>
+          `;
+        }).join('');
       }
     });
   </script>

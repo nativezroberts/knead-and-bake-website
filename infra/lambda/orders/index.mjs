@@ -18,6 +18,10 @@ const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
 const SEND_EMAILS = process.env.SEND_EMAILS === 'true';
 const SES_SANDBOX = process.env.SES_SANDBOX === 'true';
 
+// Preorder cutoff constants (must match market-dates.js)
+const MARKET_TIMEZONE = 'America/Chicago';
+const CUTOFF_HOUR = 9; // 9 AM CST on market day (Saturday)
+
 // Simple in-memory rate limiter (per Lambda instance)
 const rateLimiter = new Map();
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -58,6 +62,39 @@ function validatePhone(phone) {
   return digits.length >= 10;
 }
 
+function getCSTDate(date = new Date()) {
+  const str = date.toLocaleString('en-US', { timeZone: MARKET_TIMEZONE });
+  return new Date(str);
+}
+
+function isSaturday(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.getDay() === 6;
+}
+
+/**
+ * Check if preorders are still open for the given Saturday pickup date.
+ * Cutoff is CUTOFF_HOUR (9 AM) CST on the market day (Saturday).
+ */
+function isPreorderOpen(pickupDateStr) {
+  const cutoff = new Date(pickupDateStr + 'T12:00:00');
+  cutoff.setHours(CUTOFF_HOUR, 0, 0, 0);
+  const now = getCSTDate();
+  return now < cutoff;
+}
+
+/**
+ * Fetch skip dates from DynamoDB and check if the given date is skipped.
+ */
+async function isSkippedDate(pickupDateStr) {
+  if (!CONFIG_TABLE) return false;
+  const result = await ddb.send(new GetCommand({
+    TableName: CONFIG_TABLE,
+    Key: { type: 'SKIP_DATE', id: pickupDateStr },
+  }));
+  return !!result.Item;
+}
+
 export async function handler(event) {
   // Rate limit by source IP
   const ip = event.requestContext?.http?.sourceIp || 'unknown';
@@ -95,6 +132,19 @@ export async function handler(event) {
 
   if (!pickupDate || !/^\d{4}-\d{2}-\d{2}$/.test(pickupDate)) {
     return response(400, { message: 'A valid pickup date is required (YYYY-MM-DD).' });
+  }
+
+  // Server-side preorder business rules
+  if (!isSaturday(pickupDate)) {
+    return response(400, { message: 'Pickup date must be a Saturday market day.' });
+  }
+
+  if (!isPreorderOpen(pickupDate)) {
+    return response(400, { message: 'Preorders for this market date are closed.' });
+  }
+
+  if (await isSkippedDate(pickupDate)) {
+    return response(400, { message: 'No market is scheduled for this date.' });
   }
 
   if (!Array.isArray(items) || items.length === 0) {
