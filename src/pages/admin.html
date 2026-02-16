@@ -69,15 +69,15 @@
     .preorders-orders-table .preorders-orders-col--pickup { width: 10%; }
     .preorders-orders-table .preorders-orders-col--notes { width: 18%; }
     .preorders-orders-table .preorders-orders-col--actions { width: 10%; }
-    .btn--reject { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; }
-    .btn--reject:hover { background: #dc3545; color: #fff; }
-    .btn--reject:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn--mark-paid { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #6c757d; color: #6c757d; background: transparent; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; margin-bottom: 4px; }
-    .btn--mark-paid:hover { background: #6c757d; color: #fff; }
-    .btn--mark-paid:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn--paid { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #28a745; color: #fff; background: #28a745; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; margin-bottom: 4px; }
-    .btn--paid:hover { background: #218838; border-color: #218838; }
-    .btn--paid:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.btn--reject { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; }
+    .btn.btn--reject:hover { background: #dc3545; color: #fff; }
+    .btn.btn--reject:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.btn--mark-paid { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #6c757d; color: #6c757d; background: transparent; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; margin-bottom: 4px; }
+    .btn.btn--mark-paid:hover { background: #6c757d; color: #fff; }
+    .btn.btn--mark-paid:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.btn--paid { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border: 1px solid #28a745; color: #fff; background: #28a745; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; margin-bottom: 4px; }
+    .btn.btn--paid:hover { background: #218838; border-color: #218838; }
+    .btn.btn--paid:disabled { opacity: 0.5; cursor: not-allowed; }
     .preorders-orders-cell--actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
     .preorders-orders-cell--actions .btn { margin-bottom: 0; }
     .preorders-orders-table td.preorders-orders-cell--pickup { white-space: nowrap; }
@@ -133,8 +133,9 @@
       }
       .preorders-orders-table td:last-child { border-bottom: none; white-space: normal; }
       .preorders-orders-table td.preorders-orders-cell--pickup { white-space: normal; }
-      .preorders-orders-table td.preorders-orders-cell--actions { display: grid; gap: var(--space-2); }
-      .preorders-orders-table td.preorders-orders-cell--actions .btn { width: 100%; }
+      .preorders-orders-table td.preorders-orders-cell--actions { display: flex !important; flex-direction: column; gap: var(--space-2); }
+      .preorders-orders-table td.preorders-orders-cell--actions::before { display: none; }
+      .preorders-orders-table td.preorders-orders-cell--actions .btn { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 44px; font-size: var(--text-sm); box-sizing: border-box; }
       .preorders-orders-table td::before {
         content: attr(data-label);
         display: block;
