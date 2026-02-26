@@ -142,6 +142,7 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
+    import { escapeHtml } from '/src/js/components.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
@@ -166,11 +167,11 @@
 
       // Meta
       document.getElementById('recipe-meta').innerHTML = `
-        <span class="recipe-meta__item"><strong>Prep:</strong>&nbsp;${recipe.prepTime}</span>
-        <span class="recipe-meta__item"><strong>Rest:</strong>&nbsp;${recipe.restTime}</span>
-        <span class="recipe-meta__item"><strong>Bake:</strong>&nbsp;${recipe.bakeTime}</span>
-        <span class="recipe-meta__item"><strong>Yields:</strong>&nbsp;${recipe.yields}</span>
-        <span class="recipe-meta__item"><strong>Difficulty:</strong>&nbsp;${recipe.difficulty}</span>
+        <span class="recipe-meta__item"><strong>Prep:</strong>&nbsp;${escapeHtml(recipe.prepTime)}</span>
+        <span class="recipe-meta__item"><strong>Rest:</strong>&nbsp;${escapeHtml(recipe.restTime)}</span>
+        <span class="recipe-meta__item"><strong>Bake:</strong>&nbsp;${escapeHtml(recipe.bakeTime)}</span>
+        <span class="recipe-meta__item"><strong>Yields:</strong>&nbsp;${escapeHtml(recipe.yields)}</span>
+        <span class="recipe-meta__item"><strong>Difficulty:</strong>&nbsp;${escapeHtml(recipe.difficulty)}</span>
       `;
 
       // Image
@@ -184,17 +185,17 @@
 
       // Ingredients
       document.getElementById('recipe-ingredients').innerHTML =
-        recipe.ingredients.map(i => `<li>${i}</li>`).join('');
+        recipe.ingredients.map(i => `<li>${escapeHtml(i)}</li>`).join('');
 
-      // Steps &mdash; support bold markdown
+      // Steps — escape first, then apply bold markdown
       document.getElementById('recipe-steps').innerHTML =
-        recipe.steps.map(s => `<li>${s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`).join('');
+        recipe.steps.map(s => `<li>${escapeHtml(s).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`).join('');
 
       // Tips
       if (recipe.tips?.length) {
         document.getElementById('recipe-tips').innerHTML = `
           <h2>Tips</h2>
-          <ul>${recipe.tips.map(t => `<li>${t}</li>`).join('')}</ul>
+          <ul>${recipe.tips.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
         `;
       }
     });

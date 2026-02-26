@@ -175,7 +175,7 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderDayCard, renderAccordion } from '/src/js/components.js';
+    import { renderDayCard, renderAccordion, escapeHtml } from '/src/js/components.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
@@ -188,7 +188,7 @@
 
       // Supplies
       document.getElementById('sk-supplies').innerHTML =
-        data.supplies.map(s => `<li>${s}</li>`).join('');
+        data.supplies.map(s => `<li>${escapeHtml(s)}</li>`).join('');
 
       // Days
       document.getElementById('sk-days').innerHTML =

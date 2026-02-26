@@ -11,11 +11,11 @@ Bugs, fixes, and improvements to resolve before starting new features.
 
 ## Improvements
 
-- [ ] **Centralize `window.__API_BASE`** — Currently hardcoded in 5 separate HTML files (index, admin, market, preorder, news). Should be set in one shared place to avoid missed pages.
-
 ## Resolved
 
-_Move completed items here with date._
+- [x] **Centralize `window.__API_BASE`** — Moved to `src/js/config.js`, referenced via `<script src="/src/js/config.js">` in all 7 pages. (2026-02-26)
+- [x] **XSS hardening** — Added `escapeHtml()` to `components.js`, applied to all render functions and inline innerHTML calls across all pages. (2026-02-26)
+- [x] **Grammar fixes in menu.json** — Fixed missing spaces before parentheses and inconsistent capitalization in 3 items. (2026-02-26)
 
 ---
 

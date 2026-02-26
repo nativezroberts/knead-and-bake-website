@@ -163,6 +163,7 @@
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
+    import { escapeHtml } from '/src/js/components.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
@@ -174,8 +175,8 @@
       const textEl = document.getElementById('about-text');
       if (about.story) {
         textEl.innerHTML = `
-          <h2>${about.story.headline}</h2>
-          ${about.story.paragraphs.map(p => `<p>${p}</p>`).join('')}
+          <h2>${escapeHtml(about.story.headline)}</h2>
+          ${about.story.paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('')}
         `;
       }
 
@@ -184,9 +185,9 @@
       if (about.values) {
         valuesEl.innerHTML = about.values.map(v => `
           <div class="value-card">
-            <div class="value-card__icon">${v.icon}</div>
-            <h3 class="value-card__title">${v.title}</h3>
-            <p class="value-card__desc">${v.description}</p>
+            <div class="value-card__icon">${escapeHtml(v.icon)}</div>
+            <h3 class="value-card__title">${escapeHtml(v.title)}</h3>
+            <p class="value-card__desc">${escapeHtml(v.description)}</p>
           </div>
         `).join('');
       }

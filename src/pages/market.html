@@ -134,13 +134,11 @@
     </div>
   </footer>
 
-  <script>
-    window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
-  </script>
+  <script src="/src/js/config.js"></script>
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderNextMarket, renderAnnouncementBanner, renderSkipNotice } from '/src/js/components.js';
+    import { renderNextMarket, renderAnnouncementBanner, renderSkipNotice, escapeHtml } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -190,7 +188,7 @@
           const soldOut = inv && inv.available && inv.currentQty <= 0;
           return `
             <div class="market-quick-menu__item${soldOut ? ' market-quick-menu__item--sold-out' : ''}">
-              <span>${item.name}${item.seasonal ? ' <span class="badge badge--seasonal">Seasonal</span>' : ''}${soldOut ? ' <span class="badge badge--sold-out">Sold Out</span>' : ''}</span>
+              <span>${escapeHtml(item.name)}${item.seasonal ? ' <span class="badge badge--seasonal">Seasonal</span>' : ''}${soldOut ? ' <span class="badge badge--sold-out">Sold Out</span>' : ''}</span>
               <span style="font-weight:var(--weight-bold);color:var(--color-sage-dark)">$${item.price.toFixed(2)}</span>
             </div>
           `;

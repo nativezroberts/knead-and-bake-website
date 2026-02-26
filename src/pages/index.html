@@ -209,14 +209,12 @@
     </div>
   </footer>
 
-  <script>
-    window.__API_BASE = 'https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com';
-  </script>
+  <script src="/src/js/config.js"></script>
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
     import { loadProducts } from '/src/js/product-model.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderCard, renderTestimonial, renderNextMarket, renderAnnouncementBanner, renderSkipNotice } from '/src/js/components.js';
+    import { renderCard, renderTestimonial, renderNextMarket, renderAnnouncementBanner, renderSkipNotice, escapeHtml } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
 
     // Init nav immediately &mdash; don't wait for DOMContentLoaded which may
@@ -298,13 +296,13 @@
             const spotWebp = seasonal.image ? seasonal.image.replace(/\.(png|jpe?g)$/i, '.webp') : '';
             el.innerHTML = `
               <picture>
-                ${spotWebp ? `<source srcset="${spotWebp}" type="image/webp">` : ''}
-                <img class="spotlight__image" src="${spotImg}" alt="${seasonal.name}" loading="lazy" width="600" height="450">
+                ${spotWebp ? `<source srcset="${escapeHtml(spotWebp)}" type="image/webp">` : ''}
+                <img class="spotlight__image" src="${escapeHtml(spotImg)}" alt="${escapeHtml(seasonal.name)}" loading="lazy" width="600" height="450">
               </picture>
               <div>
-                <span class="card__tag card__tag--seasonal">${seasonal.seasonalLabel || 'Seasonal'}</span>
-                <h3 class="spotlight__title">${seasonal.name}</h3>
-                <p class="spotlight__desc">${seasonal.description}</p>
+                <span class="card__tag card__tag--seasonal">${escapeHtml(seasonal.seasonalLabel || 'Seasonal')}</span>
+                <h3 class="spotlight__title">${escapeHtml(seasonal.name)}</h3>
+                <p class="spotlight__desc">${escapeHtml(seasonal.description)}</p>
                 <p class="spotlight__desc"><strong>$${seasonal.price.toFixed(2)}</strong></p>
                 ${isSoldOut
                   ? '<span class="badge badge--sold-out">SOLD OUT</span>'
