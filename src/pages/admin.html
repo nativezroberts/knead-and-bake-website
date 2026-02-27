@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/src/css/main.css">
   <link rel="icon" href="/images/favicon.png" type="image/png">
+  <link rel="manifest" href="/manifest.json">
   <style>
     .admin-table { width: 100%; border-collapse: collapse; margin-top: var(--space-4); }
     .admin-table th, .admin-table td { padding: var(--space-3) var(--space-4); text-align: left; border-bottom: 1px solid var(--border-color); font-size: var(--text-sm); }
@@ -110,6 +111,105 @@
       .admin-section { padding: var(--space-6); }
       .preorders-toolbar .form-group, .preorders-email-row .form-group { min-width: 100%; }
       .preorders-toolbar .btn, .preorders-email-row .btn { width: 100%; }
+    }
+    /* ── Mobile card layout for admin tables (≤860px) ── */
+    @media (max-width: 860px) {
+      /* Shared: convert table to block so rows become cards */
+      #skip-dates-list .admin-table,
+      #announcements-list .admin-table,
+      #news-posts-list .admin-table,
+      #inventory-list .admin-table { display: block; }
+
+      #skip-dates-list .admin-table thead,
+      #announcements-list .admin-table thead,
+      #news-posts-list .admin-table thead,
+      #inventory-list .admin-table thead { display: none; }
+
+      #skip-dates-list .admin-table tbody,
+      #skip-dates-list .admin-table tr,
+      #announcements-list .admin-table tbody,
+      #announcements-list .admin-table tr,
+      #news-posts-list .admin-table tbody,
+      #news-posts-list .admin-table tr,
+      #inventory-list .admin-table tbody,
+      #inventory-list .admin-table tr { display: block; }
+
+      #skip-dates-list .admin-table tr,
+      #announcements-list .admin-table tr,
+      #news-posts-list .admin-table tr,
+      #inventory-list .admin-table tr {
+        background: var(--color-white);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-4);
+        padding: var(--space-4);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        border-bottom: none;
+      }
+
+      #skip-dates-list .admin-table td,
+      #announcements-list .admin-table td,
+      #news-posts-list .admin-table td,
+      #inventory-list .admin-table td {
+        display: block;
+        padding: var(--space-2) 0;
+        border: none;
+        white-space: normal;
+      }
+
+      /* Shared pseudo-label style */
+      #skip-dates-list .admin-table td::before,
+      #announcements-list .admin-table td::before,
+      #news-posts-list .admin-table td::before,
+      #inventory-list .admin-table td::before {
+        display: block;
+        font-size: var(--text-xs);
+        color: var(--text-secondary);
+        font-weight: var(--weight-bold);
+        text-transform: uppercase;
+        margin-bottom: var(--space-1);
+      }
+
+      /* Skip Dates: Date | Reason | Delete */
+      #skip-dates-list .admin-table td:nth-child(1)::before { content: 'Date'; }
+      #skip-dates-list .admin-table td:nth-child(2)::before { content: 'Reason'; }
+      #skip-dates-list .admin-table td:nth-child(3)::before { display: none; }
+      #skip-dates-list .admin-table td:nth-child(3) .btn { display: block; width: 100%; min-height: 44px; margin-top: var(--space-2); }
+
+      /* Announcements: Title | Message | Dates | Level | Active | Actions */
+      #announcements-list .admin-table td:nth-child(1)::before { content: 'Title'; }
+      #announcements-list .admin-table td:nth-child(2)::before { content: 'Message'; }
+      #announcements-list .admin-table td:nth-child(3)::before { content: 'Dates'; }
+      #announcements-list .admin-table td:nth-child(4)::before { content: 'Level'; }
+      #announcements-list .admin-table td:nth-child(5)::before { content: 'Active'; }
+      #announcements-list .admin-table td:nth-child(6)::before { display: none; }
+      #announcements-list .admin-table td:nth-child(6) { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+      #announcements-list .admin-table td:nth-child(6) .btn { width: 100%; min-height: 44px; }
+
+      /* News: Title | Start | End | Active | Actions */
+      #news-posts-list .admin-table td:nth-child(1)::before { content: 'Title'; }
+      #news-posts-list .admin-table td:nth-child(2)::before { content: 'Start'; }
+      #news-posts-list .admin-table td:nth-child(3)::before { content: 'End'; }
+      #news-posts-list .admin-table td:nth-child(4)::before { content: 'Active'; }
+      #news-posts-list .admin-table td:nth-child(5)::before { display: none; }
+      #news-posts-list .admin-table td:nth-child(5) { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+      #news-posts-list .admin-table td:nth-child(5) .btn { width: 100%; min-height: 44px; }
+
+      /* Inventory: Product | SKU | Weekly Qty | Current Qty | Available | Save */
+      #inventory-list .admin-table td:nth-child(1)::before { content: 'Product'; }
+      #inventory-list .admin-table td:nth-child(2)::before { content: 'SKU'; }
+      #inventory-list .admin-table td:nth-child(3)::before { content: 'Weekly Qty'; }
+      #inventory-list .admin-table td:nth-child(4)::before { content: 'Current Qty'; }
+      #inventory-list .admin-table td:nth-child(5)::before { content: 'Available'; }
+      #inventory-list .admin-table td:nth-child(6)::before { display: none; }
+      #inventory-list .admin-table td:nth-child(3) input,
+      #inventory-list .admin-table td:nth-child(4) input { width: 100% !important; box-sizing: border-box; padding: var(--space-2) var(--space-3) !important; font-size: var(--text-base) !important; }
+      #inventory-list .admin-table td:nth-child(6) .btn { display: block; width: 100%; min-height: 44px; margin-top: var(--space-2); }
+
+      /* Markdown toolbar — larger touch targets */
+      .editor-toolbar button { min-height: 44px; min-width: 44px; padding: var(--space-2) var(--space-3); }
+
+      /* Tab bar — slightly larger text */
+      .admin-tabs [role="tab"] { font-size: var(--text-base); }
     }
     @media (max-width: 860px) {
       .preorders-orders-table-wrap { overflow: visible; border: none; border-radius: 0; }

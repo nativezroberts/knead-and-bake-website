@@ -1,0 +1,9 @@
+{
+  "name": "Knead & Bake Admin",
+  "short_name": "KnB Admin",
+  "start_url": "/admin.html",
+  "display": "standalone",
+  "background_color": "#FBF7F0",
+  "theme_color": "#5C3D2E",
+  "icons": [{ "src": "/images/favicon.png", "sizes": "any", "type": "image/png" }]
+}
