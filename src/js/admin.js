@@ -45,7 +45,15 @@ function getInitialTab() {
 
 function activateTab(key, pushState = true) {
   if (!TAB_KEYS.includes(key)) return;
-  if (!confirmIfDirty()) return;
+  if (!confirmIfDirty()) {
+    // Revert select to whichever tab is still active
+    const mobileNav = document.getElementById('admin-mobile-nav');
+    if (mobileNav) {
+      const currentKey = TAB_KEYS.find(k => $(`tab-${k}`)?.getAttribute('aria-selected') === 'true');
+      if (currentKey) mobileNav.value = currentKey;
+    }
+    return;
+  }
   clearDirty();
 
   TAB_KEYS.forEach(k => {
