@@ -57,6 +57,10 @@ function activateTab(key, pushState = true) {
     panel.classList.toggle('hidden', !selected);
   });
 
+  // Sync mobile select
+  const mobileNav = document.getElementById('admin-mobile-nav');
+  if (mobileNav) mobileNav.value = key;
+
   if (pushState) {
     const url = new URL(window.location);
     url.searchParams.set('tab', key);
@@ -119,6 +123,12 @@ function initTabs() {
       activateTab(key);
     }
   });
+
+  // Mobile select nav
+  const mobileNav = document.getElementById('admin-mobile-nav');
+  if (mobileNav) {
+    mobileNav.addEventListener('change', (e) => { activateTab(e.target.value); });
+  }
 
   // Dirty guard on page unload
   window.addEventListener('beforeunload', (e) => {

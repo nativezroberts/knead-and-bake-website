@@ -109,6 +109,12 @@
       .admin-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
       .admin-tabs::-webkit-scrollbar { display: none; }
     }
+    /* Mobile: swap tab bar for a select dropdown */
+    #admin-mobile-nav-wrap { display: none; margin-bottom: var(--space-6); }
+    @media (max-width: 500px) {
+      #admin-mobile-nav-wrap { display: block; }
+      .admin-tabs { display: none !important; }
+    }
     @media (max-width: 600px) {
       .admin-section { padding: var(--space-6); }
       .preorders-toolbar .form-group, .preorders-email-row .form-group { min-width: 100%; }
@@ -293,6 +299,17 @@
 
         <!-- Admin Content (hidden until logged in) -->
         <div id="admin-content" class="hidden">
+
+          <div id="admin-mobile-nav-wrap">
+            <label for="admin-mobile-nav" class="form-label">Section</label>
+            <select id="admin-mobile-nav" class="form-input">
+              <option value="skipDates">Skip Dates</option>
+              <option value="announcements">Announcements</option>
+              <option value="news">News</option>
+              <option value="inventory">Inventory</option>
+              <option value="preorders">Preorders</option>
+            </select>
+          </div>
 
           <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
             <button role="tab" id="tab-skipDates" aria-controls="panel-skipDates" aria-selected="true" tabindex="0">Skip Dates</button>
