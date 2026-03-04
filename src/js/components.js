@@ -68,14 +68,25 @@ export function renderTestimonial({ text, author, source }) {
   `;
 }
 
+function formatNewsDate(value) {
+  const raw = String(value || '').slice(0, 10);
+  const parsed = raw ? new Date(`${raw}T00:00:00`) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) {
+    return { display: 'Date unavailable', datetime: '' };
+  }
+  return {
+    display: parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    datetime: raw,
+  };
+}
+
 export function renderNewsItem({ id, title, subtitle, startDate, excerpt, type }) {
-  const d = new Date(startDate + 'T00:00:00');
-  const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const { display: formatted, datetime } = formatNewsDate(startDate);
   const url = `/news-detail.html?id=${encodeURIComponent(id)}`;
   const badge = type === 'announcement' ? '<span class="news-item__badge">Announcement</span> ' : '';
   return `
     <article class="news-item">
-      <time class="news-item__date" datetime="${escapeHtml(startDate)}">${badge}${formatted}</time>
+      <time class="news-item__date" datetime="${escapeHtml(datetime)}">${badge}${formatted}</time>
       <h3 class="news-item__title"><a href="${url}">${escapeHtml(title)}</a></h3>
       ${subtitle ? `<p class="news-item__subtitle">${escapeHtml(subtitle)}</p>` : ''}
       ${excerpt ? `<p class="news-item__excerpt">${escapeHtml(excerpt)}</p>` : ''}

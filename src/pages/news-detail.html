@@ -162,9 +162,12 @@
           subtitleEl.style.display = '';
         }
 
-        const d = new Date(post.startDate + 'T00:00:00');
+        const rawDate = String(post.startDate || '').slice(0, 10);
+        const parsedDate = rawDate ? new Date(`${rawDate}T00:00:00`) : null;
         document.getElementById('post-date').textContent =
-          d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          (parsedDate && !Number.isNaN(parsedDate.getTime()))
+            ? parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+            : 'Date unavailable';
 
         document.getElementById('post-content').innerHTML = renderMarkdown(post.content || '');
       } catch (err) {
