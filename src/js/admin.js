@@ -1500,6 +1500,9 @@ export function initAdmin() {
     }
   });
 
+  // Header refresh button
+  $('header-refresh-btn').addEventListener('click', () => window.location.reload());
+
   // Skip date form
   $('skip-date-form').addEventListener('submit', addSkipDate);
 

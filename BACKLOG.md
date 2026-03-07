@@ -19,7 +19,7 @@ Bugs, fixes, and improvements to resolve before starting new features.
 ### 🟠 Moderate Priority — Security
 
 - [ ] **Restrict CORS allowed headers** — `api-stack.ts` sets `allowHeaders: ['*']` and includes localhost origins in production. Restrict to `['Content-Type', 'Authorization']` and remove `localhost` entries from the allowed origins list.
-- [ ] **Remove inline `onclick` from admin.html** — `admin.html:270` uses `onclick="window.location.reload()"` which is CSP non-compliant. Move to an event listener in `admin.js`.
+- [x] **Remove inline `onclick` from admin.html** — Replaced `onclick="window.location.reload()"` on the header refresh button with `id="header-refresh-btn"`. Event listener wired in `initAdmin()` in `admin.js`. (2026-03-07)
 - [ ] **Harden Content Security Policy (remove unsafe-inline)** — CSP in `static-site-stack.ts` allows `unsafe-inline` for scripts and styles, defeating XSS protection. Extract `admin.html` inline `<style>` block to `src/css/admin.css`, add nonce-based script CSP, and remove `unsafe-inline` from both directives.
 - [ ] **Port orders rate limiting to DynamoDB** — `infra/lambda/orders/index.mjs` uses an in-memory `Map()` for rate limiting that resets on cold start and is bypassed across Lambda instances. Migrate to DynamoDB with TTL, matching the pattern used in `auth/index.mjs`.
 
