@@ -7,6 +7,10 @@ import * as apigwv2authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -189,8 +193,6 @@ export class ApiStack extends cdk.Stack {
         allowOrigins: [
           'https://kneadandbaketx.com',
           'https://www.kneadandbaketx.com',
-          'http://localhost:3000',
-          'http://localhost:8080',
           'https://d7xgnh51ijjd2.cloudfront.net',
         ],
         allowMethods: [
@@ -354,6 +356,36 @@ export class ApiStack extends cdk.Stack {
       integration: adminIntegration,
       authorizer: jwtAuthorizer,
     });
+
+    // ── CloudWatch Alarms + SNS Alerting ──
+    const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
+      topicName: 'knead-bake-alarms',
+      displayName: 'Knead & Bake Lambda Alarms',
+    });
+    alarmTopic.addSubscription(
+      new snsSubscriptions.EmailSubscription('allyson.m.roberts@gmail.com')
+    );
+
+    const alarmAction = new cloudwatchActions.SnsAction(alarmTopic);
+
+    const monitoredLambdas: Array<[string, lambda.Function]> = [
+      ['orders', orderFn],
+      ['auth', authFn],
+      ['admin', adminFn],
+    ];
+
+    for (const [name, fn] of monitoredLambdas) {
+      const alarm = new cloudwatch.Alarm(this, `${name}-error-alarm`, {
+        alarmName: `knead-bake-${name}-errors`,
+        alarmDescription: `Error rate spike in knead-bake-${name} Lambda`,
+        metric: fn.metricErrors({ period: cdk.Duration.minutes(5) }),
+        threshold: 3,
+        evaluationPeriods: 1,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      });
+      alarm.addAlarmAction(alarmAction);
+    }
 
     // ── Outputs ──
     new cdk.CfnOutput(this, 'ApiUrl', {

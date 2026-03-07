@@ -1264,6 +1264,10 @@ export async function handler(event) {
   }
 
   // Admin endpoints — auth is handled by the Lambda authorizer at API Gateway level
+  if (event.body && event.body.length > 5 * 1024 * 1024) {
+    return response(413, { message: 'Request body too large.' });
+  }
+
   let body = {};
   if (event.body) {
     try {

@@ -174,6 +174,10 @@ export async function handler(event) {
     });
   }
 
+  if (event.body && event.body.length > 5 * 1024 * 1024) {
+    return response(413, { message: 'Request body too large.' });
+  }
+
   let body;
   try {
     body = JSON.parse(event.body || '{}');

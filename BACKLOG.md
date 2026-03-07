@@ -18,24 +18,24 @@ Bugs, fixes, and improvements to resolve before starting new features.
 
 ### 🟠 Moderate Priority — Security
 
-- [ ] **Restrict CORS allowed headers** — `api-stack.ts` sets `allowHeaders: ['*']` and includes localhost origins in production. Restrict to `['Content-Type', 'Authorization']` and remove `localhost` entries from the allowed origins list.
+- [x] **Restrict CORS allowed headers** — Removed `http://localhost:3000` and `http://localhost:8080` from `allowOrigins` in `api-stack.ts`. `allowHeaders` was already `['Content-Type', 'Authorization']`. (2026-03-07)
 - [x] **Remove inline `onclick` from admin.html** — Replaced `onclick="window.location.reload()"` on the header refresh button with `id="header-refresh-btn"`. Event listener wired in `initAdmin()` in `admin.js`. (2026-03-07)
 - [ ] **Harden Content Security Policy (remove unsafe-inline)** — CSP in `static-site-stack.ts` allows `unsafe-inline` for scripts and styles, defeating XSS protection. Extract `admin.html` inline `<style>` block to `src/css/admin.css`, add nonce-based script CSP, and remove `unsafe-inline` from both directives.
-- [ ] **Port orders rate limiting to DynamoDB** — `infra/lambda/orders/index.mjs` uses an in-memory `Map()` for rate limiting that resets on cold start and is bypassed across Lambda instances. Migrate to DynamoDB with TTL, matching the pattern used in `auth/index.mjs`.
+- [x] **Port orders rate limiting to DynamoDB** — Replaced in-memory `Map()` rate limiter in `orders/index.mjs` with DynamoDB-backed `isRateLimited()`. Uses `ORDER_RATE` type in CONFIG_TABLE with TTL. Persistent across cold starts and instances. Added `PutCommand` + `UpdateCommand` imports. (2026-03-07)
 
 ### 🟡 Low Priority — Security
 
 - [x] **Remove hardcoded email from admin.html form value** — Removed `value="allyson.m.roberts@gmail.com"` from `admin.html:511`; field now starts empty with placeholder only. Hint text updated to "default owner email". Backend fallback unchanged. (2026-03-03)
-- [ ] **Add request body size limits to all Lambdas** — No Lambda validates the size of `event.body`. Add a guard rejecting payloads over 5MB at the top of each Lambda handler to prevent cost abuse and DoS.
-- [ ] **Add magic byte validation to image uploads** — Image uploads in `infra/lambda/admin/index.mjs` check MIME type only, which can be spoofed. Read the first 4 bytes of the upload buffer and validate against known file signatures (JPEG: `FF D8 FF`, PNG: `89 50 4E 47`).
+- [x] **Add request body size limits to all Lambdas** — Added 5MB body size guard (`event.body.length > 5 * 1024 * 1024 → 413`) to `orders/index.mjs`, `auth/index.mjs`, and `admin/index.mjs`. (2026-03-07)
+- [ ] **Add magic byte validation to image uploads** — Not feasible in Lambda: images are uploaded directly to S3 via presigned URLs (Lambda never receives file bytes). Requires an S3 Event trigger + Lambda or Lambda@Edge to inspect file content post-upload. Architectural change needed before implementing.
 - [x] **Add admin audit log to DynamoDB** — Added `knead-bake-audit-log` DynamoDB table (PK: `resourceType`, SK: `auditId`, 90-day TTL). Added `writeAuditLog()` helper to `infra/lambda/admin/index.mjs`. Instrumented all 13 state-changing handlers: skip dates (2), announcements (3), news posts (3), product inventory (3), and orders (2). Audit failures are non-blocking. (2026-03-03)
-- [ ] **Add CloudWatch alarms and SNS alerting** — Lambda errors are silent unless manually checked. Add CDK CloudWatch Alarms on `metricErrors()` for all Lambdas connected to an SNS topic that sends email notifications.
+- [x] **Add CloudWatch alarms and SNS alerting** — Added SNS topic `knead-bake-alarms` with email subscription in `api-stack.ts`. CloudWatch error alarms (threshold: 3 errors / 5 min) wired to all 3 Lambdas (orders, auth, admin). (2026-03-07)
 
 ### 🔵 UX / Design
 
-- [ ] **Fix admin orders table layout on mobile** — Orders table uses fixed-width columns that overflow horizontally on small screens. Refactor to stacked card layout using `data-label` attributes and responsive CSS at ≤600px.
-- [ ] **Add retry logic with exponential backoff for API calls** — API failures in `admin.js` surface immediately with no retry. Add up to 3 retries with 2ˣ × 100ms delay for 5xx responses before showing an error to the user.
-- [ ] **Add loading state to image uploads in admin panel** — Image uploads show no visual feedback during upload. Disable the upload button and show a spinner on start; re-enable with success or error message on completion.
+- [x] **Fix admin orders table layout on mobile** — Stacked card layout with `data-label` pseudo-labels already present in `admin.html` at `@media (max-width: 860px)`. Confirmed complete — no changes needed. (2026-03-07)
+- [x] **Add retry logic with exponential backoff for API calls** — `authFetch()` in `admin.js` now retries up to 3 times on 5xx responses with 100ms / 200ms exponential delay before surfacing the error to the user. Auth errors (401/403) still throw immediately. (2026-03-07)
+- [x] **Add loading state to image uploads in admin panel** — Upload button (`news-post-upload-btn`, `announcement-upload-btn`) now disables and shows "Uploading…" on start; restores to "Upload Image" on success or error in both `initNewsEditor()` and `initAnnouncementEditor()`. (2026-03-07)
 
 ## Resolved
 

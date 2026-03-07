@@ -4,7 +4,7 @@
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { randomUUID } from 'crypto';
 
@@ -22,21 +22,49 @@ const SES_SANDBOX = process.env.SES_SANDBOX === 'true';
 const MARKET_TIMEZONE = 'America/Chicago';
 const CUTOFF_HOUR = 9; // 9 AM CST on market day (Saturday)
 
-// Simple in-memory rate limiter (per Lambda instance)
-const rateLimiter = new Map();
-const RATE_LIMIT_WINDOW_MS = 60_000;
+// DynamoDB-backed rate limiter — persistent across Lambda instances and cold starts
+const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 5;
 
-function isRateLimited(ip) {
-  const now = Date.now();
-  const entry = rateLimiter.get(ip);
-  if (!entry || now - entry.start > RATE_LIMIT_WINDOW_MS) {
-    rateLimiter.set(ip, { start: now, count: 1 });
+async function isRateLimited(ip) {
+  if (!CONFIG_TABLE) return false;
+  const now = Math.floor(Date.now() / 1000);
+  const key = { type: 'ORDER_RATE', id: ip };
+
+  try {
+    const result = await ddb.send(new GetCommand({ TableName: CONFIG_TABLE, Key: key }));
+    const item = result.Item;
+
+    if (!item || now - item.windowStart > RATE_LIMIT_WINDOW_SECONDS) {
+      // New or expired window — start fresh at count 1
+      await ddb.send(new PutCommand({
+        TableName: CONFIG_TABLE,
+        Item: {
+          type: 'ORDER_RATE',
+          id: ip,
+          count: 1,
+          windowStart: now,
+          ttl: now + RATE_LIMIT_WINDOW_SECONDS + 60,
+        },
+      }));
+      return false;
+    }
+
+    if (item.count >= RATE_LIMIT_MAX) return true;
+
+    // Increment within current window
+    await ddb.send(new UpdateCommand({
+      TableName: CONFIG_TABLE,
+      Key: key,
+      UpdateExpression: 'SET #c = #c + :one',
+      ExpressionAttributeNames: { '#c': 'count' },
+      ExpressionAttributeValues: { ':one': 1 },
+    }));
     return false;
+  } catch (e) {
+    console.error('Rate limit error:', e);
+    return false; // Fail open — never block a legitimate order due to infra error
   }
-  entry.count++;
-  if (entry.count > RATE_LIMIT_MAX) return true;
-  return false;
 }
 
 function response(statusCode, body) {
@@ -98,13 +126,17 @@ async function isSkippedDate(pickupDateStr) {
 export async function handler(event) {
   // Rate limit by source IP
   const ip = event.requestContext?.http?.sourceIp || 'unknown';
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(ip)) {
     return response(429, { message: 'Too many requests. Please try again later.' });
   }
 
   // Only accept POST
   if (event.requestContext?.http?.method !== 'POST') {
     return response(405, { message: 'Method not allowed' });
+  }
+
+  if (event.body && event.body.length > 5 * 1024 * 1024) {
+    return response(413, { message: 'Request body too large.' });
   }
 
   let body;

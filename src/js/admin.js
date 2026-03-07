@@ -205,15 +205,25 @@ function authHeaders() {
 
 async function authFetch(url, options = {}) {
   options.headers = { ...authHeaders(), ...options.headers };
-  const res = await fetch(url, options);
+  const MAX_RETRIES = 3;
 
-  if (res.status === 401 || res.status === 403) {
-    authToken = null;
-    showLogin();
-    throw new Error('Session expired. Please log in again.');
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const res = await fetch(url, options);
+
+    if (res.status === 401 || res.status === 403) {
+      authToken = null;
+      showLogin();
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    // Retry on transient server errors, except on the last attempt
+    if (res.status >= 500 && attempt < MAX_RETRIES - 1) {
+      await new Promise(r => setTimeout(r, (2 ** attempt) * 100)); // 100ms, 200ms
+      continue;
+    }
+
+    return res;
   }
-
-  return res;
 }
 
 // -- DOM Helpers --
@@ -889,6 +899,8 @@ function initNewsEditor() {
     if (!fileInput.files || fileInput.files.length === 0) return;
     const file = fileInput.files[0];
 
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading…';
     setUploadStatus('news-post-upload-status', 'Uploading image...');
     try {
       await uploadImage(file, 'news-post-content', updateNewsPreview);
@@ -897,6 +909,8 @@ function initNewsEditor() {
       setUploadStatus('news-post-upload-status', err.message || 'Upload failed.', true);
     } finally {
       fileInput.value = '';
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload Image';
     }
   });
 
@@ -925,6 +939,8 @@ function initAnnouncementEditor() {
     if (!fileInput.files || fileInput.files.length === 0) return;
     const file = fileInput.files[0];
 
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading…';
     setUploadStatus('announcement-upload-status', 'Uploading image...');
     try {
       await uploadImage(file, 'announcement-content', updateAnnouncementPreview);
@@ -933,6 +949,8 @@ function initAnnouncementEditor() {
       setUploadStatus('announcement-upload-status', err.message || 'Upload failed.', true);
     } finally {
       fileInput.value = '';
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload Image';
     }
   });
 
