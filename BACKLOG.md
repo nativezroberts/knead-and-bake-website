@@ -28,7 +28,7 @@ Bugs, fixes, and improvements to resolve before starting new features.
 - [x] **Remove hardcoded email from admin.html form value** — Removed `value="allyson.m.roberts@gmail.com"` from `admin.html:511`; field now starts empty with placeholder only. Hint text updated to "default owner email". Backend fallback unchanged. (2026-03-03)
 - [ ] **Add request body size limits to all Lambdas** — No Lambda validates the size of `event.body`. Add a guard rejecting payloads over 5MB at the top of each Lambda handler to prevent cost abuse and DoS.
 - [ ] **Add magic byte validation to image uploads** — Image uploads in `infra/lambda/admin/index.mjs` check MIME type only, which can be spoofed. Read the first 4 bytes of the upload buffer and validate against known file signatures (JPEG: `FF D8 FF`, PNG: `89 50 4E 47`).
-- [ ] **Add admin audit log to DynamoDB** — Admin create/update/delete actions are only logged unstructured to CloudWatch. Write a structured audit record (action, resourceId, before/after values, timestamp) to a DynamoDB table for every admin state change.
+- [x] **Add admin audit log to DynamoDB** — Added `knead-bake-audit-log` DynamoDB table (PK: `resourceType`, SK: `auditId`, 90-day TTL). Added `writeAuditLog()` helper to `infra/lambda/admin/index.mjs`. Instrumented all 13 state-changing handlers: skip dates (2), announcements (3), news posts (3), product inventory (3), and orders (2). Audit failures are non-blocking. (2026-03-03)
 - [ ] **Add CloudWatch alarms and SNS alerting** — Lambda errors are silent unless manually checked. Add CDK CloudWatch Alarms on `metricErrors()` for all Lambdas connected to an SNS topic that sends email notifications.
 
 ### 🔵 UX / Design

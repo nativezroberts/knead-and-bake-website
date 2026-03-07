@@ -59,6 +59,16 @@ export class ApiStack extends cdk.Stack {
       timeToLiveAttribute: 'ttl',
     });
 
+    // ── Admin Audit Log DynamoDB Table ──
+    const auditTable = new dynamodb.Table(this, 'AuditLogTable', {
+      tableName: 'knead-bake-audit-log',
+      partitionKey: { name: 'resourceType', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'auditId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      timeToLiveAttribute: 'ttl',
+    });
+
     // ── Orders Lambda ──
     const orderFn = new lambda.Function(this, 'OrderFunction', {
       functionName: 'knead-bake-orders',
@@ -146,6 +156,7 @@ export class ApiStack extends cdk.Stack {
       environment: {
         CONFIG_TABLE: configTable.tableName,
         ORDERS_TABLE: ordersTable.tableName,
+        AUDIT_TABLE: auditTable.tableName,
         OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
         FROM_EMAIL: 'noreply@kneadandbaketx.com',
         SEND_EMAILS: 'true',
@@ -157,6 +168,7 @@ export class ApiStack extends cdk.Stack {
 
     configTable.grantReadWriteData(adminFn);
     ordersTable.grantReadWriteData(adminFn);
+    auditTable.grantWriteData(adminFn);
     props.siteBucket.grantPut(adminFn, 'news-images/*');
 
     adminFn.addToRolePolicy(new iam.PolicyStatement({

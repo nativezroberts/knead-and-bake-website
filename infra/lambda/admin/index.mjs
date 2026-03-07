@@ -16,6 +16,7 @@ const s3 = new S3Client({});
 const ses = new SESClient({});
 const TABLE_NAME = process.env.CONFIG_TABLE;
 const ORDERS_TABLE = process.env.ORDERS_TABLE;
+const AUDIT_TABLE = process.env.AUDIT_TABLE;
 const OWNER_EMAIL = process.env.OWNER_EMAIL || 'allyson.m.roberts@gmail.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
 const SEND_EMAILS = process.env.SEND_EMAILS !== 'false';
@@ -154,6 +155,29 @@ async function handlePublicRead() {
   return response(200, { _nocache: true, skipDates, announcements });
 }
 
+// ── Audit Log Helper ──
+async function writeAuditLog(action, resourceType, resourceId, data = {}) {
+  if (!AUDIT_TABLE) return;
+  try {
+    const timestamp = new Date().toISOString();
+    await ddb.send(new PutCommand({
+      TableName: AUDIT_TABLE,
+      Item: {
+        resourceType,
+        auditId: `${timestamp}#${resourceId}`,
+        action,        // CREATE | UPDATE | DELETE | RESET | INIT
+        resourceId,
+        timestamp,
+        data,
+        ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90-day retention
+      },
+    }));
+  } catch (err) {
+    // Audit failures must not break the primary operation
+    console.error('Audit log write failed:', err);
+  }
+}
+
 // ── Skip Dates CRUD ──
 async function listSkipDates() {
   const items = await queryByType('SKIP_DATE');
@@ -185,6 +209,7 @@ async function createSkipDate(body) {
   };
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+  await writeAuditLog('CREATE', 'SKIP_DATE', item.id, { date: item.id, reason: item.reason });
   return response(201, { skipDate: { date: item.id, reason: item.reason } });
 }
 
@@ -193,6 +218,7 @@ async function deleteSkipDate(id) {
     TableName: TABLE_NAME,
     Key: { type: 'SKIP_DATE', id },
   }));
+  await writeAuditLog('DELETE', 'SKIP_DATE', id, { date: id });
   return response(200, { message: 'Skip date deleted.' });
 }
 
@@ -251,6 +277,7 @@ async function createAnnouncement(body) {
   };
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+  await writeAuditLog('CREATE', 'ANNOUNCEMENT', item.id, { title: item.title, startDate: item.startDate, endDate: item.endDate, active: item.active });
   return response(201, { announcement: item });
 }
 
@@ -339,6 +366,7 @@ async function updateAnnouncement(id, body) {
       ExpressionAttributeValues: expValues,
       ReturnValues: 'ALL_NEW',
     }));
+    await writeAuditLog('UPDATE', 'ANNOUNCEMENT', id, { fields: Object.keys(body) });
     return response(200, { announcement: result.Attributes });
   } catch (e) {
     if (e.name === 'ConditionalCheckFailedException') {
@@ -354,6 +382,7 @@ async function deleteAnnouncement(id) {
     TableName: TABLE_NAME,
     Key: { type: 'ANNOUNCEMENT', id },
   }));
+  await writeAuditLog('DELETE', 'ANNOUNCEMENT', id, { id });
   return response(200, { message: 'Announcement deleted.' });
 }
 
@@ -480,6 +509,7 @@ async function createNewsPost(body) {
   }
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+  await writeAuditLog('CREATE', 'NEWS', item.id, { title: item.title, startDate: item.startDate, slug: item.slug, active: item.active });
   return response(201, { post: item });
 }
 
@@ -567,6 +597,7 @@ async function updateNewsPost(id, body) {
       ExpressionAttributeValues: expValues,
       ReturnValues: 'ALL_NEW',
     }));
+    await writeAuditLog('UPDATE', 'NEWS', id, { fields: Object.keys(body) });
     return response(200, { post: result.Attributes });
   } catch (e) {
     if (e.name === 'ConditionalCheckFailedException') {
@@ -582,6 +613,7 @@ async function deleteNewsPost(id) {
     TableName: TABLE_NAME,
     Key: { type: 'NEWS', id },
   }));
+  await writeAuditLog('DELETE', 'NEWS', id, { id });
   return response(200, { message: 'News post deleted.' });
 }
 
@@ -715,6 +747,7 @@ async function updateProductInventory(sku, body) {
       ExpressionAttributeValues: expValues,
       ReturnValues: 'ALL_NEW',
     }));
+    await writeAuditLog('UPDATE', 'PRODUCT_INVENTORY', sku, { fields: Object.keys(body) });
     return response(200, { product: result.Attributes });
   } catch (e) {
     if (e.name === 'ConditionalCheckFailedException') {
@@ -743,6 +776,7 @@ async function resetAllInventory() {
   );
 
   await Promise.all(updatePromises);
+  await writeAuditLog('RESET', 'PRODUCT_INVENTORY', 'ALL', { updated: items.length });
   return response(200, { message: 'Inventory reset to weekly defaults.', updated: items.length });
 }
 
@@ -800,6 +834,7 @@ async function initProductInventory() {
     }));
   }
 
+  await writeAuditLog('INIT', 'PRODUCT_INVENTORY', 'BATCH', { created: toCreate.length, skus: toCreate.map(m => m.sku) });
   return response(201, { message: `Initialized ${toCreate.length} product(s).`, created: toCreate.length });
 }
 
@@ -1083,6 +1118,7 @@ async function togglePaymentStatus(orderId, body = {}) {
     return response(500, { message: 'Failed to update payment status.' });
   }
 
+  await writeAuditLog('UPDATE', 'ORDER', orderId, { paid });
   return response(200, { message: paid ? 'Order marked as paid.' : 'Order marked as unpaid.', orderId, paid });
 }
 
@@ -1159,6 +1195,7 @@ async function rejectOrder(orderId, body = {}) {
 
   try {
     await ddb.send(new TransactWriteCommand({ TransactItems: transactItems }));
+    await writeAuditLog('DELETE', 'ORDER', orderId, { reason: rejectReason || null, itemsRestored: order.items?.length ?? 0 });
   } catch (err) {
     if (err.name === 'TransactionCanceledException') {
       return response(409, { message: 'Order was already cancelled or inventory conflict.' });
