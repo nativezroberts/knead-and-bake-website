@@ -63,8 +63,9 @@ export async function loadProducts() {
   const items = menuData.items.map(item => {
     const inv = inventoryMap.get(item.sku);
     const qty = inv ? inv.currentQty : 0;
-    // If inventory API has its own `available` flag, AND it with menu's flag
-    const available = item.available && (inv ? inv.available : true);
+    // Inventory availability is authoritative when present.
+    // menu.json availability is used as fallback when inventory entry is missing.
+    const available = inv ? !!inv.available : !!item.available;
     return {
       ...item,
       available,
