@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(npm run:*)",
+      "Bash(git:*)",
+      "Bash(claude remote-control:*)",
+      "Bash(gh repo:*)",
+      "Bash(grep -r \"localStorage\\\\|sessionStorage\\\\|credentials\\\\|password\\\\|secret\\\\|key\\\\|token\" /c/Users/zacha/Programs/knead-and-bake-website/src/js/*.js)",
+      "Bash(grep -n \"noindex\\\\|robots\" /c/Users/zacha/Programs/knead-and-bake-website/src/pages/*.html)",
+      "Bash(grep -n \"CSP\\\\|Content-Security-Policy\" /c/Users/zacha/Programs/knead-and-bake-website/infra/lib/*.ts)",
+      "Bash(grep -r \"onclick=\" /c/Users/zacha/Programs/knead-and-bake-website/src/pages/*.html)",
+      "Bash(npx cdk deploy KneadBakeApi --require-approval never)",
+      "Bash(gh run list --limit 10)",
+      "Bash(gh run view 22798357719 --log-failed)",
+      "Bash(aws cloudformation describe-stacks --stack-name KneadBakeApi --query \"Stacks[0].StackStatus\" --output text)",
+      "Bash(gh run rerun 22798357719 --failed)",
+      "Bash(gh run view 22798357719)",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}
