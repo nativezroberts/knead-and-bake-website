@@ -11,6 +11,8 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -357,6 +359,58 @@ export class ApiStack extends cdk.Stack {
       authorizer: jwtAuthorizer,
     });
 
+    // ── Scheduler Lambda (automated preorder report emails) ──
+    const schedulerFn = new lambda.Function(this, 'SchedulerFunction', {
+      functionName: 'knead-bake-scheduler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '..', 'lambda', 'scheduler')),
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        ORDERS_TABLE: ordersTable.tableName,
+        OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
+        FROM_EMAIL: 'noreply@kneadandbaketx.com',
+        SEND_EMAILS: 'true',
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    ordersTable.grantReadData(schedulerFn);
+
+    schedulerFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['ses:SendEmail'],
+      resources: [
+        `arn:aws:ses:${this.region}:${this.account}:identity/kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/*@kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/allyson.m.roberts@gmail.com`,
+      ],
+    }));
+
+    // Friday 7 PM CDT (UTC-5) = Saturday 00:00 UTC
+    // Note: shifts to Friday 7 PM CST (UTC-6) = Saturday 01:00 UTC in winter — off by 1 hr is acceptable
+    new events.Rule(this, 'FridayEveningReport', {
+      ruleName: 'knead-bake-friday-evening-report',
+      description: 'Send preorder summary email Friday evening before market day',
+      schedule: events.Schedule.cron({ minute: '0', hour: '0', weekDay: 'SAT' }),
+      targets: [new eventsTargets.LambdaFunction(schedulerFn, {
+        event: events.RuleTargetInput.fromObject({ detail: { label: 'Friday Evening Preorder Report' } }),
+        retryAttempts: 2,
+      })],
+    });
+
+    // Saturday 9 AM CDT (UTC-5) = Saturday 14:00 UTC
+    new events.Rule(this, 'SaturdayMorningReport', {
+      ruleName: 'knead-bake-saturday-morning-report',
+      description: 'Send preorder summary email Saturday morning of market day',
+      schedule: events.Schedule.cron({ minute: '0', hour: '14', weekDay: 'SAT' }),
+      targets: [new eventsTargets.LambdaFunction(schedulerFn, {
+        event: events.RuleTargetInput.fromObject({ detail: { label: 'Saturday Morning Preorder Report' } }),
+        retryAttempts: 2,
+      })],
+    });
+
     // ── CloudWatch Alarms + SNS Alerting ──
     const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
       topicName: 'knead-bake-alarms',
@@ -372,6 +426,7 @@ export class ApiStack extends cdk.Stack {
       ['orders', orderFn],
       ['auth', authFn],
       ['admin', adminFn],
+      ['scheduler', schedulerFn],
     ];
 
     for (const [name, fn] of monitoredLambdas) {
