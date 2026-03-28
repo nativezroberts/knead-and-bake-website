@@ -11,6 +11,8 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -355,6 +357,54 @@ export class ApiStack extends cdk.Stack {
       methods: [apigwv2.HttpMethod.POST],
       integration: adminIntegration,
       authorizer: jwtAuthorizer,
+    });
+
+    // ── Preorder Scheduler Lambda ──
+    // Sends automated preorder summary emails:
+    //   Friday 7 PM CDT  = 23:00 UTC  → cron(0 23 ? * FRI *)
+    //   Saturday 9 AM CDT = 14:00 UTC → cron(0 14 ? * SAT *)
+    // (CDT = UTC-5, active during market season Mar–Nov)
+    const schedulerFn = new lambda.Function(this, 'SchedulerFunction', {
+      functionName: 'knead-bake-scheduler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '..', 'lambda', 'scheduler')),
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        ORDERS_TABLE: ordersTable.tableName,
+        OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
+        FROM_EMAIL: 'noreply@kneadandbaketx.com',
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    ordersTable.grantReadData(schedulerFn);
+
+    schedulerFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['ses:SendEmail'],
+      resources: [
+        `arn:aws:ses:${this.region}:${this.account}:identity/kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/*@kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/allyson.m.roberts@gmail.com`,
+      ],
+    }));
+
+    // Friday 7 PM CDT (23:00 UTC) — weekly preview
+    new events.Rule(this, 'SchedulerFridayRule', {
+      ruleName: 'knead-bake-friday-preview',
+      description: 'Trigger preorder summary email every Friday at 7 PM CDT',
+      schedule: events.Schedule.cron({ minute: '0', hour: '23', weekDay: 'FRI' }),
+      targets: [new eventsTargets.LambdaFunction(schedulerFn)],
+    });
+
+    // Saturday 9 AM CDT (14:00 UTC) — market day final list
+    new events.Rule(this, 'SchedulerSaturdayRule', {
+      ruleName: 'knead-bake-saturday-morning',
+      description: 'Trigger preorder summary email every Saturday at 9 AM CDT',
+      schedule: events.Schedule.cron({ minute: '0', hour: '14', weekDay: 'SAT' }),
+      targets: [new eventsTargets.LambdaFunction(schedulerFn)],
     });
 
     // ── CloudWatch Alarms + SNS Alerting ──
