@@ -206,6 +206,35 @@ ${commentsHtml}
   });
 }
 
+function buildOwnerPreorderEmailHtml(order, orderId) {
+  const totalStr = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
+  const shortOrderId = orderId.slice(0, 8);
+  const commentsHtml = order.notes
+    ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#5e4a3d;"><strong>Comments:</strong> ${escapeHtml(order.notes)}</p>`
+    : '';
+
+  return buildCustomerEmailShell({
+    iconEntity: '&#128203;',
+    badgeText: 'Order Placed',
+    heading: 'New Preorder Received',
+    intro: 'A customer placed a new preorder and payment is still pending.',
+    bodyHtml: `
+<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>${escapeHtml(order.name)}</strong> just submitted order <strong>#${escapeHtml(shortOrderId)}</strong>.</p>
+<div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Total:</strong> ${escapeHtml(totalStr)}</p>
+  <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Payment status:</strong> Pending payment</p>
+</div>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+  ${buildItemsHtml(order.items)}
+</table>
+${commentsHtml}
+<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>Created:</strong> ${escapeHtml(order.createdAt)}</p>`,
+  });
+}
+
 async function handlePaymentChoice(orderId, body = {}) {
   if (!ORDERS_TABLE) {
     return response(500, { message: 'Orders table is not configured.' });
@@ -489,6 +518,7 @@ export async function handler(event) {
 
     try {
       // Owner notification (always send — works in SES sandbox since owner email is verified)
+      const ownerEmailHtml = buildOwnerPreorderEmailHtml(order, orderId);
       await ses.send(new SendEmailCommand({
         Source: FROM_EMAIL,
         Destination: { ToAddresses: [OWNER_EMAIL] },
@@ -514,6 +544,7 @@ Comments: ${order.notes || 'None'}
 Order ID: ${orderId}
 Created: ${order.createdAt}`
             },
+            Html: { Data: ownerEmailHtml },
           },
         },
       }));

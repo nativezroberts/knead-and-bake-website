@@ -1105,33 +1105,43 @@ function renderPreorderOrders(summary) {
           </tr>
         </thead>
         <tbody>
-          ${orders.map(order => `
-            <tr>
-              <td class="preorders-orders-cell--customer" data-label="Customer">
-                <strong>${escapeHtml(order.name || '-')}</strong><br>
-                <span class="preorders-meta">Placed ${escapeHtml(formatDateTime(order.createdAt))}</span>
-              </td>
-              <td class="preorders-orders-cell--contact" data-label="Contact">
-                <div>${escapeHtml(order.phone || '-')}</div>
-                <div class="preorders-meta">${escapeHtml(order.email || 'No email')}</div>
-              </td>
-              <td class="preorders-orders-cell--items" data-label="Items">
-                ${(Array.isArray(order.items) && order.items.length > 0)
-                  ? `<div class="preorders-line-items">${order.items.map(item => `
-                    <div class="preorders-line-item">
-                      <strong>${Number(item.qty || 0)}x</strong> ${escapeHtml(item.name || '')}
-                    </div>
-                  `).join('')}</div>`
-                  : '-'}
-              </td>
-              <td class="preorders-orders-cell--pickup" data-label="Pickup">${escapeHtml(order.pickupDate || '-')}</td>
-              <td class="preorders-orders-cell--notes" data-label="Notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
-              <td class="preorders-orders-cell--actions" data-label="Actions">
-                <button class="btn ${order.paid ? 'btn--paid' : 'btn--mark-paid'}" data-order-id="${escapeHtml(order.orderId || '')}" data-paid="${order.paid ? 'true' : 'false'}">${order.paid ? 'Paid' : 'Mark Paid'}</button>
-                <button class="btn btn--reject" data-order-id="${escapeHtml(order.orderId || '')}" data-order-name="${escapeHtml(order.name || 'this customer')}">Reject</button>
-              </td>
-            </tr>
-          `).join('')}
+          ${orders.map((order) => {
+            const paymentStatus = String(order.paymentStatus || '').toUpperCase();
+            const paymentMethod = String(order.paymentMethod || '').toUpperCase();
+            const isOnlinePaid = paymentStatus === 'PAID' && paymentMethod === 'SQUARE';
+            const isPaid = isOnlinePaid || !!order.paid;
+            const actionsHtml = isOnlinePaid
+              ? '<span class="preorders-status-pill preorders-status-pill--online">Paid via Online</span>'
+              : `<button class="btn ${isPaid ? 'btn--paid' : 'btn--mark-paid'}" data-order-id="${escapeHtml(order.orderId || '')}" data-paid="${isPaid ? 'true' : 'false'}">${isPaid ? 'Paid' : 'Mark Paid'}</button>
+                 <button class="btn btn--reject" data-order-id="${escapeHtml(order.orderId || '')}" data-order-name="${escapeHtml(order.name || 'this customer')}">Reject</button>`;
+
+            return `
+              <tr>
+                <td class="preorders-orders-cell--customer" data-label="Customer">
+                  <strong>${escapeHtml(order.name || '-')}</strong><br>
+                  <span class="preorders-meta">Placed ${escapeHtml(formatDateTime(order.createdAt))}</span>
+                </td>
+                <td class="preorders-orders-cell--contact" data-label="Contact">
+                  <div>${escapeHtml(order.phone || '-')}</div>
+                  <div class="preorders-meta">${escapeHtml(order.email || 'No email')}</div>
+                </td>
+                <td class="preorders-orders-cell--items" data-label="Items">
+                  ${(Array.isArray(order.items) && order.items.length > 0)
+                    ? `<div class="preorders-line-items">${order.items.map(item => `
+                      <div class="preorders-line-item">
+                        <strong>${Number(item.qty || 0)}x</strong> ${escapeHtml(item.name || '')}
+                      </div>
+                    `).join('')}</div>`
+                    : '-'}
+                </td>
+                <td class="preorders-orders-cell--pickup" data-label="Pickup">${escapeHtml(order.pickupDate || '-')}</td>
+                <td class="preorders-orders-cell--notes" data-label="Notes">${order.notes ? escapeHtml(order.notes) : '<span class="preorders-meta">None</span>'}</td>
+                <td class="preorders-orders-cell--actions" data-label="Actions">
+                  ${actionsHtml}
+                </td>
+              </tr>
+            `;
+          }).join('')}
         </tbody>
       </table>
     </div>

@@ -893,6 +893,12 @@ function buildPreorderSummary(orders, weekStart, weekEnd) {
         : [];
 
       const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+      const paymentStatus = sanitize(
+        order.paymentStatus || (order.paid ? 'PAID' : 'UNPAID'),
+        40
+      );
+      const paymentMethod = sanitize(order.paymentMethod || '', 40);
+      const paid = paymentStatus === 'PAID';
 
       return {
         orderId: sanitize(order.orderId || '', 100),
@@ -903,6 +909,9 @@ function buildPreorderSummary(orders, weekStart, weekEnd) {
         notes: sanitize(order.notes || '', 500),
         status: sanitize(order.status || 'NEW', 40),
         createdAt: formatOrderCreatedAt(order.createdAt),
+        paymentStatus,
+        paymentMethod,
+        paid,
         items,
         totalQty,
       };

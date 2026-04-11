@@ -135,6 +135,37 @@ function buildItemsHtml(items = []) {
     .join('');
 }
 
+function buildOwnerPaymentEmailHtml(order, orderId, subtotalStr, processingFeeStr, totalPaidStr, squarePaymentId) {
+  const shortOrderId = orderId.slice(0, 8);
+  const commentsHtml = order.notes
+    ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#5e4a3d;"><strong>Comments:</strong> ${escapeHtml(order.notes)}</p>`
+    : '';
+
+  return buildCustomerEmailShell({
+    iconEntity: '&#9989;',
+    badgeText: 'Paid Online',
+    heading: 'Order Paid Online',
+    intro: 'A preorder was successfully paid with Square.',
+    bodyHtml: `
+<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>${escapeHtml(order.name)}</strong> completed payment for order <strong>#${escapeHtml(shortOrderId)}</strong>.</p>
+<div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Subtotal:</strong> ${escapeHtml(subtotalStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Card processing fee:</strong> ${escapeHtml(processingFeeStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Total paid:</strong> ${escapeHtml(totalPaidStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Payment method:</strong> Square</p>
+  <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Square payment reference:</strong> ${escapeHtml(squarePaymentId || 'unknown')}</p>
+</div>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+  ${buildItemsHtml(order.items)}
+</table>
+${commentsHtml}
+<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>Full order ID:</strong> ${escapeHtml(orderId)}</p>`,
+  });
+}
+
 async function sendPaymentEmails(order, orderId, totalPaidCents, squarePaymentId) {
   if (!SEND_EMAILS || !FROM_EMAIL) return;
 
@@ -149,6 +180,14 @@ async function sendPaymentEmails(order, orderId, totalPaidCents, squarePaymentId
   const emailTasks = [];
 
   if (isValidEmail(OWNER_EMAIL)) {
+    const ownerPaymentHtml = buildOwnerPaymentEmailHtml(
+      order,
+      orderId,
+      subtotalStr,
+      processingFeeStr,
+      totalPaidStr,
+      squarePaymentId
+    );
     emailTasks.push(
       ses.send(new SendEmailCommand({
         Source: FROM_EMAIL,
@@ -178,6 +217,7 @@ Comments: ${order.notes || 'None'}
 
 Order ID: ${orderId}`
             },
+            Html: { Data: ownerPaymentHtml },
           },
         },
       }))
