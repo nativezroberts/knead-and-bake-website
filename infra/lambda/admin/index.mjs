@@ -45,6 +45,15 @@ function sanitize(str, maxLen = 500) {
   return str.replace(/[<>]/g, '').trim().slice(0, maxLen);
 }
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function isValidDate(dateStr) {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(new Date(dateStr + 'T00:00:00').getTime());
 }
@@ -107,6 +116,27 @@ function formatOrderCreatedAt(createdAt) {
   const d = new Date(createdAt);
   if (isNaN(d.getTime())) return String(createdAt);
   return d.toISOString();
+}
+
+function buildSummaryEmailShell({ iconEntity, badgeText, heading, intro, bodyHtml }) {
+  return `<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f6efe5;font-family:Georgia,Arial,sans-serif;color:#2f241c;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:720px;margin:0 auto;background:#fffdf9;border:1px solid #e7d7c3;border-radius:20px;overflow:hidden;">
+        <div style="padding:28px 24px 20px;background:#fff6df;border-bottom:1px solid #ecdcc5;text-align:center;">
+          <div style="width:68px;height:68px;line-height:68px;margin:0 auto 12px;border-radius:999px;background:#5c3d2e;color:#fff;font-size:32px;font-weight:700;">${iconEntity}</div>
+          <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:#ead7ba;color:#5c3d2e;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${escapeHtml(badgeText)}</div>
+          <h1 style="margin:16px 0 8px;font-size:28px;line-height:1.2;color:#3b2a1f;">${escapeHtml(heading)}</h1>
+          <p style="margin:0;font-size:16px;line-height:1.6;color:#6e5645;">${escapeHtml(intro)}</p>
+        </div>
+        <div style="padding:24px;">
+          ${bodyHtml}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
 }
 
 async function queryByType(type) {
@@ -968,6 +998,7 @@ async function generateWeeklyPreorderSummary(weekStartInput) {
 }
 
 function buildPreorderSummaryEmailText(summary) {
+  const buckets = groupPreorderSummaryOrders(summary.orders);
   const lines = [
     'Knead & Bake TX - Weekly Preorder Summary',
     `Week: ${summary.weekStart} to ${summary.weekEnd}`,
@@ -979,37 +1010,164 @@ function buildPreorderSummaryEmailText(summary) {
     `- Unique Customers: ${summary.totals.uniqueCustomers}`,
     `- Product Types Ordered: ${summary.totals.productTypeCount}`,
     '',
+    'Payment Breakdown',
+    `- Paid Online: ${buckets.paidOnline.length}`,
+    `- Marked Paid: ${buckets.markedPaid.length}`,
+    `- Payment Due at Pickup: ${buckets.unpaidPickup.length}`,
+    '',
     'Loaf/Product Totals',
   ];
 
   if (summary.productTotals.length === 0) {
     lines.push('- No products ordered.');
   } else {
-    summary.productTotals.forEach(product => {
+    summary.productTotals.forEach((product) => {
       lines.push(`- ${product.name}: ${product.qty}`);
     });
   }
 
-  lines.push('', 'Order Details');
-
-  if (summary.orders.length === 0) {
-    lines.push('- No preorders for this week.');
-  } else {
-    summary.orders.forEach((order, idx) => {
-      lines.push(
-        '',
-        `${idx + 1}. ${order.name || 'Customer'} (${order.orderId || 'No ID'})`,
-        `   Pickup: ${order.pickupDate || '-'}`,
-        `   Phone: ${order.phone || '-'}`,
-        `   Email: ${order.email || 'Not provided'}`,
-        `   Created: ${order.createdAt || '-'}`,
-        `   Items: ${order.items.map(item => `${item.qty}x ${item.name}`).join(', ') || '-'}`,
-        `   Notes: ${order.notes || 'None'}`,
-      );
-    });
-  }
+  appendPreorderSummarySectionText(lines, 'Paid Online', buckets.paidOnline, 'Already paid with card online.');
+  appendPreorderSummarySectionText(lines, 'Marked Paid', buckets.markedPaid, 'Recorded as paid manually.');
+  appendPreorderSummarySectionText(lines, 'Payment Due at Pickup', buckets.unpaidPickup, 'Collect payment at pickup.');
 
   return lines.join('\n');
+}
+
+function groupPreorderSummaryOrders(orders = []) {
+  const buckets = {
+    paidOnline: [],
+    markedPaid: [],
+    unpaidPickup: [],
+  };
+
+  orders.forEach((order) => {
+    const paymentStatus = String(order.paymentStatus || (order.paid ? 'PAID' : 'UNPAID')).toUpperCase();
+    const paymentMethod = String(order.paymentMethod || '').toUpperCase();
+
+    if (paymentStatus === 'PAID' && paymentMethod === 'SQUARE') {
+      buckets.paidOnline.push(order);
+      return;
+    }
+
+    if (paymentStatus === 'PAID') {
+      buckets.markedPaid.push(order);
+      return;
+    }
+
+    buckets.unpaidPickup.push(order);
+  });
+
+  return buckets;
+}
+
+function appendPreorderSummarySectionText(lines, title, orders, description) {
+  lines.push('', `${title} (${orders.length})`, description);
+
+  if (!orders.length) {
+    lines.push('- None');
+    return;
+  }
+
+  orders.forEach((order, idx) => {
+    const itemsText = Array.isArray(order.items) && order.items.length
+      ? order.items.map((item) => `${item.qty}x ${item.name}`).join(', ')
+      : '-';
+
+    lines.push(
+      '',
+      `${idx + 1}. ${order.name || 'Customer'} (${order.orderId || 'No ID'})`,
+      `   Pickup: ${order.pickupDate || '-'}`,
+      `   Phone: ${order.phone || '-'}`,
+      `   Email: ${order.email || 'Not provided'}`,
+      `   Created: ${order.createdAt || '-'}`,
+      `   Items: ${itemsText}`,
+      `   Notes: ${order.notes || 'None'}`
+    );
+  });
+}
+
+function buildPreorderSummaryMetricCards(summary, buckets) {
+  const cards = [
+    { label: 'Orders', value: summary.totals.orderCount },
+    { label: 'Total Loaves', value: summary.totals.totalQty },
+    { label: 'Paid Online', value: buckets.paidOnline.length },
+    { label: 'Due at Pickup', value: buckets.unpaidPickup.length },
+  ];
+
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0 0 24px;">
+    ${cards.map((card) => `
+      <div style="padding:16px;border:1px solid #eadbc8;border-radius:16px;background:#fcf7ef;">
+        <div style="margin:0 0 6px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#8a6b57;font-weight:700;">${escapeHtml(card.label)}</div>
+        <div style="font-size:28px;line-height:1.1;color:#3b2a1f;font-weight:700;">${escapeHtml(String(card.value))}</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function buildPreorderSummaryProductTotalsHtml(summary) {
+  if (!summary.productTotals.length) {
+    return '<p style="margin:0;font-size:15px;line-height:1.6;color:#6e5645;">No products ordered for this window.</p>';
+  }
+
+  return `<table role="presentation" style="width:100%;border-collapse:collapse;">
+    ${summary.productTotals.map((product) => `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;">${escapeHtml(product.name)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;text-align:right;font-weight:700;">${escapeHtml(String(product.qty))}</td>
+      </tr>
+    `).join('')}
+  </table>`;
+}
+
+function buildPreorderSummaryOrderCardHtml(order) {
+  const itemsHtml = Array.isArray(order.items) && order.items.length
+    ? `<ul style="margin:0;padding-left:18px;color:#5e4a3d;font-size:14px;line-height:1.6;">
+        ${order.items.map((item) => `<li>${escapeHtml(`${item.qty}x ${item.name}`)}</li>`).join('')}
+      </ul>`
+    : '<p style="margin:0;font-size:14px;line-height:1.6;color:#6e5645;">No items listed.</p>';
+
+  return `<div style="margin:0 0 14px;padding:16px;border-radius:16px;background:#fffdf9;border:1px solid #eadbc8;">
+    <p style="margin:0 0 8px;font-size:16px;line-height:1.5;color:#3b2a1f;"><strong>${escapeHtml(order.name || 'Customer')}</strong> <span style="color:#8a6b57;">#${escapeHtml((order.orderId || '').slice(0, 8) || 'No ID')}</span></p>
+    <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate || '-')}</p>
+    <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Phone:</strong> ${escapeHtml(order.phone || '-')}</p>
+    <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
+    <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Created:</strong> ${escapeHtml(order.createdAt || '-')}</p>
+    ${itemsHtml}
+    <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Notes:</strong> ${escapeHtml(order.notes || 'None')}</p>
+  </div>`;
+}
+
+function buildPreorderSummarySectionHtml(title, description, orders, accentColor) {
+  return `<div style="margin:0 0 24px;">
+    <div style="margin:0 0 12px;padding:14px 16px;border-radius:16px;background:#fcf7ef;border-left:4px solid ${accentColor};">
+      <p style="margin:0 0 4px;font-size:18px;line-height:1.4;color:#3b2a1f;font-weight:700;">${escapeHtml(title)} (${escapeHtml(String(orders.length))})</p>
+      <p style="margin:0;font-size:14px;line-height:1.6;color:#6e5645;">${escapeHtml(description)}</p>
+    </div>
+    ${orders.length
+      ? orders.map((order) => buildPreorderSummaryOrderCardHtml(order)).join('')
+      : '<p style="margin:0;font-size:14px;line-height:1.6;color:#6e5645;">No orders in this section.</p>'}
+  </div>`;
+}
+
+function buildPreorderSummaryEmailHtml(summary) {
+  const buckets = groupPreorderSummaryOrders(summary.orders);
+
+  return buildSummaryEmailShell({
+    iconEntity: '&#128203;',
+    badgeText: 'Preorder Summary',
+    heading: `Weekly Report: ${summary.weekStart} to ${summary.weekEnd}`,
+    intro: 'Your preorder report is grouped by payment status so market prep is easier to scan.',
+    bodyHtml: `
+<p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#5e4a3d;">Generated at ${escapeHtml(summary.generatedAt)}.</p>
+${buildPreorderSummaryMetricCards(summary, buckets)}
+<div style="margin:0 0 24px;padding:18px;border-radius:18px;background:#fff8ed;border:1px solid #eadbc8;">
+  <p style="margin:0 0 12px;font-size:18px;line-height:1.4;color:#3b2a1f;font-weight:700;">Loaf / Product Totals</p>
+  ${buildPreorderSummaryProductTotalsHtml(summary)}
+</div>
+${buildPreorderSummarySectionHtml('Paid Online', 'These orders were already paid by card online.', buckets.paidOnline, '#2e8b57')}
+${buildPreorderSummarySectionHtml('Marked Paid', 'These orders were recorded as paid manually.', buckets.markedPaid, '#8a5a44')}
+${buildPreorderSummarySectionHtml('Payment Due at Pickup', 'These orders still need payment collected at pickup.', buckets.unpaidPickup, '#c97a2b')}`,
+  });
 }
 
 async function getPreorderSummary(weekStartInput) {
@@ -1076,6 +1234,7 @@ async function emailPreorderSummary(body) {
         },
         Body: {
           Text: { Data: buildPreorderSummaryEmailText(summary) },
+          Html: { Data: buildPreorderSummaryEmailHtml(summary) },
         },
       },
     }));
