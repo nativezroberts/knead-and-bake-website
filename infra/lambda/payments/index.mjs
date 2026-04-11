@@ -67,7 +67,7 @@ async function getSquareCredentials() {
 
 async function getSquarePublicConfig() {
   if (!cachedSquareAppId) {
-    cachedSquareAppId = await getSSMParam('/knead-bake/square-app-id');
+    cachedSquareAppId = await getSSMParam('/knead-bake/square-app-id', true);
   }
 
   const { locationId, environment } = await getSquareCredentials();
