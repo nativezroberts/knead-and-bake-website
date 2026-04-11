@@ -126,11 +126,60 @@
               <button type="submit" id="order-submit" class="btn btn--primary btn--lg btn--full" disabled>Place Preorder</button>
             </form>
 
-            <!-- Success Message -->
+            <!-- Payment Choice (shown after order submission) -->
+            <div id="payment-choice" class="hidden" style="text-align:center;padding:var(--space-8)">
+              <div style="font-size:var(--text-4xl);margin-bottom:var(--space-4)">&#10003;</div>
+              <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-3)">Order Received!</h2>
+              <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">How would you like to pay?</p>
+              <div id="payment-choice-total" style="font-size:var(--text-lg);font-weight:var(--weight-bold);margin-bottom:var(--space-6)"></div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-3);max-width:360px;margin:0 auto">
+                <button id="pay-now-btn" class="btn btn--primary btn--lg btn--full">Pay Now with Card</button>
+                <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:calc(-1 * var(--space-2))">A $0.30 processing fee applies</p>
+                <button id="pay-at-pickup-btn" class="btn btn--outline btn--lg btn--full">Pay at Pickup</button>
+              </div>
+            </div>
+
+            <!-- Card Payment Section (shown when Pay Now is clicked) -->
+            <div id="card-payment-section" class="hidden" style="padding:var(--space-8)">
+              <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-6)">Pay with Card</h2>
+              <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-6)">
+                <div style="display:flex;justify-content:space-between;font-size:var(--text-sm);margin-bottom:var(--space-2)">
+                  <span>Order subtotal</span>
+                  <span id="card-subtotal"></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:var(--text-sm);margin-bottom:var(--space-2);color:var(--text-secondary)">
+                  <span>Card processing fee</span>
+                  <span>$0.30</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-weight:var(--weight-bold);padding-top:var(--space-2);border-top:1px solid var(--border-color)">
+                  <span>Total</span>
+                  <span id="card-total"></span>
+                </div>
+              </div>
+              <div id="card-container" style="min-height:90px;margin-bottom:var(--space-4)"></div>
+              <div id="card-errors" class="form-error mb-4 hidden" role="alert"></div>
+              <button id="card-pay-btn" class="btn btn--primary btn--lg btn--full" disabled>Complete Payment</button>
+              <button id="card-back-btn" class="btn btn--outline btn--full" style="margin-top:var(--space-3)">Back</button>
+            </div>
+
+            <!-- Payment Success -->
+            <div id="payment-success" class="hidden" style="text-align:center;padding:var(--space-12)">
+              <div style="font-size:var(--text-4xl);margin-bottom:var(--space-4)">&#10003;</div>
+              <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-3)">Payment Complete!</h2>
+              <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">Your order is confirmed and paid. We'll text you to confirm closer to pickup day. See you Saturday!</p>
+              <a href="/" class="btn btn--outline">Back to Home</a>
+            </div>
+
+            <!-- Pay at Pickup Success -->
             <div id="order-success" class="hidden" style="text-align:center;padding:var(--space-12)">
               <div style="font-size:var(--text-4xl);margin-bottom:var(--space-4)">&#10003;</div>
               <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-3)">Order Received!</h2>
-              <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">We'll text you to confirm your order. See you at the market on Saturday!</p>
+              <p style="color:var(--text-secondary);margin-bottom:var(--space-4)">We'll text you to confirm your order. See you at the market on Saturday!</p>
+              <div style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-6)">
+                <p style="margin-bottom:var(--space-1)"><strong>Payment Options:</strong></p>
+                <p>Pre-pay via Venmo: <a href="https://venmo.com/Allyson-Roberts1" target="_blank" rel="noopener" style="color:var(--accent)">@Allyson-Roberts1</a></p>
+                <p>Or pay at pickup (cash or card)</p>
+              </div>
               <a href="/" class="btn btn--outline">Back to Home</a>
             </div>
           </div>
@@ -196,6 +245,7 @@
     </div>
   </footer>
 
+  <script src="https://web.squarecdn.com/v1/square.js" async></script>
   <script src="/src/js/config.js"></script>
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';

@@ -1,5 +1,6 @@
 /**
- * Order Form — handles item selection, form validation, and submission.
+ * Order Form — handles item selection, form validation, submission,
+ * and optional Square Web Payments card checkout.
  * Uses product-model.js as single source of truth for availability & status.
  */
 
@@ -7,6 +8,7 @@ import { loadProducts } from './product-model.js';
 import { renderOrderItem } from './components.js';
 
 const API_BASE = window.__API_BASE || '';
+const PROCESSING_FEE_CENTS = 30;
 
 export async function initOrderForm({ preorderOpen = true } = {}) {
   const container = document.getElementById('order-items');
@@ -15,6 +17,19 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
   const submitBtn = document.getElementById('order-submit');
   const successMsg = document.getElementById('order-success');
   const errorMsg = document.getElementById('order-error');
+
+  // Payment flow elements
+  const paymentChoice = document.getElementById('payment-choice');
+  const paymentChoiceTotal = document.getElementById('payment-choice-total');
+  const payNowBtn = document.getElementById('pay-now-btn');
+  const payAtPickupBtn = document.getElementById('pay-at-pickup-btn');
+  const cardSection = document.getElementById('card-payment-section');
+  const cardSubtotal = document.getElementById('card-subtotal');
+  const cardTotal = document.getElementById('card-total');
+  const cardErrors = document.getElementById('card-errors');
+  const cardPayBtn = document.getElementById('card-pay-btn');
+  const cardBackBtn = document.getElementById('card-back-btn');
+  const paymentSuccess = document.getElementById('payment-success');
 
   if (!container || !form) return;
 
@@ -91,9 +106,7 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
         <span>$${total.toFixed(2)}</span>
       </div>
       <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:var(--space-2)">
-        <p style="margin-bottom:var(--space-1)"><strong>Payment Options:</strong></p>
-        <p>Pre-pay via Venmo: <a href="https://venmo.com/Allyson-Roberts1" target="_blank" rel="noopener" style="color:var(--accent)">@Allyson-Roberts1</a></p>
-        <p>Or pay at pickup (cash or card)</p>
+        <p>Pay online with card or at pickup (Venmo, cash, or card)</p>
       </div>
     `;
     submitBtn.disabled = !preorderOpen;
@@ -101,11 +114,10 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
 
   updateSummary();
 
-  // Form submission
+  // ── Form submission ──
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Block submission if preorders are closed (defense-in-depth)
     if (!preorderOpen) {
       showError('Preorders are currently closed.');
       return;
@@ -142,20 +154,18 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
       return;
     }
 
-    // Phone is required (min 10 digits)
     const phoneDigits = payload.phone.replace(/\D/g, '');
     if (phoneDigits.length < 10) {
       showError('Please enter a valid phone number (at least 10 digits).');
       return;
     }
 
-    // Email is optional but validate format if provided
     if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
       showError('Please enter a valid email address or leave it blank.');
       return;
     }
 
-    // Submit
+    // Submit order
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting...';
     errorMsg.classList.add('hidden');
@@ -170,7 +180,6 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
 
-        // Handle inventory conflict (409)
         if (res.status === 409 || data.unavailableItems) {
           showError(data.message || 'Some items sold out. Please refresh and try again.');
           setTimeout(() => window.location.reload(), 3000);
@@ -180,15 +189,121 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
         throw new Error(data.message || 'Something went wrong. Please try again.');
       }
 
-      // Success
+      const data = await res.json();
+
+      // Show payment choice
       form.classList.add('hidden');
-      successMsg.classList.remove('hidden');
+      showPaymentChoice(data.orderId, data.totalCents);
     } catch (err) {
       showError(err.message);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Place Preorder';
     }
   });
+
+  // ── Payment choice flow ──
+  function showPaymentChoice(orderId, totalCents) {
+    const subtotalStr = `$${(totalCents / 100).toFixed(2)}`;
+    const totalWithFee = `$${((totalCents + PROCESSING_FEE_CENTS) / 100).toFixed(2)}`;
+
+    paymentChoiceTotal.textContent = `Order total: ${subtotalStr}`;
+    paymentChoice.classList.remove('hidden');
+
+    // Pay Now button
+    payNowBtn.onclick = () => {
+      paymentChoice.classList.add('hidden');
+      showCardPayment(orderId, totalCents);
+    };
+
+    // Pay at Pickup button
+    payAtPickupBtn.onclick = () => {
+      paymentChoice.classList.add('hidden');
+      successMsg.classList.remove('hidden');
+    };
+  }
+
+  // ── Square card payment ──
+  let squareCard = null;
+
+  async function showCardPayment(orderId, totalCents) {
+    const subtotalStr = `$${(totalCents / 100).toFixed(2)}`;
+    const totalWithFee = (totalCents + PROCESSING_FEE_CENTS) / 100;
+
+    cardSubtotal.textContent = subtotalStr;
+    cardTotal.textContent = `$${totalWithFee.toFixed(2)}`;
+    cardSection.classList.remove('hidden');
+
+    // Back button returns to payment choice
+    cardBackBtn.onclick = () => {
+      cardSection.classList.add('hidden');
+      showPaymentChoice(orderId, totalCents);
+    };
+
+    // Initialize Square card form
+    try {
+      if (!window.Square) {
+        showCardError('Payment service is loading. Please wait a moment and try again.');
+        return;
+      }
+
+      const payments = window.Square.payments(
+        window.__SQUARE_APP_ID,
+        window.__SQUARE_LOCATION_ID
+      );
+
+      if (!squareCard) {
+        squareCard = await payments.card();
+        await squareCard.attach('#card-container');
+      }
+
+      cardPayBtn.disabled = false;
+    } catch (err) {
+      console.error('Square card init error:', err);
+      showCardError('Unable to load payment form. Please try again or pay at pickup.');
+      return;
+    }
+
+    // Handle payment
+    cardPayBtn.onclick = async () => {
+      cardPayBtn.disabled = true;
+      cardPayBtn.textContent = 'Processing...';
+      cardErrors.classList.add('hidden');
+
+      try {
+        const result = await squareCard.tokenize();
+
+        if (result.status !== 'OK') {
+          throw new Error(result.errors?.[0]?.message || 'Card verification failed. Please check your card details.');
+        }
+
+        // Send payment to our API
+        const payRes = await fetch(`${API_BASE}/api/payments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, nonce: result.token }),
+        });
+
+        const payData = await payRes.json();
+
+        if (!payRes.ok) {
+          throw new Error(payData.message || 'Payment failed. Please try again.');
+        }
+
+        // Payment success
+        cardSection.classList.add('hidden');
+        paymentSuccess.classList.remove('hidden');
+      } catch (err) {
+        showCardError(err.message);
+        cardPayBtn.disabled = false;
+        cardPayBtn.textContent = 'Complete Payment';
+      }
+    };
+  }
+
+  function showCardError(msg) {
+    cardErrors.textContent = msg;
+    cardErrors.classList.remove('hidden');
+  }
 
   function showError(msg) {
     errorMsg.textContent = msg;

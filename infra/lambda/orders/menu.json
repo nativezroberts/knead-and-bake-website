@@ -1,0 +1,193 @@
+{
+  "categories": [
+    {
+      "id": "standard-loaves",
+      "name": "Standard Loaves",
+      "description": "Our staple sourdough lineup — available every market day."
+    },
+    {
+      "id": "seasonal-loaves",
+      "name": "Seasonal Loaves",
+      "description": "Limited-edition flavors inspired by the seasons."
+    },
+    {
+      "id": "non-loaf",
+      "name": "Non-Loaf Items",
+      "description": "Beyond bread — treats and extras from our kitchen."
+    }
+  ],
+  "items": [
+    {
+      "sku": "CL-001",
+      "name": "Classic Plain Sourdough",
+      "category": "standard-loaves",
+      "description": "Our signature loaf — crispy crust, open crumb, tangy flavor. Made with a 24-hour cold ferment.",
+      "price": 10.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/KnB_Loaf_Plain.png"
+    },
+    {
+      "sku": "CL-002",
+      "name": "Classic Plain Sourdough Sandwich Loaf",
+      "category": "standard-loaves",
+      "description": "Just like our Classic Plain Sourdough, but shaped ready for daily sandwiches.",
+      "price": 10.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/KnB_SandwichLoaf_Plain.png"
+    },
+    {
+      "sku": "CL-003",
+      "name": "Jalapeño Cheddar Sourdough",
+      "category": "standard-loaves",
+      "description": "Jalapeño heat (not too spicy) and sharp cheddar folded into our classic dough. A fan favorite year-round!",
+      "price": 13.00,
+      "allergens": ["wheat", "milk"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/KnB_Loaf_JalapenoCheddar.png"
+    },
+    {
+      "sku": "CL-004",
+      "name": "Roasted Garlic, Olive & Rosemary Sourdough",
+      "category": "standard-loaves",
+      "description": "Fragrant rosemary and fresh roasted garlic with kalamata olives folded into our classic dough.",
+      "price": 13.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/KnB_Loaf_RoastedGarlicOliveRosemary.png"
+    },
+    {
+      "sku": "CL-005",
+      "name": "Italian Parmesan Sourdough",
+      "category": "standard-loaves",
+      "description": "Aromatic parmesan cheese folded into our classic sourdough dough.",
+      "price": 13.00,
+      "allergens": ["wheat", "milk"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/KnB_Loaf_ItalianParmesan.png"
+    },
+    {
+      "sku": "CL-006",
+      "name": "Cinnamon Brown Sugar Sourdough",
+      "category": "standard-loaves",
+      "description": "Swirled with Ceylon cinnamon and Brown Sugar. Amazing when toasted for breakfast, or as treats with butter or cream cheese.",
+      "price": 13.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/KnB_Loaf_CinnamonBrownSugar.png"
+    },
+    {
+      "sku": "CL-007",
+      "name": "Chocolate Chip Sourdough",
+      "category": "standard-loaves",
+      "description": "Chocolate chips folded into our classic sourdough dough.",
+      "price": 13.00,
+      "allergens": ["wheat", "milk"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/KnB_Loaf_ChocolateChip.png"
+    },
+    {
+      "sku": "SL-001",
+      "name": "Orange Cranberry Walnut Sourdough",
+      "category": "seasonal-loaves",
+      "description": "Tart dried cranberries and toasted walnuts with a light orange zest folded into our classic dough. A winter favorite.",
+      "price": 13.00,
+      "allergens": ["wheat", "tree nuts"],
+      "available": true,
+      "seasonal": true,
+      "seasonalLabel": "Winter Special",
+      "image": "/images/menu/KnB_Loaf_OrangeCranberryWalnut.png"
+    },
+    {
+      "sku": "SL-002",
+      "name": "Lemon Blueberry Sourdough",
+      "category": "seasonal-loaves",
+      "description": "Sweet spring flavors in every bite! Juicy blueberries and bright lemon zest folded into our classic dough.",
+      "price": 13.00,
+      "allergens": ["wheat", "tree nuts"],
+      "available": false,
+      "seasonal": true,
+      "seasonalLabel": "Spring Special",
+      "image": "/images/menu/KnB_Loaf_LemonBlueberry.png"
+    },
+    {
+      "sku": "SL-003",
+      "name": "Pumpkin Spice Sourdough",
+      "category": "seasonal-loaves",
+      "description": "Warm fall flavors in every bite! Pumpkin puree and a blend of cozy spices folded into our classic dough.",
+      "price": 13.00,
+      "allergens": ["wheat"],
+      "available": false,
+      "seasonal": true,
+      "seasonalLabel": "Fall Special",
+      "image": "/images/menu/KnB_Loaf_PumpkinSpice.png"
+    },
+    {
+      "sku": "NL-001",
+      "name": "Sourdough Focaccia - Cinnamon Brown Sugar (Half Sheet)",
+      "category": "non-loaf",
+      "description": "Crispy-bottomed, Cinnamon Brown Sugar focaccia that is to die for! Perfect for breakfast, snacks, or dessert.",
+      "price": 15.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/KnB_Focaccia_CinnamonBrownSugar.png"
+    },
+    {
+      "sku": "NL-002",
+      "name": "Sourdough Discard Crackers",
+      "category": "non-loaf",
+      "description": "Various flavors: Plain, Everything Bagel, Parmesan... Thin, crispy crackers made from sourdough discard. Perfect with cheese or hummus.",
+      "price": 7.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/crackers.png"
+    },
+    {
+      "sku": "NL-003",
+      "name": "Sourdough English Muffins (Pack of 6)",
+      "category": "non-loaf",
+      "description": "These fly off our shelves fast! Soft, chewy, and perfect for breakfast sandwiches or simply toasted with butter.",
+      "price": 5.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": true,
+      "image": "/images/menu/KnB_EnglishMuffins_Plain.png"
+    },
+    {
+      "sku": "NL-004",
+      "name": "Sourdough Starter (Jar)",
+      "category": "non-loaf",
+      "description": "Start today — no waiting! Take home a piece of our starter. Includes care instructions and a beginner recipe.",
+      "price": 15.00,
+      "allergens": ["wheat"],
+      "available": true,
+      "seasonal": false,
+      "topSeller": false,
+      "image": "/images/menu/starter-jar.jpg"
+    }
+  ],
+  "seasonalBanner": {
+    "text": "Winter Specials: Orange Cranberry Walnut is here!",
+    "active": true
+  }
+}

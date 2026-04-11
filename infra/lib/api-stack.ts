@@ -187,6 +187,31 @@ export class ApiStack extends cdk.Stack {
       ],
     }));
 
+    // ── Payments Lambda (Square Web Payments) ──
+    const paymentFn = new lambda.Function(this, 'PaymentFunction', {
+      functionName: 'knead-bake-payments',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '..', 'lambda', 'payments')),
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(15),
+      environment: {
+        ORDERS_TABLE: ordersTable.tableName,
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    ordersTable.grantReadWriteData(paymentFn);
+
+    // SSM read access for Square credentials
+    paymentFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['ssm:GetParameter'],
+      resources: [
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/knead-bake/*`,
+      ],
+    }));
+
     // ── API Gateway HTTP API ──
     const httpApi = new apigwv2.HttpApi(this, 'OrderApi', {
       apiName: 'knead-bake-api',
@@ -223,6 +248,13 @@ export class ApiStack extends cdk.Stack {
       path: '/api/orders',
       methods: [apigwv2.HttpMethod.POST],
       integration: new apigwv2integrations.HttpLambdaIntegration('OrderIntegration', orderFn),
+    });
+
+    // POST /api/payments (public — Square card payment after order)
+    httpApi.addRoutes({
+      path: '/api/payments',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: new apigwv2integrations.HttpLambdaIntegration('PaymentIntegration', paymentFn),
     });
 
     // POST /api/auth/login (public)
@@ -422,6 +454,7 @@ export class ApiStack extends cdk.Stack {
       ['orders', orderFn],
       ['auth', authFn],
       ['admin', adminFn],
+      ['payments', paymentFn],
     ];
 
     for (const [name, fn] of monitoredLambdas) {

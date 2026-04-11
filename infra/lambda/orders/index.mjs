@@ -7,9 +7,17 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { randomUUID } from 'crypto';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ses = new SESClient({});
+
+// Load menu.json for authoritative prices (bundled alongside handler)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const menuData = JSON.parse(readFileSync(join(__dirname, 'menu.json'), 'utf-8'));
+const PRICE_MAP = Object.fromEntries(menuData.items.map(i => [i.sku, i.price]));
 
 const ORDERS_TABLE = process.env.ORDERS_TABLE;
 const CONFIG_TABLE = process.env.CONFIG_TABLE;
@@ -218,21 +226,35 @@ export async function handler(event) {
     }
   }
 
-  // Build order record
+  // Build order record with server-side prices from menu.json
   const orderId = randomUUID();
+  const orderItems = items.map(i => {
+    const sku = sanitize(i.sku);
+    const price = PRICE_MAP[sku];
+    if (price == null) {
+      // Should not happen if frontend and menu.json are in sync
+      console.error(`Unknown SKU price: ${sku}`);
+    }
+    return {
+      sku,
+      name: sanitize(i.name),
+      qty: Math.min(Math.max(Math.round(i.qty), 1), 99),
+      price: price ?? 0,
+    };
+  });
+  const totalCents = Math.round(orderItems.reduce((sum, i) => sum + i.price * i.qty, 0) * 100);
+
   const order = {
     orderId,
     name: sanitize(name),
     email: sanitize(email || ''),
     phone: sanitize(phone),
     pickupDate: sanitize(pickupDate),
-    items: items.map(i => ({
-      sku: sanitize(i.sku),
-      name: sanitize(i.name),
-      qty: Math.min(Math.max(Math.round(i.qty), 1), 99),
-    })),
+    items: orderItems,
     notes: sanitize(notes || ''),
     status: 'NEW',
+    paymentStatus: 'UNPAID',
+    totalCents,
     createdAt: new Date().toISOString(),
   };
 
@@ -281,7 +303,8 @@ export async function handler(event) {
 
   // Send emails (best-effort, don't fail the order)
   if (SEND_EMAILS) {
-    const itemList = order.items.map(i => `  ${i.qty}x ${i.name}`).join('\n');
+    const itemList = order.items.map(i => `  ${i.qty}x ${i.name} ($${(i.price * i.qty).toFixed(2)})`).join('\n');
+    const totalStr = `$${(order.totalCents / 100).toFixed(2)}`;
 
     try {
       // Owner notification (always send — works in SES sandbox since owner email is verified)
@@ -301,6 +324,9 @@ Pickup: ${order.pickupDate}
 
 Items:
 ${itemList}
+
+Total: ${totalStr}
+Payment: Pending (customer will pay online or at pickup)
 
 Comments: ${order.notes || 'None'}
 
@@ -326,9 +352,12 @@ Thanks for your preorder! Here's what we have for you:
 
 ${itemList}
 
+Total: ${totalStr}
+
 Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
 ${order.notes ? `Comments: ${order.notes}\n` : ''}
 Payment Options:
+- Pay online with card (a $0.30 processing fee applies)
 - Pre-pay via Venmo: @Allyson-Roberts1 (https://venmo.com/Allyson-Roberts1)
 - Or pay at pickup (cash or card)
 
@@ -349,5 +378,6 @@ See you Saturday!
   return response(201, {
     message: 'Order received! We\'ll text you to confirm.',
     orderId,
+    totalCents: order.totalCents,
   });
 }

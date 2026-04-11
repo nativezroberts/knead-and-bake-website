@@ -1084,6 +1084,7 @@ async function emailPreorderSummary(body) {
 }
 
 // ── Toggle Payment Status ──
+// Supports both new paymentStatus field and legacy paid boolean for backward compat.
 async function togglePaymentStatus(orderId, body = {}) {
   if (!ORDERS_TABLE) {
     return response(500, { message: 'Orders table is not configured.' });
@@ -1096,11 +1097,11 @@ async function togglePaymentStatus(orderId, body = {}) {
   const now = new Date().toISOString();
 
   const updateExpr = paid
-    ? 'SET paid = :paid, paidAt = :now'
-    : 'SET paid = :paid REMOVE paidAt';
+    ? 'SET paid = :paid, paidAt = :now, paymentStatus = :ps, paymentMethod = :pm'
+    : 'SET paid = :paid, paymentStatus = :ps REMOVE paidAt, paymentMethod';
   const exprValues = paid
-    ? { ':paid': true, ':now': now }
-    : { ':paid': false };
+    ? { ':paid': true, ':now': now, ':ps': 'PAID', ':pm': 'MANUAL' }
+    : { ':paid': false, ':ps': 'UNPAID' };
 
   try {
     await ddb.send(new UpdateCommand({
@@ -1118,7 +1119,7 @@ async function togglePaymentStatus(orderId, body = {}) {
     return response(500, { message: 'Failed to update payment status.' });
   }
 
-  await writeAuditLog('UPDATE', 'ORDER', orderId, { paid });
+  await writeAuditLog('UPDATE', 'ORDER', orderId, { paid, paymentStatus: paid ? 'PAID' : 'UNPAID' });
   return response(200, { message: paid ? 'Order marked as paid.' : 'Order marked as unpaid.', orderId, paid });
 }
 
