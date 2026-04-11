@@ -9,6 +9,45 @@ import { renderOrderItem } from './components.js';
 
 const API_BASE = window.__API_BASE || '';
 const PROCESSING_FEE_CENTS = 30;
+let squareSdkPromise = null;
+
+function getSquareSdkUrl() {
+  return window.__SQUARE_ENVIRONMENT === 'production'
+    ? 'https://web.squarecdn.com/v1/square.js'
+    : 'https://sandbox.web.squarecdn.com/v1/square.js';
+}
+
+async function ensureSquareSdkLoaded() {
+  if (window.Square) return window.Square;
+  if (squareSdkPromise) return squareSdkPromise;
+  if (!window.__SQUARE_APP_ID || !window.__SQUARE_LOCATION_ID) {
+    throw new Error('Square payment config is not loaded yet.');
+  }
+
+  squareSdkPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector('script[data-square-sdk="true"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(window.Square), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Failed to load Square payment service.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = getSquareSdkUrl();
+    script.async = true;
+    script.dataset.squareSdk = 'true';
+    script.onload = () => resolve(window.Square);
+    script.onerror = () => reject(new Error('Failed to load Square payment service.'));
+    document.head.appendChild(script);
+  });
+
+  try {
+    return await squareSdkPromise;
+  } catch (err) {
+    squareSdkPromise = null;
+    throw err;
+  }
+}
 
 export async function initOrderForm({ preorderOpen = true } = {}) {
   const container = document.getElementById('order-items');
@@ -274,10 +313,7 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
 
     // Initialize Square card form
     try {
-      if (!window.Square) {
-        showCardError('Payment service is loading. Please wait a moment and try again.');
-        return;
-      }
+      await ensureSquareSdkLoaded();
 
       console.log('[Square] appId:', JSON.stringify(window.__SQUARE_APP_ID), 'locationId:', JSON.stringify(window.__SQUARE_LOCATION_ID));
       const payments = window.Square.payments(

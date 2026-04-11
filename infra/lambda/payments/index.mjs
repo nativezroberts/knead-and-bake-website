@@ -28,6 +28,7 @@ const SQUARE_ENVIRONMENTS = {
 let cachedSquareAccessToken = null;
 let cachedSquareLocationId = null;
 let cachedSquareEnvironment = null;
+let cachedSquareAppId = null;
 
 async function getSSMParam(name, decrypt = false) {
   const result = await ssm.send(new GetParameterCommand({
@@ -61,6 +62,22 @@ async function getSquareCredentials() {
     accessToken: cachedSquareAccessToken,
     locationId: cachedSquareLocationId,
     environment: cachedSquareEnvironment,
+  };
+}
+
+async function getSquarePublicConfig() {
+  if (!cachedSquareAppId) {
+    cachedSquareAppId = await getSSMParam('/knead-bake/square-app-id');
+  }
+
+  const { locationId, environment } = await getSquareCredentials();
+  return {
+    applicationId: cachedSquareAppId,
+    locationId,
+    environment,
+    sdkUrl: environment === 'production'
+      ? 'https://web.squarecdn.com/v1/square.js'
+      : 'https://sandbox.web.squarecdn.com/v1/square.js',
   };
 }
 
@@ -232,7 +249,20 @@ See you Saturday!
 }
 
 export async function handler(event) {
-  if (event.requestContext?.http?.method !== 'POST') {
+  const method = event.requestContext?.http?.method;
+  const rawPath = event.rawPath || '';
+
+  if (method === 'GET' && rawPath.endsWith('/config')) {
+    try {
+      const publicConfig = await getSquarePublicConfig();
+      return response(200, publicConfig);
+    } catch (err) {
+      console.error('Failed to load Square public config:', err);
+      return response(500, { message: 'Square public config is not available.' });
+    }
+  }
+
+  if (method !== 'POST') {
     return response(405, { message: 'Method not allowed' });
   }
 

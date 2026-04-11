@@ -277,6 +277,12 @@ export class ApiStack extends cdk.Stack {
       integration: new apigwv2integrations.HttpLambdaIntegration('PaymentIntegration', paymentFn),
     });
 
+    httpApi.addRoutes({
+      path: '/api/payments/config',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: new apigwv2integrations.HttpLambdaIntegration('PaymentConfigIntegration', paymentFn),
+    });
+
     // POST /api/auth/login (public)
     httpApi.addRoutes({
       path: '/api/auth/login',
