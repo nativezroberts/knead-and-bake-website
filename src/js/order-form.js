@@ -259,7 +259,7 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
       cardPayBtn.disabled = false;
     } catch (err) {
       console.error('Square card init error:', err);
-      showCardError('Unable to load payment form. Please try again or pay at pickup.');
+      showCardError(`Unable to load payment form: ${err?.message || err}. Please try again or pay at pickup.`);
       return;
     }
 
