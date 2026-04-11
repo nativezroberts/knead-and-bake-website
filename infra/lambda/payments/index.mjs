@@ -7,12 +7,18 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ssm = new SSMClient({});
+const ses = new SESClient({});
 
 const ORDERS_TABLE = process.env.ORDERS_TABLE;
 const PROCESSING_FEE_CENTS = 30;
+const OWNER_EMAIL = process.env.OWNER_EMAIL || 'allyson.m.roberts@gmail.com';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
+const SEND_EMAILS = process.env.SEND_EMAILS === 'true';
+const SES_SANDBOX = process.env.SES_SANDBOX === 'true';
 const SQUARE_ENVIRONMENTS = {
   sandbox: 'https://connect.squareupsandbox.com/v2/payments',
   production: 'https://connect.squareup.com/v2/payments',
@@ -64,6 +70,98 @@ function response(statusCode, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   };
+}
+
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function sendPaymentEmails(order, orderId, totalPaidCents, squarePaymentId) {
+  if (!SEND_EMAILS || !FROM_EMAIL) return;
+
+  const itemList = (order.items || [])
+    .map((item) => `  ${item.qty}x ${item.name} ($${(Number(item.price || 0) * Number(item.qty || 0)).toFixed(2)})`)
+    .join('\n');
+  const subtotalStr = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
+  const processingFeeStr = `$${(PROCESSING_FEE_CENTS / 100).toFixed(2)}`;
+  const totalPaidStr = `$${(Number(totalPaidCents || 0) / 100).toFixed(2)}`;
+  const shortOrderId = orderId.slice(0, 8);
+
+  const emailTasks = [];
+
+  if (isValidEmail(OWNER_EMAIL)) {
+    emailTasks.push(
+      ses.send(new SendEmailCommand({
+        Source: FROM_EMAIL,
+        Destination: { ToAddresses: [OWNER_EMAIL] },
+        Message: {
+          Subject: { Data: `Order Paid Online: ${order.name} (#${shortOrderId})` },
+          Body: {
+            Text: {
+              Data:
+`A preorder was paid online with Square.
+
+Name: ${order.name}
+Phone: ${order.phone}
+Email: ${order.email || 'Not provided'}
+Pickup: ${order.pickupDate}
+
+Items:
+${itemList}
+
+Subtotal: ${subtotalStr}
+Processing fee: ${processingFeeStr}
+Total paid: ${totalPaidStr}
+Payment method: Square
+Square Payment ID: ${squarePaymentId || 'unknown'}
+
+Comments: ${order.notes || 'None'}
+
+Order ID: ${orderId}`
+            },
+          },
+        },
+      }))
+    );
+  }
+
+  if (isValidEmail(order.email) && !SES_SANDBOX) {
+    emailTasks.push(
+      ses.send(new SendEmailCommand({
+        Source: FROM_EMAIL,
+        Destination: { ToAddresses: [order.email] },
+        Message: {
+          Subject: { Data: `Payment Confirmed - Knead & Bake TX (#${shortOrderId})` },
+          Body: {
+            Text: {
+              Data:
+`Hi ${order.name},
+
+Your payment was received and your preorder is confirmed.
+
+${itemList}
+
+Subtotal: ${subtotalStr}
+Card processing fee: ${processingFeeStr}
+Total paid: ${totalPaidStr}
+
+Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
+${order.notes ? `Comments: ${order.notes}\n` : ''}Payment method: Card
+Square payment reference: ${squarePaymentId || 'unknown'}
+
+We'll text you at ${order.phone} closer to pickup day.
+
+See you Saturday!
+- Knead & Bake TX`
+            },
+          },
+        },
+      }))
+    );
+  }
+
+  if (!emailTasks.length) return;
+  await Promise.all(emailTasks);
 }
 
 export async function handler(event) {
@@ -190,6 +288,12 @@ export async function handler(event) {
       squarePaymentId,
       warning: 'Payment processed but order status update may be delayed.',
     });
+  }
+
+  try {
+    await sendPaymentEmails(order, orderId, amountCents, squarePaymentId);
+  } catch (err) {
+    console.error('SES payment email error (non-fatal):', { orderId, squarePaymentId, err });
   }
 
   return response(200, {

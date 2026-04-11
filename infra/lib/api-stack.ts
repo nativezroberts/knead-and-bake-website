@@ -197,6 +197,10 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(15),
       environment: {
         ORDERS_TABLE: ordersTable.tableName,
+        OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
+        FROM_EMAIL: 'noreply@kneadandbaketx.com',
+        SEND_EMAILS: 'true',
+        SES_SANDBOX: (props.sesSandbox ?? true).toString(),
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
@@ -209,6 +213,16 @@ export class ApiStack extends cdk.Stack {
       actions: ['ssm:GetParameter'],
       resources: [
         `arn:aws:ssm:${this.region}:${this.account}:parameter/knead-bake/*`,
+      ],
+    }));
+
+    paymentFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['ses:SendEmail'],
+      resources: [
+        `arn:aws:ses:${this.region}:${this.account}:identity/kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/*@kneadandbaketx.com`,
+        `arn:aws:ses:${this.region}:${this.account}:identity/allyson.m.roberts@gmail.com`,
       ],
     }));
 
