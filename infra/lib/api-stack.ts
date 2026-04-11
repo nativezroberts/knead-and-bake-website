@@ -94,7 +94,7 @@ export class ApiStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
-    ordersTable.grantWriteData(orderFn);
+    ordersTable.grantReadWriteData(orderFn);
     configTable.grantReadWriteData(orderFn);
 
     orderFn.addToRolePolicy(new iam.PolicyStatement({
