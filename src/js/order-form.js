@@ -246,6 +246,7 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
         return;
       }
 
+      console.log('[Square] appId:', JSON.stringify(window.__SQUARE_APP_ID), 'locationId:', JSON.stringify(window.__SQUARE_LOCATION_ID));
       const payments = window.Square.payments(
         window.__SQUARE_APP_ID,
         window.__SQUARE_LOCATION_ID
