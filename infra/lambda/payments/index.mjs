@@ -13,10 +13,15 @@ const ssm = new SSMClient({});
 
 const ORDERS_TABLE = process.env.ORDERS_TABLE;
 const PROCESSING_FEE_CENTS = 30;
+const SQUARE_ENVIRONMENTS = {
+  sandbox: 'https://connect.squareupsandbox.com/v2/payments',
+  production: 'https://connect.squareup.com/v2/payments',
+};
 
 // Cache SSM parameters for warm Lambda starts
 let cachedSquareAccessToken = null;
 let cachedSquareLocationId = null;
+let cachedSquareEnvironment = null;
 
 async function getSSMParam(name, decrypt = false) {
   const result = await ssm.send(new GetParameterCommand({
@@ -33,7 +38,24 @@ async function getSquareCredentials() {
   if (!cachedSquareLocationId) {
     cachedSquareLocationId = await getSSMParam('/knead-bake/square-location-id', true);
   }
-  return { accessToken: cachedSquareAccessToken, locationId: cachedSquareLocationId };
+  if (!cachedSquareEnvironment) {
+    try {
+      const rawEnvironment = await getSSMParam('/knead-bake/square-environment');
+      const normalizedEnvironment = String(rawEnvironment || '').trim().toLowerCase();
+      cachedSquareEnvironment = SQUARE_ENVIRONMENTS[normalizedEnvironment] ? normalizedEnvironment : 'sandbox';
+    } catch (err) {
+      if (err?.name === 'ParameterNotFound') {
+        cachedSquareEnvironment = 'sandbox';
+      } else {
+        throw err;
+      }
+    }
+  }
+  return {
+    accessToken: cachedSquareAccessToken,
+    locationId: cachedSquareLocationId,
+    environment: cachedSquareEnvironment,
+  };
 }
 
 function response(statusCode, body) {
@@ -98,9 +120,9 @@ export async function handler(event) {
   const amountCents = order.totalCents + PROCESSING_FEE_CENTS;
 
   // Get Square credentials
-  let accessToken, locationId;
+  let accessToken, locationId, environment;
   try {
-    ({ accessToken, locationId } = await getSquareCredentials());
+    ({ accessToken, locationId, environment } = await getSquareCredentials());
   } catch (err) {
     console.error('Failed to read Square credentials from SSM:', err);
     return response(500, { message: 'Payment service configuration error.' });
@@ -109,7 +131,7 @@ export async function handler(event) {
   // Call Square Payments API
   let squarePaymentId;
   try {
-    const squareRes = await fetch('https://connect.squareup.com/v2/payments', {
+    const squareRes = await fetch(SQUARE_ENVIRONMENTS[environment], {
       method: 'POST',
       headers: {
         'Square-Version': '2024-12-18',
