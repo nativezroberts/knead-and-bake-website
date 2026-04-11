@@ -23,6 +23,7 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
   const paymentChoiceTotal = document.getElementById('payment-choice-total');
   const payNowBtn = document.getElementById('pay-now-btn');
   const payAtPickupBtn = document.getElementById('pay-at-pickup-btn');
+  const paymentChoiceError = document.getElementById('payment-choice-error');
   const cardSection = document.getElementById('card-payment-section');
   const cardSubtotal = document.getElementById('card-subtotal');
   const cardTotal = document.getElementById('card-total');
@@ -204,21 +205,53 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
   // ── Payment choice flow ──
   function showPaymentChoice(orderId, totalCents) {
     const subtotalStr = `$${(totalCents / 100).toFixed(2)}`;
-    const totalWithFee = `$${((totalCents + PROCESSING_FEE_CENTS) / 100).toFixed(2)}`;
 
     paymentChoiceTotal.textContent = `Order total: ${subtotalStr}`;
     paymentChoice.classList.remove('hidden');
+    paymentChoiceError?.classList.add('hidden');
+    if (paymentChoiceError) paymentChoiceError.textContent = '';
+    payNowBtn.disabled = false;
+    payAtPickupBtn.disabled = false;
+    payNowBtn.textContent = 'Pay Now with Card';
+    payAtPickupBtn.textContent = 'Pay at Pickup';
 
     // Pay Now button
     payNowBtn.onclick = () => {
+      paymentChoiceError?.classList.add('hidden');
       paymentChoice.classList.add('hidden');
       showCardPayment(orderId, totalCents);
     };
 
     // Pay at Pickup button
-    payAtPickupBtn.onclick = () => {
-      paymentChoice.classList.add('hidden');
-      successMsg.classList.remove('hidden');
+    payAtPickupBtn.onclick = async () => {
+      payNowBtn.disabled = true;
+      payAtPickupBtn.disabled = true;
+      payAtPickupBtn.textContent = 'Saving...';
+      paymentChoiceError?.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}/payment-choice`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentChoice: 'PICKUP' }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.message || 'Unable to save your payment choice. Please try again.');
+        }
+
+        paymentChoice.classList.add('hidden');
+        successMsg.classList.remove('hidden');
+      } catch (err) {
+        if (paymentChoiceError) {
+          paymentChoiceError.textContent = err.message;
+          paymentChoiceError.classList.remove('hidden');
+        }
+        payNowBtn.disabled = false;
+        payAtPickupBtn.disabled = false;
+        payAtPickupBtn.textContent = 'Pay at Pickup';
+      }
     };
   }
 

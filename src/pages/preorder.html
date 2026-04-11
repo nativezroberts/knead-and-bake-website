@@ -111,7 +111,7 @@
               <div class="form-group">
                 <label for="email" class="form-label">Email (optional)</label>
                 <input type="email" id="email" name="email" class="form-input" autocomplete="email">
-                <p class="form-hint">We'll send you an order confirmation email.</p>
+                <p class="form-hint">We'll email you after you choose card payment or pay-at-pickup.</p>
               </div>
 
               <input type="hidden" id="pickup_date" name="pickup_date">
@@ -137,6 +137,7 @@
                 <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:calc(-1 * var(--space-2))">A $0.30 processing fee applies</p>
                 <button id="pay-at-pickup-btn" class="btn btn--outline btn--lg btn--full">Pay at Pickup</button>
               </div>
+              <div id="payment-choice-error" class="form-error mt-4 hidden" role="alert"></div>
             </div>
 
             <!-- Card Payment Section (shown when Pay Now is clicked) -->
@@ -172,8 +173,8 @@
 
             <!-- Pay at Pickup Success -->
             <div id="order-success" class="hidden" style="text-align:center;padding:var(--space-12)">
-              <div style="font-size:var(--text-4xl);margin-bottom:var(--space-4)">&#10003;</div>
-              <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-3)">Order Received!</h2>
+              <div style="font-size:var(--text-4xl);margin-bottom:var(--space-4)">&#9203;</div>
+              <h2 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-3)">Payment Pending</h2>
               <p style="color:var(--text-secondary);margin-bottom:var(--space-4)">We'll text you to confirm your order. See you at the market on Saturday!</p>
               <div style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-6)">
                 <p style="margin-bottom:var(--space-1)"><strong>Payment Options:</strong></p>
@@ -298,5 +299,3 @@
 
 </body>
 </html>
-
-

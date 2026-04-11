@@ -264,6 +264,12 @@ export class ApiStack extends cdk.Stack {
       integration: new apigwv2integrations.HttpLambdaIntegration('OrderIntegration', orderFn),
     });
 
+    httpApi.addRoutes({
+      path: '/api/orders/{orderId}/payment-choice',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: new apigwv2integrations.HttpLambdaIntegration('OrderPaymentChoiceIntegration', orderFn),
+    });
+
     // POST /api/payments (public — Square card payment after order)
     httpApi.addRoutes({
       path: '/api/payments',

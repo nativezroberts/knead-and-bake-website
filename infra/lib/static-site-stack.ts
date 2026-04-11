@@ -74,7 +74,7 @@ export class StaticSiteStack extends cdk.Stack {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://web.squarecdn.com https://sandbox.web.squarecdn.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://web.squarecdn.com https://sandbox.web.squarecdn.com",
-            "font-src 'self' https://fonts.gstatic.com https://web.squarecdn.com https://sandbox.web.squarecdn.com https://square-fonts-production-f.squarecdn.com https://d1g145x70srn7h.cloudfront.net",
+            "font-src 'self' https://fonts.gstatic.com https://web.squarecdn.com https://sandbox.web.squarecdn.com https://square-fonts-production-f.squarecdn.com https://cash-f.squarecdn.com https://d1g145x70srn7h.cloudfront.net https://*.squarecdn.com",
             "img-src 'self' data: https://www.google-analytics.com https://web.squarecdn.com https://sandbox.web.squarecdn.com",
             "connect-src 'self' https://3db1s4oqy5.execute-api.us-east-1.amazonaws.com https://www.google-analytics.com https://www.googletagmanager.com https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://*.ingest.sentry.io",
             "frame-src 'self' https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://web.squarecdn.com https://sandbox.web.squarecdn.com",

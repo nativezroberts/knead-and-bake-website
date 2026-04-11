@@ -76,6 +76,48 @@ function isValidEmail(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildCustomerEmailShell({ iconEntity, badgeText, heading, intro, bodyHtml }) {
+  return `<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f6efe5;font-family:Georgia,Arial,sans-serif;color:#2f241c;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:640px;margin:0 auto;background:#fffdf9;border:1px solid #e7d7c3;border-radius:20px;overflow:hidden;">
+        <div style="padding:28px 24px 20px;background:#fff6df;border-bottom:1px solid #ecdcc5;text-align:center;">
+          <div style="width:68px;height:68px;line-height:68px;margin:0 auto 12px;border-radius:999px;background:#5c3d2e;color:#fff;font-size:32px;font-weight:700;">${iconEntity}</div>
+          <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:#ead7ba;color:#5c3d2e;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${escapeHtml(badgeText)}</div>
+          <h1 style="margin:16px 0 8px;font-size:28px;line-height:1.2;color:#3b2a1f;">${escapeHtml(heading)}</h1>
+          <p style="margin:0;font-size:16px;line-height:1.6;color:#6e5645;">${escapeHtml(intro)}</p>
+        </div>
+        <div style="padding:24px;">
+          ${bodyHtml}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+function buildItemsHtml(items = []) {
+  return items
+    .map((item) => {
+      const subtotal = `$${(Number(item.price || 0) * Number(item.qty || 0)).toFixed(2)}`;
+      return `<tr>
+  <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;">${escapeHtml(`${item.qty}x ${item.name}`)}</td>
+  <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;text-align:right;font-weight:700;">${escapeHtml(subtotal)}</td>
+</tr>`;
+    })
+    .join('');
+}
+
 async function sendPaymentEmails(order, orderId, totalPaidCents, squarePaymentId) {
   if (!SEND_EMAILS || !FROM_EMAIL) return;
 
@@ -126,6 +168,30 @@ Order ID: ${orderId}`
   }
 
   if (isValidEmail(order.email) && !SES_SANDBOX) {
+    const commentsHtml = order.notes
+      ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#5e4a3d;"><strong>Comments:</strong> ${escapeHtml(order.notes)}</p>`
+      : '';
+    const paymentHtml = buildCustomerEmailShell({
+      iconEntity: '&#9989;',
+      badgeText: 'Paid',
+      heading: 'Payment Confirmed',
+      intro: 'Your card payment was successful and your preorder is fully confirmed.',
+      bodyHtml: `
+<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;">Hi ${escapeHtml(order.name)}, we received your payment and your order is locked in.</p>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+  ${buildItemsHtml(order.items)}
+</table>
+<div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Subtotal:</strong> ${escapeHtml(subtotalStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Card processing fee:</strong> ${escapeHtml(processingFeeStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Total paid:</strong> ${escapeHtml(totalPaidStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Square payment reference:</strong> ${escapeHtml(squarePaymentId || 'unknown')}</p>
+</div>
+${commentsHtml}
+<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>`,
+    });
+
     emailTasks.push(
       ses.send(new SendEmailCommand({
         Source: FROM_EMAIL,
@@ -154,6 +220,7 @@ We'll text you at ${order.phone} closer to pickup day.
 See you Saturday!
 - Knead & Bake TX`
             },
+            Html: { Data: paymentHtml },
           },
         },
       }))

@@ -87,6 +87,15 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function sanitize(str) {
   if (typeof str !== 'string') return '';
   return str.replace(/[<>]/g, '').trim().slice(0, 500);
@@ -106,6 +115,172 @@ function getCSTDate(date = new Date()) {
 function isSaturday(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return d.getDay() === 6;
+}
+
+function buildCustomerEmailShell({ iconEntity, badgeText, heading, intro, bodyHtml }) {
+  return `<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f6efe5;font-family:Georgia,Arial,sans-serif;color:#2f241c;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:640px;margin:0 auto;background:#fffdf9;border:1px solid #e7d7c3;border-radius:20px;overflow:hidden;">
+        <div style="padding:28px 24px 20px;background:#fff6df;border-bottom:1px solid #ecdcc5;text-align:center;">
+          <div style="width:68px;height:68px;line-height:68px;margin:0 auto 12px;border-radius:999px;background:#5c3d2e;color:#fff;font-size:32px;font-weight:700;">${iconEntity}</div>
+          <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:#ead7ba;color:#5c3d2e;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${escapeHtml(badgeText)}</div>
+          <h1 style="margin:16px 0 8px;font-size:28px;line-height:1.2;color:#3b2a1f;">${escapeHtml(heading)}</h1>
+          <p style="margin:0;font-size:16px;line-height:1.6;color:#6e5645;">${escapeHtml(intro)}</p>
+        </div>
+        <div style="padding:24px;">
+          ${bodyHtml}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+function buildItemsText(items = []) {
+  return items
+    .map((item) => `  ${item.qty}x ${item.name} ($${(Number(item.price || 0) * Number(item.qty || 0)).toFixed(2)})`)
+    .join('\n');
+}
+
+function buildItemsHtml(items = []) {
+  return items
+    .map((item) => {
+      const subtotal = `$${(Number(item.price || 0) * Number(item.qty || 0)).toFixed(2)}`;
+      return `<tr>
+  <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;">${escapeHtml(`${item.qty}x ${item.name}`)}</td>
+  <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;text-align:right;font-weight:700;">${escapeHtml(subtotal)}</td>
+</tr>`;
+    })
+    .join('');
+}
+
+function buildPendingPaymentEmailText(order) {
+  const itemList = buildItemsText(order.items);
+  const totalStr = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
+
+  return `Hi ${order.name},
+
+Your preorder is confirmed. Payment is still pending.
+
+${itemList}
+
+Order total: ${totalStr}
+Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
+${order.notes ? `Comments: ${order.notes}\n` : ''}Payment status: Pending payment
+Payment options:
+- Pre-pay via Venmo: @Allyson-Roberts1
+- Or pay at pickup (cash or card)
+
+We'll text you at ${order.phone} closer to pickup day.
+
+See you Saturday!
+- Knead & Bake TX`;
+}
+
+function buildPendingPaymentEmailHtml(order) {
+  const totalStr = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
+  const commentsHtml = order.notes
+    ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#5e4a3d;"><strong>Comments:</strong> ${escapeHtml(order.notes)}</p>`
+    : '';
+
+  return buildCustomerEmailShell({
+    iconEntity: '&#9203;',
+    badgeText: 'Pending Payment',
+    heading: 'Preorder Confirmed',
+    intro: 'Your items are reserved for market pickup and payment is still pending.',
+    bodyHtml: `
+<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;">Hi ${escapeHtml(order.name)}, your preorder is in and we have your loaves reserved.</p>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+  ${buildItemsHtml(order.items)}
+</table>
+<div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Order total:</strong> ${escapeHtml(totalStr)}</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Payment status:</strong> Pending payment</p>
+  <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Payment options:</strong> Pre-pay via Venmo <a href="https://venmo.com/Allyson-Roberts1" style="color:#8a5a44;">@Allyson-Roberts1</a>, or pay at pickup with cash or card.</p>
+</div>
+${commentsHtml}
+<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>`,
+  });
+}
+
+async function handlePaymentChoice(orderId, body = {}) {
+  if (!ORDERS_TABLE) {
+    return response(500, { message: 'Orders table is not configured.' });
+  }
+  if (!orderId || typeof orderId !== 'string') {
+    return response(400, { message: 'A valid orderId is required.' });
+  }
+
+  const paymentChoice = String(body.paymentChoice || '').trim().toUpperCase();
+  if (paymentChoice !== 'PICKUP') {
+    return response(400, { message: 'paymentChoice must be PICKUP.' });
+  }
+
+  let order;
+  try {
+    const result = await ddb.send(new GetCommand({
+      TableName: ORDERS_TABLE,
+      Key: { orderId },
+    }));
+    order = result.Item;
+  } catch (err) {
+    console.error('Failed to read order for payment choice:', err);
+    return response(500, { message: 'Failed to load order.' });
+  }
+
+  if (!order) {
+    return response(404, { message: 'Order not found.' });
+  }
+  if (order.paymentStatus === 'PAID') {
+    return response(400, { message: 'This order has already been paid.' });
+  }
+  if (order.status === 'REJECTED' || order.status === 'CANCELLED') {
+    return response(400, { message: 'This order cannot be updated.' });
+  }
+
+  const now = new Date().toISOString();
+  try {
+    await ddb.send(new UpdateCommand({
+      TableName: ORDERS_TABLE,
+      Key: { orderId },
+      UpdateExpression: 'SET paymentMethod = :pm, paymentChoiceConfirmedAt = :pc',
+      ExpressionAttributeValues: {
+        ':pm': 'PICKUP',
+        ':pc': now,
+      },
+      ConditionExpression: 'attribute_exists(orderId)',
+    }));
+  } catch (err) {
+    console.error('Failed to update payment choice:', err);
+    return response(500, { message: 'Failed to save payment choice.' });
+  }
+
+  if (SEND_EMAILS && order.email && validateEmail(order.email) && !SES_SANDBOX) {
+    try {
+      await ses.send(new SendEmailCommand({
+        Source: FROM_EMAIL,
+        Destination: { ToAddresses: [order.email] },
+        Message: {
+          Subject: { Data: `Preorder Confirmed - Payment Pending (#${orderId.slice(0, 8)})` },
+          Body: {
+            Text: { Data: buildPendingPaymentEmailText(order) },
+            Html: { Data: buildPendingPaymentEmailHtml(order) },
+          },
+        },
+      }));
+    } catch (emailErr) {
+      console.error('Pending payment email error (non-fatal):', emailErr);
+    }
+  }
+
+  return response(200, {
+    success: true,
+    orderId,
+    paymentChoice: 'PICKUP',
+  });
 }
 
 /**
@@ -143,6 +318,8 @@ export async function handler(event) {
     return response(405, { message: 'Method not allowed' });
   }
 
+  const rawPath = event.rawPath || '';
+
   if (event.body && event.body.length > 5 * 1024 * 1024) {
     return response(413, { message: 'Request body too large.' });
   }
@@ -152,6 +329,10 @@ export async function handler(event) {
     body = JSON.parse(event.body || '{}');
   } catch {
     return response(400, { message: 'Invalid JSON' });
+  }
+
+  if (rawPath.endsWith('/payment-choice')) {
+    return handlePaymentChoice(event.pathParameters?.orderId, body);
   }
 
   // Validate required fields
@@ -337,8 +518,8 @@ Created: ${order.createdAt}`
         },
       }));
 
-      // Customer confirmation (only if email provided and NOT in SES sandbox mode)
-      if (order.email && !SES_SANDBOX) {
+      // Customer confirmation moved to the explicit payment-choice and paid flows.
+      if (false && order.email && !SES_SANDBOX) {
         await ses.send(new SendEmailCommand({
           Source: FROM_EMAIL,
           Destination: { ToAddresses: [order.email] },
