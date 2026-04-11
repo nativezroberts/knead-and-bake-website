@@ -82,15 +82,10 @@ jobs:
           name: site-dist
           path: dist/
 
-      # Configure AWS credentials via OIDC (recommended) or secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
-          # Option A: OIDC (set up GitHub OIDC provider in IAM)
-          # role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          # Option B: Access keys (less secure but simpler to start)
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       # Sync to S3
@@ -166,8 +161,7 @@ jobs:
         if: steps.infra-check.outputs.changed == 'true'
         uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Install project dependencies
