@@ -1416,6 +1416,14 @@ async function rejectOrder(orderId, body = {}) {
 }
 
 export async function handler(event) {
+  // EventBridge scheduled invocation — auto-reset inventory every Saturday at 9:01 AM
+  if (event.source === 'aws.events') {
+    console.log('Scheduled inventory reset triggered by EventBridge');
+    const result = await resetAllInventory();
+    console.log('Inventory reset result:', JSON.stringify(result));
+    return result;
+  }
+
   const method = event.requestContext?.http?.method;
   const path = event.rawPath;
 

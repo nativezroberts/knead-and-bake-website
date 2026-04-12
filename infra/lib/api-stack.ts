@@ -465,6 +465,14 @@ export class ApiStack extends cdk.Stack {
       targets: [new eventsTargets.LambdaFunction(schedulerFn)],
     });
 
+    // Saturday 9:01 AM CDT (14:01 UTC) — auto-reset inventory for next week
+    new events.Rule(this, 'InventoryResetRule', {
+      ruleName: 'knead-bake-inventory-reset',
+      description: 'Auto-reset inventory to weekly defaults every Saturday at 9:01 AM CDT',
+      schedule: events.Schedule.cron({ minute: '1', hour: '14', weekDay: 'SAT' }),
+      targets: [new eventsTargets.LambdaFunction(adminFn)],
+    });
+
     // ── CloudWatch Alarms + SNS Alerting ──
     const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
       topicName: 'knead-bake-alarms',
