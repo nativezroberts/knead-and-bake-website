@@ -173,6 +173,10 @@ Payment options:
 - Pre-pay via Venmo: @Allyson-Roberts1
 - Or pay at pickup (cash or card)
 
+⚠️ PICKUP DEADLINE: Please pick up your order by 12:00 PM (noon) on market day.
+Orders not picked up by noon will be released for walk-up sale unless you've made
+other arrangements with Allyson directly at 425-328-4109 day of market.
+
 We'll text you at ${order.phone} closer to pickup day.
 
 See you Saturday!
@@ -202,6 +206,10 @@ function buildPendingPaymentEmailHtml(order) {
   <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Payment options:</strong> Pre-pay via Venmo <a href="https://venmo.com/Allyson-Roberts1" style="color:#8a5a44;">@Allyson-Roberts1</a>, or pay at pickup with cash or card.</p>
 </div>
 ${commentsHtml}
+<div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fff3cd;border:2px solid #e8a020;">
+  <p style="margin:0 0 8px;font-size:15px;font-weight:bold;color:#7a4a00;">&#9888;&#65039; Pickup Deadline: 12:00 PM (noon) on market day</p>
+  <p style="margin:0;font-size:14px;line-height:1.6;color:#5e4a3d;">Orders not picked up by noon will be released for walk-up sale. If you need to make other arrangements, contact Allyson at <a href="tel:4253284109" style="color:#8a5a44;">425-328-4109</a> day of market.</p>
+</div>
 <p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>`,
   });
 }

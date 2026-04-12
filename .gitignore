@@ -24,5 +24,8 @@ Thumbs.db
 .env.local
 .env.production
 
+# MCP config — contains credentials, never commit
+.mcp.json
+
 # Logs
 *.log
