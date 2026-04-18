@@ -1,4 +1,6 @@
-﻿# CLAUDE.md
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 Purpose: Ship high-quality code fast with minimal token usage.
 
@@ -52,7 +54,9 @@ Use exact commands below unless task requires broader validation.
 ### App (`knead-and-bake-website`)
 - Install deps (if needed): `npm install`
 - Build: `npm run build`
-- Local smoke check: `npm run dev`
+- Local smoke check: `npm run dev` → http://localhost:3000
+
+> No test runner or linter is configured. Validation is manual + build success.
 
 ### Infra (`knead-and-bake-website/infra`)
 - Install deps (if needed): `npm install`
@@ -96,3 +100,82 @@ If checks cannot run, explicitly state what was not validated.
 - Protect production flows first: admin actions, data paths, and deploy infra.
 - For frontend edits: preserve brand consistency and mobile behavior.
 - For infra edits: minimize blast radius and verify environment assumptions.
+
+---
+
+## Architecture Overview
+
+**Stack**: Vanilla HTML/CSS/JS (no framework) + AWS serverless backend. Zero frontend build step — `scripts/build.js` copies source files to `/dist`.
+
+### Frontend Data Flow
+
+All content is stored in `content/*.json` and fetched at runtime by the browser:
+
+```
+content/*.json  →  src/js/content-loader.js (singleton cache)
+                       ↓
+                   src/js/components.js (pure render functions)
+                       ↓
+                   page scripts (index, menu, recipes, etc.)
+```
+
+- `content-loader.js` — fetches and caches JSON; all pages go through this singleton
+- `components.js` — stateless render functions returning HTML strings (cards, accordions, news items)
+- `product-model.js` — single source of truth for product availability; status enum: `available`, `sold_out`, `not_available`
+- Dynamic pages (`recipe-detail.html`, `news-detail.html`) load content via URL query params (e.g., `?slug=sourdough`, `?id=123`)
+
+### CSS Layer Order
+
+`src/css/main.css` imports in dependency order:
+1. `variables.css` — design tokens (`--bg-primary`, `--text-link`, spacing, fonts)
+2. `reset.css` — CSS reset + accessibility utilities
+3. `layout.css` — header, footer, hero, page shells
+4. `components.css` — buttons, cards, forms, accordions
+5. `pages.css` — page-specific overrides
+
+Always place new styles in the correct layer. Never add design tokens inline — add to `variables.css`.
+
+### Content Editing Conventions
+
+- **Menu items**: `content/menu.json` → `items[]`. SKU format: `CATEGORY-PREFIX-NNN` (e.g., `SL-004`).
+- **Market dates / preorder cutoff**: `content/site-config.json` → `nextMarket`.
+- **News posts**: managed via `/admin.html` dashboard (stored in DynamoDB, not JSON files).
+- **Recipes**: `content/recipes.json` → `recipes[]`. Build auto-generates detail pages per slug.
+
+### Order / Payment Flow
+
+`src/js/order-form.js` → Square Web Payments SDK → POST `/api/orders` → Lambda
+
+The Lambda (`infra/lambda/orders/index.mjs`) is the authoritative validator:
+- Bundles `infra/lambda/orders/menu.json` for server-side price validation (prevents client-side tampering)
+- Deducts inventory atomically via DynamoDB conditional writes
+- Rate limits: 5 requests / 60 seconds per IP (fails open — never blocks legitimate orders)
+- Sends SES emails: owner always; customer only when `sesSandbox: false` in `infra/bin/app.ts`
+
+**If menu prices or items change**, update both `content/menu.json` (frontend) and `infra/lambda/orders/menu.json` (backend validation) — they must stay in sync.
+
+### Infra Architecture
+
+Two CDK stacks in `infra/lib/`:
+
+| Stack | Key Resources |
+|-------|--------------|
+| `StaticSiteStack` | S3 (private, OAC) + CloudFront + CloudFront Function (URL rewriting) |
+| `ApiStack` | API Gateway v2 + Lambda (Node.js 22) + DynamoDB (3 tables) + SES |
+
+**URL rewriting**: CloudFront Function rewrites clean URLs → `.html` (e.g., `/about` → `/about.html`). This lives in `infra/lib/static-site-stack.ts`, not in the app.
+
+**Caching**: HTML/JSON = 5 min; CSS/JS/images = 1 year immutable. CI auto-invalidates `/*` on deploy.
+
+**DynamoDB tables**: `knead-bake-orders`, `knead-bake-market-config`, `knead-bake-audit-log`. All have point-in-time recovery. S3 bucket uses `RemovalPolicy.RETAIN`.
+
+**SES sandbox toggle**: `sesSandbox` boolean in `infra/bin/app.ts`. Set `true` to suppress customer confirmation emails (owner emails always send).
+
+### CI/CD
+
+`.github/workflows/deploy.yml` — on push to `main`:
+1. Builds site (`node scripts/build.js`)
+2. Syncs `/dist` to S3
+3. Invalidates CloudFront `/*`
+
+Required GitHub secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`, `CLOUDFRONT_DISTRIBUTION_ID`.
