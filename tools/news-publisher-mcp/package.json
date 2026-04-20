@@ -1,0 +1,17 @@
+{
+  "name": "knead-bake-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for publishing news posts to KneadAndBakeTX.com",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "knead-bake-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.0"
+  }
+}
