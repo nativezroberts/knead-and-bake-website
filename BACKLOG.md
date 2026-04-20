@@ -13,7 +13,7 @@ Bugs, fixes, and improvements to resolve before starting new features.
 
 ### 🔴 High Priority — Security
 
-- [ ] **Upgrade password hashing to bcrypt** — Admin password currently uses HMAC-SHA256 with a hardcoded salt, which is fast and crackable via GPU brute-force. Replace with `bcryptjs` (cost=12) in `infra/lambda/auth/index.mjs` and re-store the hash in SSM.
+- [x] **Upgrade password hashing to bcrypt** — Admin password currently uses HMAC-SHA256 with a hardcoded salt, which is fast and crackable via GPU brute-force. Replace with `bcryptjs` (cost=12) in `infra/lambda/auth/index.mjs` and re-store the hash in SSM. (2026-04-20)
 - [ ] **Replace custom markdown renderer with markdown-it + DOMPurify** — Custom renderer in `src/js/markdown.js` is vulnerable to XSS via crafted image alt/link attributes inserted via `innerHTML` in `admin.js:262`. Replace with `markdown-it` and sanitize output with `DOMPurify`.
 - [x] **Switch GitHub Actions to OIDC auth** — Created OIDC provider, scoped IAM role (`github-actions-knead-bake-deploy`), updated deploy.yml. Deleted `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` from GitHub. (2026-04-11)
 - [ ] **Move Venmo handle to SSM Parameter Store** — `@Allyson-Roberts1` is hardcoded in `infra/lambda/orders/index.mjs:173,202,573`. Move to SSM `/knead-bake/payment-venmo-handle`, fetch at runtime.

@@ -6,7 +6,8 @@
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { createHmac, timingSafeEqual } from 'crypto';
+import bcrypt from 'bcryptjs';
+import { createHmac } from 'crypto';
 
 const ssm = new SSMClient({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -49,25 +50,9 @@ function response(statusCode, body) {
   };
 }
 
-// Simple bcrypt-like verification using SHA-256 HMAC
-// The stored hash format is: sha256:<hex>
-// Generated via: echo -n "password" | openssl dgst -sha256 -hmac "knead-bake-salt" -hex
+// Verify password using bcrypt
 async function verifyPassword(password, storedHash) {
-  if (storedHash.startsWith('sha256:')) {
-    const expectedHex = storedHash.slice(7);
-    const computedHex = createHmac('sha256', 'knead-bake-salt')
-      .update(password)
-      .digest('hex');
-    const expected = Buffer.from(expectedHex, 'hex');
-    const computed = Buffer.from(computedHex, 'hex');
-    if (expected.length !== computed.length) return false;
-    return timingSafeEqual(expected, computed);
-  }
-  // Plain text comparison (not recommended, but fallback)
-  const a = Buffer.from(password);
-  const b = Buffer.from(storedHash);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
+  return await bcrypt.compare(password, storedHash);
 }
 
 // Simple JWT implementation (HS256) — no external dependencies
