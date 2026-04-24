@@ -295,7 +295,12 @@
             <form id="login-form">
               <div class="form-group">
                 <label for="admin-password" class="form-label">Password</label>
-                <input type="password" id="admin-password" class="form-input" required autocomplete="current-password">
+                <div style="position:relative;display:flex;align-items:center;">
+                  <input type="password" id="admin-password" class="form-input" required autocomplete="current-password" style="padding-right:2.75rem;">
+                  <button type="button" id="toggle-password" aria-label="Show password" style="position:absolute;right:0;top:0;bottom:0;width:2.75rem;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);padding:0;" onclick="(function(){var i=document.getElementById('admin-password'),b=document.getElementById('toggle-password');var show=i.type==='password';i.type=show?'text':'password';b.setAttribute('aria-label',show?'Hide password':'Show password');b.innerHTML=show?'<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; aria-hidden=&quot;true&quot;><path d=&quot;M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24&quot;/><line x1=&quot;1&quot; y1=&quot;1&quot; x2=&quot;23&quot; y2=&quot;23&quot;/></svg>':'<svg width=&quot;18&quot; height=&quot;18&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; aria-hidden=&quot;true&quot;><path d=&quot;M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z&quot;/><circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;3&quot;/></svg>';})()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
               </div>
               <div id="login-error" class="form-error hidden" role="alert"></div>
               <button type="submit" class="btn btn--primary mt-4">Log In</button>
