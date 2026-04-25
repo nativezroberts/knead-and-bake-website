@@ -188,6 +188,6 @@
   ],
   "seasonalBanner": {
     "text": "Winter Specials: Orange Cranberry Walnut is here!",
-    "active": true
+    "active": false
   }
 }

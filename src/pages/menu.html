@@ -81,10 +81,8 @@
       </div>
     </section>
 
-    <!-- Seasonal Banner -->
-    <section class="section section--white" style="padding-block:var(--space-4)">
-      <div class="container" id="seasonal-banner-wrap"></div>
-    </section>
+    <!-- Announcements (live, matches home page) -->
+    <div id="announcements"></div>
 
     <!-- Category Filters -->
     <section class="section section--cream">
@@ -147,18 +145,26 @@
   <script type="module">
     import { loadProducts } from '/src/js/product-model.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderCard, escapeHtml } from '/src/js/components.js';
+    import { renderCard, renderAnnouncementBanner, renderSkipNotice, escapeHtml } from '/src/js/components.js';
+    import { getMarketInfo } from '/src/js/market-dates.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const menuData = await loadProducts();
+      const [menuData, marketInfo] = await Promise.all([loadProducts(), getMarketInfo()]);
       if (!menuData) return;
 
-      // Seasonal Banner
-      if (menuData.seasonalBanner?.active) {
-        document.getElementById('seasonal-banner-wrap').innerHTML =
-          `<div class="banner banner--seasonal">${escapeHtml(menuData.seasonalBanner.text)}</div>`;
+      // Live announcements (same as home page)
+      const announcementEl = document.getElementById('announcements');
+      let bannerHtml = '';
+      if (marketInfo.skippedThisWeek) {
+        bannerHtml += renderSkipNotice(marketInfo.skipReason, marketInfo.nextMarket.date);
+      }
+      if (marketInfo.announcements?.length > 0) {
+        bannerHtml += marketInfo.announcements.map(renderAnnouncementBanner).join('');
+      }
+      if (bannerHtml) {
+        announcementEl.innerHTML = `<section class="section section--white" style="padding-bottom:0"><div class="container">${bannerHtml}</div></section>`;
       }
 
       const filtersEl = document.getElementById('menu-filters');

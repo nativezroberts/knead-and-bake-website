@@ -59,6 +59,41 @@
   .section__title { font-size: var(--text-4xl); }
 }
 
+/* ── Google Review CTA ── */
+.review-cta {
+  max-width: 540px;
+  margin-inline: auto;
+  background: var(--bg-primary);
+  border: 2px solid var(--color-brown);
+  border-radius: var(--radius-xl);
+  padding: var(--space-10) var(--space-8);
+  text-align: center;
+}
+
+.review-cta__stars {
+  font-size: 1.75rem;
+  color: var(--color-wheat);
+  letter-spacing: 4px;
+  margin-bottom: var(--space-4);
+}
+
+.review-cta__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.review-cta__body {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-width: 420px;
+  margin-inline: auto;
+  margin-bottom: var(--space-6);
+}
+
 /* ── Buttons ── */
 .btn {
   display: inline-flex;

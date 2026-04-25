@@ -210,7 +210,14 @@ ${commentsHtml}
   <p style="margin:0 0 8px;font-size:15px;font-weight:bold;color:#7a4a00;">&#9888;&#65039; Pickup Deadline: 12:00 PM (noon) on market day</p>
   <p style="margin:0;font-size:14px;line-height:1.6;color:#5e4a3d;">Orders not picked up by noon will be released for walk-up sale. If you need to make other arrangements, contact Allyson at <a href="tel:4253284109" style="color:#8a5a44;">425-328-4109</a> day of market.</p>
 </div>
-<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>`,
+<p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>
+<div style="margin:0 0 8px;padding:20px 20px 22px;border-radius:14px;background:#f5f0e8;border:1px solid #ddd0bc;text-align:center;">
+  <p style="margin:0 0 6px;font-size:19px;">🍞</p>
+  <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#3b2a1f;line-height:1.3;">Loved your bread? Tell New Braunfels!</p>
+  <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#6e5645;">A quick Google review goes a long way for our small family bakery — and helps other locals find fresh, handcrafted sourdough right here in town.</p>
+  <a href="https://g.page/r/CX0SXLHZkEShEBM/review" style="display:inline-block;padding:12px 28px;background:#5c3d2e;color:#fff;text-decoration:none;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:0.03em;">⭐⭐⭐⭐⭐ Leave a Google Review</a>
+  <p style="margin:12px 0 0;font-size:12px;color:#a08878;">It only takes a minute and means the world to us.</p>
+</div>`,
   });
 }
 

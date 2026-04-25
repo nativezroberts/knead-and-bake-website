@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Google Review Flyer — Knead &amp; Bake TX</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="qrcode.min.js"></script>
   <style>
     /* ── Print setup: half-letter card (5.5" × 4.25") ── */
     @page {
@@ -211,8 +211,7 @@
     Open in Chrome &rarr; File &rarr; Print &rarr; set paper to <strong>5.5&Prime; &times; 4.25&Prime;</strong> (half-letter),
     no margins, scale &ldquo;Fit to page&rdquo;. Cut and hand out at the booth.
     <br><br>
-    <strong>Note:</strong> Update the QR code URL below once your Google Business Profile is live
-    (replace the search link with your direct Google review link).
+    <strong>Note:</strong> QR code links directly to your Google review page.
   </p>
 
   <div class="card">
@@ -259,14 +258,8 @@
   </div>
 
   <script>
-    /*
-     * REVIEW LINK:
-     * Right now this links to a Google search so customers can find the listing.
-     * Once your Google Business Profile is set up and verified, replace this URL
-     * with your direct review link (format: https://g.page/r/YOUR_PLACE_ID/review).
-     * You can get that link from your GBP dashboard under "Get more reviews".
-     */
-    const REVIEW_URL = 'https://www.google.com/search?q=Knead+and+Bake+TX+New+Braunfels+TX&hl=en';
+    /* Direct Google review link from GBP dashboard "Get more reviews". */
+    const REVIEW_URL = 'https://g.page/r/CX0SXLHZkEShEBM/review';
 
     QRCode.toCanvas(document.getElementById('qr-canvas'), REVIEW_URL, {
       width: 130,

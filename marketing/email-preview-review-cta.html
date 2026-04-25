@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Email Preview — Preorder Confirmation w/ Review CTA</title>
+  <style>
+    body { margin: 0; padding: 32px 16px; background: #e8ddd2; font-family: sans-serif; }
+    .label {
+      max-width: 640px; margin: 0 auto 12px;
+      font-size: 12px; font-weight: bold; color: #888;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .note {
+      max-width: 640px; margin: 16px auto 0;
+      font-size: 12px; color: #999; font-style: italic;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<p class="label">Email Preview — Customer Preorder Confirmation</p>
+
+<!-- ═══════════════════════════════════════════════════════
+     EMAIL BODY (matches exact style of Lambda template)
+     ═══════════════════════════════════════════════════════ -->
+<div style="font-family:Georgia,Arial,sans-serif;color:#2f241c;">
+  <div style="max-width:640px;margin:0 auto;background:#fffdf9;border:1px solid #e7d7c3;border-radius:20px;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="padding:28px 24px 20px;background:#fff6df;border-bottom:1px solid #ecdcc5;text-align:center;">
+      <div style="width:68px;height:68px;line-height:68px;margin:0 auto 12px;border-radius:999px;background:#5c3d2e;color:#fff;font-size:32px;font-weight:700;">⏳</div>
+      <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:#ead7ba;color:#5c3d2e;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Pending Payment</div>
+      <h1 style="margin:16px 0 8px;font-size:28px;line-height:1.2;color:#3b2a1f;">Preorder Confirmed</h1>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#6e5645;">Your items are reserved for market pickup and payment is still pending.</p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px;">
+
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;">Hi <strong>Sarah</strong>, your preorder is in and we have your loaves reserved.</p>
+
+      <!-- Order items -->
+      <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;">2x Classic Sourdough Loaf</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;text-align:right;font-weight:700;">$26.00</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;">1x Jalapeño Cheddar Loaf</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0e4d5;text-align:right;font-weight:700;">$15.00</td>
+        </tr>
+      </table>
+
+      <!-- Order summary box -->
+      <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
+        <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Order total:</strong> $41.00</p>
+        <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> Saturday, May 3 at the New Braunfels Farmers Market</p>
+        <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Payment status:</strong> Pending payment</p>
+        <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Payment options:</strong> Pre-pay via Venmo <a href="https://venmo.com/Allyson-Roberts1" style="color:#8a5a44;">@Allyson-Roberts1</a>, or pay at pickup with cash or card.</p>
+      </div>
+
+      <!-- Pickup deadline warning -->
+      <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fff3cd;border:2px solid #e8a020;">
+        <p style="margin:0 0 8px;font-size:15px;font-weight:bold;color:#7a4a00;">⚠️ Pickup Deadline: 12:00 PM (noon) on market day</p>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#5e4a3d;">Orders not picked up by noon will be released for walk-up sale. If you need to make other arrangements, contact Allyson at <a href="tel:4253284109" style="color:#8a5a44;">425-328-4109</a> day of market.</p>
+      </div>
+
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at <strong>(512) 555-0192</strong> closer to pickup day.</p>
+
+      <!-- ════════════════════════════════════════════════
+           GOOGLE REVIEW CTA — new section being added
+           ════════════════════════════════════════════════ -->
+      <div style="margin:0 0 8px;padding:20px 20px 22px;border-radius:14px;background:#f5f0e8;border:1px solid #ddd0bc;text-align:center;">
+        <p style="margin:0 0 6px;font-size:19px;">🍞</p>
+        <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#3b2a1f;line-height:1.3;">Loved your bread? Tell New Braunfels!</p>
+        <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#6e5645;">A quick Google review goes a long way for our small family bakery — and helps other locals find fresh, handcrafted sourdough right here in town.</p>
+        <a href="https://g.page/r/CX0SXLHZkEShEBM/review"
+           style="display:inline-block;padding:12px 28px;background:#5c3d2e;color:#fff;text-decoration:none;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:0.03em;">
+          ⭐⭐⭐⭐⭐ Leave a Google Review
+        </a>
+        <p style="margin:12px 0 0;font-size:12px;color:#a08878;">It only takes a minute and means the world to us.</p>
+      </div>
+      <!-- ════════════════════════════════════════════════ -->
+
+    </div>
+  </div>
+</div>
+
+<p class="note">
+  Preview only — this is what the customer email will look like after the review CTA is wired in.<br>
+  The "Leave a Google Review" button links to: https://g.page/r/CX0SXLHZkEShEBM/review
+</p>
+
+</body>
+</html>
