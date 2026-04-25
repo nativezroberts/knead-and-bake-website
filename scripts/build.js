@@ -101,7 +101,7 @@ if (fs.existsSync(recipeTemplate)) {
 try { fs.unlinkSync(path.join(DIST, 'recipe-detail.html')); } catch {}
 
 // 9. Generate sitemap.xml
-const siteUrl = 'https://kneadandbaketx.com';
+const siteUrl = 'https://www.kneadandbaketx.com';
 const today = new Date().toISOString().split('T')[0];
 const sitemapPages = [
   { path: '',             priority: '1.0', freq: 'weekly'  },

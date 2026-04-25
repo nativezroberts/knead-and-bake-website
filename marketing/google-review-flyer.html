@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Review Flyer — Knead &amp; Bake TX</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <style>
+    /* ── Print setup: half-letter card (5.5" × 4.25") ── */
+    @page {
+      size: 5.5in 4.25in;
+      margin: 0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* Screen preview: show both cards stacked */
+    @media screen {
+      body { background: #e8e0d8; padding: 32px; flex-direction: column; gap: 24px; }
+      .card { box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+      .print-hint {
+        font-family: sans-serif;
+        font-size: 13px;
+        color: #666;
+        text-align: center;
+        max-width: 440px;
+      }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; min-height: 0; }
+      .print-hint { display: none; }
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 5.5in;
+      height: 4.25in;
+      background: #fffdf8;
+      border: 2px solid #5C3D2E;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: row;
+    }
+
+    /* ── Left panel (brand + ask) ── */
+    .left {
+      flex: 1;
+      background: linear-gradient(160deg, #5C3D2E 0%, #3d2a1e 100%);
+      color: #fff;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-circle {
+      width: 40px;
+      height: 40px;
+      background: #E8C872;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Georgia, serif;
+      font-size: 22px;
+      font-weight: bold;
+      color: #5C3D2E;
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 17px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      opacity: 0.75;
+      font-family: sans-serif;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .ask-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 12px 0;
+    }
+
+    .ask-headline {
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      color: #E8C872;
+    }
+
+    .ask-body {
+      font-family: sans-serif;
+      font-size: 12px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .stars {
+      font-size: 20px;
+      margin-top: 12px;
+      letter-spacing: 2px;
+    }
+
+    .footer-msg {
+      font-family: sans-serif;
+      font-size: 10px;
+      opacity: 0.65;
+      font-style: italic;
+    }
+
+    /* ── Right panel (QR + steps) ── */
+    .right {
+      width: 2.2in;
+      background: #fffdf8;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      border-left: 2px solid #5C3D2E;
+    }
+
+    .qr-label {
+      font-family: sans-serif;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #5C3D2E;
+      text-align: center;
+    }
+
+    #qr-canvas {
+      margin: 6px 0;
+    }
+
+    .steps-title {
+      font-family: sans-serif;
+      font-size: 10px;
+      font-weight: bold;
+      color: #5C3D2E;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      align-self: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .steps {
+      list-style: none;
+      width: 100%;
+    }
+
+    .steps li {
+      font-family: sans-serif;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: #3a2616;
+      padding: 3px 0;
+      border-bottom: 1px dotted #d4c4b0;
+      display: flex;
+      gap: 6px;
+    }
+
+    .steps li:last-child { border-bottom: none; }
+
+    .step-num {
+      font-weight: bold;
+      color: #5C3D2E;
+      flex-shrink: 0;
+    }
+
+    .wheat-divider {
+      font-size: 14px;
+      color: #E8C872;
+      letter-spacing: 4px;
+      margin: 2px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <p class="print-hint">
+    Open in Chrome &rarr; File &rarr; Print &rarr; set paper to <strong>5.5&Prime; &times; 4.25&Prime;</strong> (half-letter),
+    no margins, scale &ldquo;Fit to page&rdquo;. Cut and hand out at the booth.
+    <br><br>
+    <strong>Note:</strong> Update the QR code URL below once your Google Business Profile is live
+    (replace the search link with your direct Google review link).
+  </p>
+
+  <div class="card">
+    <!-- Left -->
+    <div class="left">
+      <div class="logo-row">
+        <div class="logo-circle">K</div>
+        <div>
+          <div class="brand-name">Knead &amp; Bake TX</div>
+          <div class="brand-sub">Artisan Sourdough &bull; New Braunfels</div>
+        </div>
+      </div>
+
+      <div class="ask-block">
+        <div class="ask-headline">Loved your bread?<br>Tell the world!</div>
+        <div class="ask-body">
+          Your review helps other locals discover
+          fresh, handcrafted sourdough right here
+          in New Braunfels — and it means the
+          world to our small family bakery.
+        </div>
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+      </div>
+
+      <div class="footer-msg">Made with flour, water, salt &amp; time.</div>
+    </div>
+
+    <!-- Right -->
+    <div class="right">
+      <div class="qr-label">Scan to Review</div>
+
+      <canvas id="qr-canvas"></canvas>
+
+      <div class="wheat-divider">&#10022; &#10022; &#10022;</div>
+
+      <div class="steps-title">How to leave a review:</div>
+      <ul class="steps">
+        <li><span class="step-num">1.</span> Scan the QR code above</li>
+        <li><span class="step-num">2.</span> Find <strong>Knead &amp; Bake TX</strong> on Google</li>
+        <li><span class="step-num">3.</span> Tap &ldquo;Write a review&rdquo;</li>
+        <li><span class="step-num">4.</span> Share your experience &#x1F35E;</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    /*
+     * REVIEW LINK:
+     * Right now this links to a Google search so customers can find the listing.
+     * Once your Google Business Profile is set up and verified, replace this URL
+     * with your direct review link (format: https://g.page/r/YOUR_PLACE_ID/review).
+     * You can get that link from your GBP dashboard under "Get more reviews".
+     */
+    const REVIEW_URL = 'https://www.google.com/search?q=Knead+and+Bake+TX+New+Braunfels+TX&hl=en';
+
+    QRCode.toCanvas(document.getElementById('qr-canvas'), REVIEW_URL, {
+      width: 130,
+      margin: 1,
+      color: {
+        dark: '#5C3D2E',
+        light: '#fffdf8',
+      },
+    }, function(err) {
+      if (err) console.error('QR generation failed:', err);
+    });
+  </script>
+
+</body>
+</html>
