@@ -160,10 +160,42 @@
         return;
       }
 
-      // Update page
+      // Update page title and visible content
       document.title = `${recipe.title} | Knead & Bake TX`;
       document.getElementById('recipe-title').textContent = recipe.title;
       document.getElementById('recipe-desc').textContent = recipe.description;
+
+      // Update meta description for this specific recipe
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.setAttribute('content', recipe.description + ' — A sourdough recipe from Knead & Bake TX in New Braunfels, TX.');
+
+      // Inject Recipe structured data for Google rich results
+      const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Recipe',
+        'name': recipe.title,
+        'description': recipe.description,
+        'author': { '@type': 'Person', 'name': 'Allyson Roberts' },
+        'publisher': { '@type': 'Organization', 'name': 'Knead & Bake TX', 'url': 'https://kneadandbaketx.com' },
+        'recipeCategory': 'Bread',
+        'recipeCuisine': 'American',
+        'keywords': `sourdough, artisan bread, New Braunfels, ${(recipe.tags || []).join(', ')}`,
+        'prepTime': recipe.prepTime ? `PT${recipe.prepTime.replace(/\s/g, '')}` : undefined,
+        'cookTime': recipe.bakeTime ? `PT${recipe.bakeTime.replace(/\s/g, '')}` : undefined,
+        'recipeYield': recipe.yields,
+        'image': recipe.image ? `https://kneadandbaketx.com${recipe.image}` : undefined,
+        'recipeIngredient': recipe.ingredients,
+        'recipeInstructions': recipe.steps.map((s, i) => ({
+          '@type': 'HowToStep',
+          'position': i + 1,
+          'text': s.replace(/\*\*(.*?)\*\*/g, '$1')
+        }))
+      };
+      Object.keys(jsonLd).forEach(k => jsonLd[k] === undefined && delete jsonLd[k]);
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify(jsonLd);
+      document.head.appendChild(script);
 
       // Meta
       document.getElementById('recipe-meta').innerHTML = `

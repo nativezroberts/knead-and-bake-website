@@ -8,6 +8,18 @@ All open bugs, security fixes, and improvements. Check this file before starting
 
 | # | Item | Priority | Effort | Status |
 |---|---|---|---|---|
+| S1 | Create / complete Google Business Profile | 🔴 SEO Priority | S | 🔲 Open |
+| S2 | Get 20+ Google reviews (QR card + IG ask) | 🔴 SEO Priority | Ongoing | 🔲 Open |
+| S3 | Add LocalBusiness JSON-LD to homepage | 🟠 SEO | XS | ✅ Done 2026-04-25 |
+| S4 | Fix robots.txt + sitemap (admin disallow, clean URLs) | 🟠 SEO | XS | ✅ Done 2026-04-25 |
+| S5 | Fix meta/OG/Twitter tags across all pages | 🟠 SEO | XS | ✅ Done 2026-04-25 |
+| S6 | Add Recipe JSON-LD to recipe detail pages | 🟠 SEO | XS | ✅ Done 2026-04-25 |
+| S7 | Submit to Yelp, Bing Places, Apple Maps | 🟠 SEO | S | 🔲 Open |
+| S8 | Set up Google Search Console + submit sitemap | 🟠 SEO | XS | 🔲 Open |
+| S9 | Publish keyword-targeted news posts (weekly) | 🟡 SEO | Ongoing | 🔲 Open |
+| S10 | Verify homepage H1 contains "sourdough New Braunfels" | 🟡 SEO | XS | 🔲 Open |
+| S11 | Add Nextdoor business listing | 🟡 SEO | XS | 🔲 Open |
+| S12 | Print QR-code review card for market booth | 🟡 SEO | XS | 🔲 Open |
 | 1 | Switch GitHub Actions to OIDC auth | 🔴 High Security | L | ✅ Done 2026-04-11 |
 | 2 | Upgrade password hashing to bcrypt | 🔴 High Security | S | ✅ Done 2026-04-20 |
 | 3 | Replace markdown renderer with markdown-it + DOMPurify | 🔴 High Security | S | 🔲 Open |
@@ -32,6 +44,86 @@ All open bugs, security fixes, and improvements. Check this file before starting
 ---
 
 ## Open Items
+
+---
+
+### S1. Create / complete Google Business Profile
+**Owner:** Allyson / Zach
+**URL:** https://business.google.com
+
+1. Sign in with Google account and search for "Knead & Bake TX" to claim or create
+2. Category: **Bakery** (primary), Farmers Market (secondary)
+3. Service area: New Braunfels TX + Seguin, San Marcos, Canyon Lake
+4. Hours: Saturday 8:00 AM – 1:00 PM (market hours)
+5. Website: `https://kneadandbaketx.com`
+6. Description: *"Handcrafted small-batch sourdough bread baked in New Braunfels, TX. Find us every Saturday at the Castell Street Farmers Market. Preorder online for guaranteed pickup."*
+7. Upload 10+ photos: loaves, booth, Allyson baking, product close-ups
+8. Enable Google Posts (reuse weekly news posts)
+
+---
+
+### S2. Get 20+ Google reviews
+**Owner:** Allyson
+
+1. Get your short review link from GBP dashboard → "Get more reviews"
+2. Post to Instagram stories after every market with the review link
+3. Print a small card with QR code to hand out at booth (see S12)
+4. DM/text repeat customers asking for a review
+5. Target: 20 reviews to break into the Map Pack for "sourdough New Braunfels"
+
+---
+
+### S7. Submit to Yelp, Bing Places, Apple Maps
+**Owner:** Zach / Allyson
+
+1. **Yelp:** `biz.yelp.com` → Add Business → Bakery in New Braunfels TX
+2. **Bing Places:** `bingplaces.com` → Import from Google Business or create new
+3. **Apple Maps:** `mapsconnect.apple.com` → Add a New Place
+4. **New Braunfels Chamber:** search for member directory listing
+5. **Critical:** NAP must be identical everywhere — `Knead & Bake TX`, same address format, same phone
+
+---
+
+### S8. Set up Google Search Console
+**Owner:** Zach
+
+1. Go to `search.google.com/search-console`
+2. Add property: `https://kneadandbaketx.com`
+3. Verify ownership via HTML tag or Google Analytics (GA already on site — easiest method)
+4. Submit sitemap: `https://kneadandbaketx.com/sitemap.xml`
+5. Monitor Search Console weekly for crawl errors and keyword impressions
+
+---
+
+### S9. Publish keyword-targeted news posts (weekly)
+**Owner:** Allyson / Claude (via `/publish-bakery-news`)
+
+Target keyword themes for posts:
+- "sourdough New Braunfels" — "Where to find fresh sourdough in New Braunfels every Saturday"
+- "Castell Street Market bread" — "What we bring to Castell Street Market this week"
+- "preorder sourdough New Braunfels" — "How to preorder your loaf for Saturday pickup"
+- "sourdough starter tips Texas" — "Starter tips from a New Braunfels baker"
+- "artisan bread New Braunfels" — "Why small-batch matters: our baking philosophy"
+
+---
+
+### S10. Verify homepage H1 contains "sourdough New Braunfels"
+**Branch:** `seo/homepage-h1`
+**Owner:** Zach / Allyson
+
+1. Check the hero `<h1>` text on `index.html` — should read something like *"Artisan Sourdough Bread in New Braunfels, TX"*
+2. If not, update the H1 to naturally include the phrase
+3. Do NOT change the visual style — font, size, color stay the same
+
+---
+
+### S12. Print QR-code review card for market booth
+**Owner:** Zach
+
+1. Get short Google review URL from GBP dashboard
+2. Generate a QR code at qr-code-generator.com
+3. Print small cards: "Loved your bread? Leave us a Google review!" + QR code
+4. Hand out at the booth each Saturday
 
 ---
 

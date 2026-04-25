@@ -102,12 +102,34 @@ try { fs.unlinkSync(path.join(DIST, 'recipe-detail.html')); } catch {}
 
 // 9. Generate sitemap.xml
 const siteUrl = 'https://kneadandbaketx.com';
-const staticPages = [
-  '', 'about', 'menu', 'preorder', 'recipes', 'starter-kit', 'news', 'news-detail', 'social', 'market'
+const today = new Date().toISOString().split('T')[0];
+const sitemapPages = [
+  { path: '',             priority: '1.0', freq: 'weekly'  },
+  { path: 'menu',         priority: '0.9', freq: 'weekly'  },
+  { path: 'market',       priority: '0.9', freq: 'weekly'  },
+  { path: 'about',        priority: '0.7', freq: 'monthly' },
+  { path: 'recipes',      priority: '0.8', freq: 'monthly' },
+  { path: 'starter-kit',  priority: '0.7', freq: 'monthly' },
+  { path: 'news',         priority: '0.8', freq: 'weekly'  },
+  { path: 'social',       priority: '0.5', freq: 'monthly' },
 ];
 const sitemapEntries = [
-  ...staticPages.map(p => `  <url><loc>${siteUrl}/${p ? p + '.html' : ''}</loc><changefreq>weekly</changefreq></url>`),
-  ...recipesData.recipes.map(r => `  <url><loc>${siteUrl}/recipes/${r.slug}.html</loc><changefreq>monthly</changefreq></url>`),
+  ...sitemapPages.map(p => [
+    `  <url>`,
+    `    <loc>${siteUrl}/${p.path ? p.path + '.html' : ''}</loc>`,
+    `    <lastmod>${today}</lastmod>`,
+    `    <changefreq>${p.freq}</changefreq>`,
+    `    <priority>${p.priority}</priority>`,
+    `  </url>`,
+  ].join('\n')),
+  ...recipesData.recipes.map(r => [
+    `  <url>`,
+    `    <loc>${siteUrl}/recipes/${r.slug}.html</loc>`,
+    `    <lastmod>${today}</lastmod>`,
+    `    <changefreq>monthly</changefreq>`,
+    `    <priority>0.6</priority>`,
+    `  </url>`,
+  ].join('\n')),
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -116,9 +138,11 @@ ${sitemapEntries.join('\n')}
 fs.writeFileSync(path.join(DIST, 'sitemap.xml'), sitemap);
 console.log('  Generated sitemap.xml');
 
-// 10. Copy robots.txt
+// 10. Generate robots.txt
 const robotsTxt = `User-agent: *
 Allow: /
+Disallow: /admin.html
+Disallow: /preorder.html
 
 Sitemap: ${siteUrl}/sitemap.xml`;
 fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
