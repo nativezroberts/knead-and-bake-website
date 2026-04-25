@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit dependencies
+        run: npm audit --production --audit-level=moderate
+
       # Build the static site
       - name: Build site
         run: node scripts/build.js
@@ -157,6 +160,11 @@ jobs:
         working-directory: infra
         run: npm ci
 
+      - name: Audit infra dependencies
+        if: steps.infra-check.outputs.changed == 'true'
+        working-directory: infra
+        run: npm audit --production --audit-level=moderate
+
       - name: Configure AWS credentials
         if: steps.infra-check.outputs.changed == 'true'
         uses: aws-actions/configure-aws-credentials@v6.1.0
@@ -175,4 +183,4 @@ jobs:
       - name: CDK Deploy
         if: steps.infra-check.outputs.changed == 'true'
         working-directory: infra
-        run: npx cdk deploy --all --require-approval never
+        run: npx cdk deploy --all --require-approval broadening

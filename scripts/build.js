@@ -89,6 +89,9 @@ const recipeTemplate = path.join(DIST, 'recipe-detail.html');
 if (fs.existsSync(recipeTemplate)) {
   fs.mkdirSync(path.join(DIST, 'recipes'), { recursive: true });
   for (const recipe of recipesData.recipes) {
+    if (!/^[a-z0-9-]+$/.test(recipe.slug)) {
+      throw new Error(`Invalid recipe slug: "${recipe.slug}" — only lowercase letters, numbers, hyphens allowed`);
+    }
     fs.copyFileSync(recipeTemplate, path.join(DIST, 'recipes', `${recipe.slug}.html`));
   }
   console.log(`  Generated ${recipesData.recipes.length} recipe detail pages`);

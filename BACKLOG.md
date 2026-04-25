@@ -1,64 +1,292 @@
 # Backlog — Knead & Bake TX
 
-Bugs, fixes, and improvements to resolve before starting new features.
+All open bugs, security fixes, and improvements. Check this file before starting any new feature work. Each item is self-contained and branch-ready.
 
 ---
 
-## Bugs
+## Status Summary
 
-- [ ] **Browser cache serves stale JS** — `components.js` and other JS files have 1-year cache headers. After deploys, users may see old behavior until hard-refresh. Consider adding content hashing or cache-busting version params to JS imports across all pages.
-- [ ] **Old announcements missing new fields** — Announcements created before the title/excerpt/content fields were added have empty values in DynamoDB. They still display correctly (fallback to `message`), but the admin table shows "—" for title.
+| # | Item | Priority | Effort | Status |
+|---|---|---|---|---|
+| 1 | Switch GitHub Actions to OIDC auth | 🔴 High Security | L | ✅ Done 2026-04-11 |
+| 2 | Upgrade password hashing to bcrypt | 🔴 High Security | S | ✅ Done 2026-04-20 |
+| 3 | Replace markdown renderer with markdown-it + DOMPurify | 🔴 High Security | S | 🔲 Open |
+| 4 | Move Venmo handle to SSM | 🔴 High Security | S | 🔲 Open |
+| 5 | Scope S3 image uploads | 🔴 High Security | M | 🔲 Open |
+| 6 | Harden Content Security Policy | 🟠 Moderate Security | M | 🔲 Open |
+| 7 | Move auth token to sessionStorage | 🟠 Moderate Security | S | 🔲 Open |
+| 8 | Fix inventory race condition | 🟠 Moderate Security | S | 🔲 Open |
+| 9 | Add npm audit to CI/CD | 🟠 Moderate Security | XS | 🔲 Open |
+| 10 | Move hardcoded emails to SSM | 🟠 Moderate Security | M | 🔲 Open |
+| 11 | SRI hashes on Google Analytics | 🟠 Moderate Security | S | ❌ Dropped — GTM rotates scripts, SRI would break on every GA update |
+| 12 | Fix browser cache stale JS | 🐛 Bug | M | 🔲 Open |
+| 13 | Backfill old announcements | 🐛 Bug | S | ⚠️ Needs DynamoDB verify first |
+| 14 | Magic byte validation for image uploads | 🟡 Low Security | L | ⏸ Deferred — architectural change, low ROI now |
+| 15 | Pin GitHub Actions to commit SHAs | 🟡 Low Security | S | 🔲 Open |
+| 16 | Path traversal guard in build script | 🟡 Low Security | XS | 🔲 Open |
+| 17 | Add Dependabot | 🟡 Low Security | XS | 🔲 Open |
+| 18 | CDK deploy approval flag | 🟡 Low Security | XS | 🔲 Open |
 
-## Improvements
-
-### 🔴 High Priority — Security
-
-- [x] **Upgrade password hashing to bcrypt** — Admin password currently uses HMAC-SHA256 with a hardcoded salt, which is fast and crackable via GPU brute-force. Replace with `bcryptjs` (cost=12) in `infra/lambda/auth/index.mjs` and re-store the hash in SSM. (2026-04-20)
-- [ ] **Replace custom markdown renderer with markdown-it + DOMPurify** — Custom renderer in `src/js/markdown.js` is vulnerable to XSS via crafted image alt/link attributes inserted via `innerHTML` in `admin.js:262`. Replace with `markdown-it` and sanitize output with `DOMPurify`.
-- [x] **Switch GitHub Actions to OIDC auth** — Created OIDC provider, scoped IAM role (`github-actions-knead-bake-deploy`), updated deploy.yml. Deleted `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` from GitHub. (2026-04-11)
-- [ ] **Move Venmo handle to SSM Parameter Store** — `@Allyson-Roberts1` is hardcoded in `infra/lambda/orders/index.mjs:173,202,573`. Move to SSM `/knead-bake/payment-venmo-handle`, fetch at runtime.
-- [ ] **Scope S3 image uploads** — `api-stack.ts:178` grants `grantPut(adminFn, 'news-images/*')` with no path/quota enforcement. Enforce `news-images/{uuid}_{filename}` naming in Lambda, add per-day upload count to DynamoDB.
-
-### 🟠 Moderate Priority — Security
-
-- [x] **Restrict CORS allowed headers** — Removed `http://localhost:3000` and `http://localhost:8080` from `allowOrigins` in `api-stack.ts`. `allowHeaders` was already `['Content-Type', 'Authorization']`. (2026-03-07)
-- [x] **Remove inline `onclick` from admin.html** — Replaced `onclick="window.location.reload()"` on the header refresh button with `id="header-refresh-btn"`. Event listener wired in `initAdmin()` in `admin.js`. (2026-03-07)
-- [ ] **Harden Content Security Policy (remove unsafe-inline)** — CSP in `static-site-stack.ts` allows `unsafe-inline` for scripts and styles, defeating XSS protection. Extract `admin.html` inline `<style>` block to `src/css/admin.css`, add nonce-based script CSP, and remove `unsafe-inline` from both directives.
-- [x] **Port orders rate limiting to DynamoDB** — Replaced in-memory `Map()` rate limiter in `orders/index.mjs` with DynamoDB-backed `isRateLimited()`. Uses `ORDER_RATE` type in CONFIG_TABLE with TTL. Persistent across cold starts and instances. Added `PutCommand` + `UpdateCommand` imports. (2026-03-07)
-
-### 🟠 Moderate Priority — Security (new from 2026-04-10 audit)
-
-- [ ] **Auth token in global JS variable** — `admin.js:14,195,214` stores JWT in `let authToken`. Move to `sessionStorage` with short TTL; clear on logout.
-- [ ] **Inventory race condition** — Concurrent orders can oversell. Use DynamoDB `UpdateCommand` with `ConditionExpression: 'quantity >= :decrement'` in `infra/lambda/orders/index.mjs`.
-- [ ] **Missing SRI hashes on Google Analytics** — All pages load `googletagmanager.com/gtag/js` without `integrity=` attribute. Generate SHA-384 hash and add to all page `<script>` tags.
-- [ ] **Add `npm audit` to CI/CD** — deploy.yml has no dependency vulnerability scan. Add `npm audit --production --audit-level=moderate` step before build.
-- [ ] **Hardcoded emails in source** — `allyson.m.roberts@gmail.com` appears in 15+ locations across `infra/lib/api-stack.ts`, Lambdas, `src/js/admin.js`. Centralize in SSM `/knead-bake/owner-email` and inject via Lambda env var.
-
-### 🟡 Low Priority — Security
-
-- [x] **Remove hardcoded email from admin.html form value** — Removed `value="allyson.m.roberts@gmail.com"` from `admin.html:511`; field now starts empty with placeholder only. Hint text updated to "default owner email". Backend fallback unchanged. (2026-03-03)
-- [x] **Add request body size limits to all Lambdas** — Added 5MB body size guard (`event.body.length > 5 * 1024 * 1024 → 413`) to `orders/index.mjs`, `auth/index.mjs`, and `admin/index.mjs`. (2026-03-07)
-- [ ] **Add magic byte validation to image uploads** — Not feasible in Lambda: images are uploaded directly to S3 via presigned URLs (Lambda never receives file bytes). Requires an S3 Event trigger + Lambda or Lambda@Edge to inspect file content post-upload. Architectural change needed before implementing.
-- [ ] **Pin GitHub Actions to commit SHAs** — deploy.yml uses semver pins (e.g. `v6.0.2`). For supply-chain hardness, pin to full git SHAs (e.g. `actions/checkout@abc123...  # v6.0.2`).
-- [ ] **Path traversal guard in build script** — `scripts/build.js` uses `recipe.slug` directly in `fs.copyFileSync` path. Add `if (!/^[a-z0-9-]+$/.test(recipe.slug)) throw` guard.
-- [ ] **Add Dependabot** — No `.github/dependabot.yml`. Add weekly update config for both root and `infra/` npm workspaces.
-- [ ] **CDK deploy approval flag** — deploy.yml runs `cdk deploy --require-approval never`. Change to `--require-approval broadening` so destructive infra changes require manual approval.
-- [x] **Add admin audit log to DynamoDB** — Added `knead-bake-audit-log` DynamoDB table (PK: `resourceType`, SK: `auditId`, 90-day TTL). Added `writeAuditLog()` helper to `infra/lambda/admin/index.mjs`. Instrumented all 13 state-changing handlers: skip dates (2), announcements (3), news posts (3), product inventory (3), and orders (2). Audit failures are non-blocking. (2026-03-03)
-- [x] **Add CloudWatch alarms and SNS alerting** — Added SNS topic `knead-bake-alarms` with email subscription in `api-stack.ts`. CloudWatch error alarms (threshold: 3 errors / 5 min) wired to all 3 Lambdas (orders, auth, admin). (2026-03-07)
-
-### 🔵 UX / Design
-
-- [x] **Fix admin orders table layout on mobile** — Stacked card layout with `data-label` pseudo-labels already present in `admin.html` at `@media (max-width: 860px)`. Confirmed complete — no changes needed. (2026-03-07)
-- [x] **Add retry logic with exponential backoff for API calls** — `authFetch()` in `admin.js` now retries up to 3 times on 5xx responses with 100ms / 200ms exponential delay before surfacing the error to the user. Auth errors (401/403) still throw immediately. (2026-03-07)
-- [x] **Add loading state to image uploads in admin panel** — Upload button (`news-post-upload-btn`, `announcement-upload-btn`) now disables and shows "Uploading…" on start; restores to "Upload Image" on success or error in both `initNewsEditor()` and `initAnnouncementEditor()`. (2026-03-07)
-
-## Resolved
-
-- [x] **Centralize `window.__API_BASE`** — Moved to `src/js/config.js`, referenced via `<script src="/src/js/config.js">` in all 7 pages. (2026-02-26)
-- [x] **XSS hardening** — Added `escapeHtml()` to `components.js`, applied to all render functions and inline innerHTML calls across all pages. (2026-02-26)
-- [x] **Grammar fixes in menu.json** — Fixed missing spaces before parentheses and inconsistent capitalization in 3 items. (2026-02-26)
-- [x] **Invalid Date on news pages** — Added `formatNewsDate()` helper to `components.js`; applied safe date normalization in both `renderNewsItem` and `news-detail.html`. Handles missing, ISO, and malformed `startDate` values. (2026-03-03)
+**Effort key:** XS = <30 min · S = 30–90 min · M = 2–4 hrs · L = 4+ hrs
 
 ---
 
-*Check this file before starting any new feature work.*
+## Open Items
+
+---
+
+### 3. Replace markdown renderer with markdown-it + DOMPurify
+**Branch:** `security/markdown-it-dompurify`
+**Files:** `src/js/markdown.js`, `src/js/admin.js`, `src/pages/admin.html`
+
+1. Add to `package.json` devDependencies: `markdown-it`, `dompurify`
+2. Rewrite `src/js/markdown.js`:
+   ```javascript
+   import MarkdownIt from 'markdown-it';
+   import DOMPurify from 'dompurify';
+   const md = new MarkdownIt({ html: false, linkify: true });
+   export function renderMarkdown(input) {
+     return DOMPurify.sanitize(md.render(input));
+   }
+   ```
+3. In `admin.js:262` (and all other `innerHTML` calls with markdown), replace raw renderer with `renderMarkdown()`
+4. Remove old `src/js/markdown.js` implementation
+5. Rebuild and test all markdown preview flows in admin panel
+
+---
+
+### 4. Move Venmo handle to SSM
+**Branch:** `security/ssm-venmo-handle`
+**Files:** `infra/lambda/orders/index.mjs`, `infra/lib/api-stack.ts`
+
+1. Add SSM parameter: `aws ssm put-parameter --name /knead-bake/payment-venmo-handle --value "@Allyson-Roberts1" --type SecureString`
+2. In `api-stack.ts`, add SSM read permission to orders Lambda and pass as env var:
+   ```typescript
+   const venmoParam = ssm.StringParameter.fromSecureStringParameterAttributes(...);
+   venmoParam.grantRead(ordersFn);
+   ordersFn.addEnvironment('VENMO_HANDLE', venmoParam.stringValue);
+   ```
+3. In `orders/index.mjs:173,202,573` replace hardcoded `@Allyson-Roberts1` with `process.env.VENMO_HANDLE`
+4. Deploy and verify Venmo link still appears in order confirmation emails
+
+---
+
+### 5. Scope S3 image uploads
+**Branch:** `security/scope-image-uploads`
+**Files:** `infra/lambda/admin/index.mjs`, `infra/lib/api-stack.ts`
+
+1. In the presigned URL Lambda handler, enforce path format:
+   ```javascript
+   const uuid = crypto.randomUUID();
+   const safeName = filename.replace(/[^a-z0-9.\-_]/gi, '_').slice(0, 100);
+   const key = `news-images/${uuid}_${safeName}`;
+   ```
+2. Add daily upload quota check via DynamoDB (count uploads per adminId per UTC day, reject if > 50)
+3. Log each upload to audit table (`writeAuditLog('image-upload', { key, adminId })`)
+4. In `api-stack.ts`, ensure `grantPut` scope stays as `news-images/*` (already scoped — just enforce naming in Lambda)
+
+---
+
+### 6. Harden Content Security Policy (remove unsafe-inline)
+**Branch:** `security/harden-csp`
+**Files:** `infra/lib/static-site-stack.ts`, `src/pages/admin.html`, `src/css/admin.css`
+
+1. Extract the inline `<style>` block from `admin.html` into `src/css/admin.css`
+2. Add `<link rel="stylesheet" href="/src/css/admin.css">` to `admin.html`
+3. For scripts, generate a nonce at CloudFront level (Lambda@Edge) OR move all inline `<script>` blocks to external `.js` files
+4. In `static-site-stack.ts`, update CSP:
+   - Remove `'unsafe-inline'` from `script-src`
+   - Remove `'unsafe-inline'` from `style-src`
+5. Load test all pages — watch browser console for CSP violations
+6. Fix any remaining violations (check Network tab for blocked resources)
+
+---
+
+### 7. Move auth token to sessionStorage
+**Branch:** `security/auth-token-storage`
+**Files:** `src/js/admin.js`
+
+1. Replace `let authToken = null` with sessionStorage reads/writes:
+   ```javascript
+   // Store: sessionStorage.setItem('authToken', data.token);
+   // Read:  const token = sessionStorage.getItem('authToken');
+   // Clear: sessionStorage.removeItem('authToken');
+   ```
+2. Update all `authToken` references across `admin.js` to use `sessionStorage.getItem('authToken')`
+3. In logout handler, call `sessionStorage.removeItem('authToken')`
+4. Test: token should be gone after tab close; logout should clear it immediately
+
+---
+
+### 8. Fix inventory race condition
+**Branch:** `fix/inventory-race-condition`
+**Files:** `infra/lambda/orders/index.mjs`
+
+1. Wrap inventory decrement in a DynamoDB conditional write:
+   ```javascript
+   await ddb.send(new UpdateCommand({
+     TableName: INVENTORY_TABLE,
+     Key: { sku: item.sku },
+     UpdateExpression: 'SET quantity = quantity - :qty',
+     ConditionExpression: 'quantity >= :qty',
+     ExpressionAttributeValues: { ':qty': item.quantity }
+   }));
+   ```
+2. Catch `ConditionalCheckFailedException` → return 409 with message "Item sold out"
+3. Test with concurrent requests using `Promise.all` in a local test script
+
+---
+
+### 9. Add npm audit to CI/CD
+**Branch:** `chore/npm-audit-ci`
+**Files:** `.github/workflows/deploy.yml`
+
+1. After `npm ci` in the build job, add:
+   ```yaml
+   - name: Audit dependencies
+     run: npm audit --production --audit-level=moderate
+   ```
+2. Also add in `deploy-infra` job after CDK `npm ci`:
+   ```yaml
+   - name: Audit infra dependencies
+     working-directory: infra
+     run: npm audit --production --audit-level=moderate
+   ```
+3. If audit fails on known acceptable issues, add `--ignore-scripts` or create `.npmrc` with `audit-level=high`
+
+---
+
+### 10. Move hardcoded emails to SSM
+**Branch:** `security/ssm-owner-email`
+**Files:** `infra/lib/api-stack.ts`, `infra/lambda/orders/index.mjs`, `infra/lambda/auth/index.mjs`, `infra/lambda/admin/index.mjs`, `src/js/admin.js`
+
+1. Add SSM parameter: `aws ssm put-parameter --name /knead-bake/owner-email --value "allyson.m.roberts@gmail.com" --type SecureString`
+2. In `api-stack.ts`, fetch and inject as env var into all 3 Lambdas
+3. In each Lambda, replace hardcoded email with `process.env.OWNER_EMAIL`
+4. In `src/js/admin.js:12`, the email reference is frontend-only — serve from a `/config` API endpoint or leave as-is
+5. Verify: `grep -r "allyson.m.roberts" src/ infra/lambda/` should return zero results
+
+---
+
+### 12. Fix browser cache stale JS
+**Branch:** `fix/js-cache-busting`
+**Files:** `scripts/build.js`, all `src/pages/*.html`
+
+1. In `build.js`, generate a content hash for each JS file during build:
+   ```javascript
+   import { createHash } from 'crypto';
+   const hash = createHash('md5').update(fs.readFileSync(filePath)).digest('hex').slice(0, 8);
+   ```
+2. Output hashed filenames: `components.abc12345.js`
+3. Update HTML `<script src>` references in build output to use hashed filenames
+4. OR simpler: append `?v=BUILD_HASH` query param to script URLs (no filename change needed)
+5. Confirm S3 deploy still serves correct files; confirm CloudFront caches new hashed versions
+
+---
+
+### 13. Backfill old announcements with empty fields
+**Branch:** `fix/announcement-backfill`
+**Files:** one-shot script (not committed to codebase)
+
+> ⚠️ **Verify first:** Check DynamoDB announcements table for items missing `title` field. If none exist, skip this item entirely.
+
+1. Write a local Node script to scan the announcements DynamoDB table for items missing `title`/`excerpt`/`content` fields
+2. For each missing-fields item, set `title = ''`, `excerpt = ''`, `content = item.message ?? ''`
+3. Run with `--dry-run` first to preview affected items
+4. Apply with `--apply` flag
+5. Verify admin table no longer shows "—" for those rows
+6. Delete the script after use (one-shot)
+
+---
+
+### 15. Pin GitHub Actions to commit SHAs
+**Branch:** `chore/pin-actions-sha`
+**Files:** `.github/workflows/deploy.yml`
+
+1. For each action, get the SHA for the pinned version:
+   ```bash
+   gh api repos/actions/checkout/git/refs/tags/v6.0.2 --jq '.object.sha'
+   ```
+2. Replace semver with SHA + comment:
+   ```yaml
+   - uses: actions/checkout@SHA_HERE  # v6.0.2
+   ```
+3. Update manually when bumping action versions
+
+---
+
+### 16. Path traversal guard in build script
+**Branch:** `fix/build-script-slug-guard`
+**Files:** `scripts/build.js`
+
+1. Find the recipe slug loop in `build.js`
+2. Add before `fs.copyFileSync`:
+   ```javascript
+   if (!/^[a-z0-9-]+$/.test(recipe.slug)) {
+     throw new Error(`Invalid recipe slug: "${recipe.slug}" — only lowercase letters, numbers, hyphens allowed`);
+   }
+   ```
+3. Run `npm run build` to verify existing slugs pass
+
+---
+
+### 17. Add Dependabot
+**Branch:** `chore/add-dependabot`
+**Files:** `.github/dependabot.yml` (new file)
+
+1. Create `.github/dependabot.yml`:
+   ```yaml
+   version: 2
+   updates:
+     - package-ecosystem: "npm"
+       directory: "/"
+       schedule:
+         interval: "weekly"
+       open-pull-requests-limit: 5
+     - package-ecosystem: "npm"
+       directory: "/infra"
+       schedule:
+         interval: "weekly"
+       open-pull-requests-limit: 5
+   ```
+2. Push to main — no PR needed, low risk
+
+---
+
+### 18. CDK deploy approval flag
+**Branch:** `chore/cdk-require-approval`
+**Files:** `.github/workflows/deploy.yml`
+
+1. Change the CDK deploy command:
+   ```yaml
+   # Before:
+   run: npx cdk deploy --all --require-approval never
+   # After:
+   run: npx cdk deploy --all --require-approval broadening
+   ```
+2. Note: `broadening` only blocks changes that expand permissions or security groups — non-destructive infra changes still auto-approve
+
+---
+
+## Completed
+
+| # | Item | Completed |
+|---|---|---|
+| 1 | Switch GitHub Actions to OIDC auth | 2026-04-11 |
+| 2 | Upgrade password hashing to bcrypt | 2026-04-20 |
+| 11 | SRI hashes on Google Analytics | ❌ Dropped — GTM scripts rotate, SRI breaks on every GA update |
+| 14 | Magic byte validation for image uploads | ⏸ Deferred — requires architectural change (S3 event trigger + new Lambda) |
+| — | Restrict CORS allowed headers | 2026-03-07 |
+| — | Remove inline onclick from admin.html | 2026-03-07 |
+| — | Port orders rate limiting to DynamoDB | 2026-03-07 |
+| — | Remove hardcoded email from admin.html form | 2026-03-03 |
+| — | Add request body size limits to all Lambdas | 2026-03-07 |
+| — | Add admin audit log to DynamoDB | 2026-03-03 |
+| — | Add CloudWatch alarms and SNS alerting | 2026-03-07 |
+| — | Fix admin orders table layout on mobile | 2026-03-07 |
+| — | Add retry logic with exponential backoff | 2026-03-07 |
+| — | Add loading state to image uploads | 2026-03-07 |
+| — | Centralize window.__API_BASE | 2026-02-26 |
+| — | XSS hardening (escapeHtml) | 2026-02-26 |
+| — | Grammar fixes in menu.json | 2026-02-26 |
+| — | Invalid Date on news pages | 2026-03-03 |
