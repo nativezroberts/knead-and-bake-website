@@ -84,14 +84,6 @@
     <!-- Announcements (live, matches home page) -->
     <div id="announcements"></div>
 
-    <section class="section section--white" style="padding-bottom:0">
-      <div class="container">
-        <div class="banner banner--info mb-4" role="note">
-          <strong>Note:</strong> We do not offer sliced bread. Any sliced bread shown in photos is for pictures only; all loaves are sold whole.
-        </div>
-      </div>
-    </section>
-
     <!-- Category Filters -->
     <section class="section section--cream">
       <div class="container">
@@ -189,10 +181,14 @@
         const cats = filter === 'all' ? menuData.categories : menuData.categories.filter(c => c.id === filter);
         categoriesEl.innerHTML = cats.map(cat => {
           const items = menuData.items.filter(i => i.category === cat.id);
+          const slicedNote = cat.id === 'standard-loaves'
+            ? '<p class="mb-6" style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:calc(-1 * var(--space-4))">Loaves are not sold pre-sliced.</p>'
+            : '';
           return `
             <div class="menu-category" id="${escapeHtml(cat.id)}">
               <h2 class="menu-category__title">${escapeHtml(cat.name)}</h2>
               <p class="mb-6" style="color:var(--text-secondary)">${escapeHtml(cat.description)}</p>
+              ${slicedNote}
               <div class="card-grid">${items.map(renderCard).join('')}</div>
             </div>
           `;
@@ -218,4 +214,3 @@
 
 </body>
 </html>
-
