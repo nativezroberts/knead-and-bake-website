@@ -160,6 +160,11 @@ jobs:
         working-directory: infra
         run: npm ci
 
+      - name: Install lambda dependencies
+        if: steps.infra-check.outputs.changed == 'true'
+        working-directory: infra/lambda/auth
+        run: npm ci
+
       - name: Audit infra dependencies
         if: steps.infra-check.outputs.changed == 'true'
         working-directory: infra

@@ -18,5 +18,8 @@
       "Bash(gh run view 22798357719)",
       "mcp__Claude_Preview__preview_start"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "knead-bake"
+  ]
 }

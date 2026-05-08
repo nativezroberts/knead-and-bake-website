@@ -29,3 +29,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# SES credentials (never commit)
+.ses-credentials
