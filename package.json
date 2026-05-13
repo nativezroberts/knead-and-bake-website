@@ -11,7 +11,7 @@
   "author": "Knead & Bake TX",
   "license": "UNLICENSED",
   "devDependencies": {
-    "esbuild": "^0.27.3",
+    "esbuild": "^0.28.0",
     "sharp": "^0.34.5"
   },
   "dependencies": {
