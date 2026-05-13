@@ -22,12 +22,12 @@ All open bugs, security fixes, and improvements. Check this file before starting
 | S12 | Print QR-code review card for market booth | 🟡 SEO | XS | 🔲 Open |
 | 1 | Switch GitHub Actions to OIDC auth | 🔴 High Security | L | ✅ Done 2026-04-11 |
 | 2 | Upgrade password hashing to bcrypt | 🔴 High Security | S | ✅ Done 2026-04-20 |
-| 3 | Replace markdown renderer with markdown-it + DOMPurify | 🔴 High Security | S | 🔲 Open |
+| 3 | Replace markdown renderer with markdown-it + DOMPurify | 🔴 High Security | S | ✅ Done 2026-05-13 |
 | 4 | Move Venmo handle to SSM | 🔴 High Security | S | 🔲 Open |
 | 5 | Scope S3 image uploads | 🔴 High Security | M | 🔲 Open |
 | 6 | Harden Content Security Policy | 🟠 Moderate Security | M | 🔲 Open |
 | 7 | Move auth token to sessionStorage | 🟠 Moderate Security | S | 🔲 Open |
-| 8 | Fix inventory race condition | 🟠 Moderate Security | S | 🔲 Open |
+| 8 | Fix inventory race condition | 🟠 Moderate Security | S | ✅ Done (already implemented via TransactWriteCommand) |
 | 9 | Add npm audit to CI/CD | 🟠 Moderate Security | XS | 🔲 Open |
 | 10 | Move hardcoded emails to SSM | 🟠 Moderate Security | M | 🔲 Open |
 | 11 | SRI hashes on Google Analytics | 🟠 Moderate Security | S | ❌ Dropped — GTM rotates scripts, SRI would break on every GA update |
@@ -366,6 +366,8 @@ Target keyword themes for posts:
 |---|---|---|
 | 1 | Switch GitHub Actions to OIDC auth | 2026-04-11 |
 | 2 | Upgrade password hashing to bcrypt | 2026-04-20 |
+| 3 | Replace markdown renderer with markdown-it + DOMPurify | 2026-05-13 |
+| 8 | Fix inventory race condition | Already done — TransactWriteCommand with ConditionExpression |
 | 11 | SRI hashes on Google Analytics | ❌ Dropped — GTM scripts rotate, SRI breaks on every GA update |
 | 14 | Magic byte validation for image uploads | ⏸ Deferred — requires architectural change (S3 event trigger + new Lambda) |
 | — | Restrict CORS allowed headers | 2026-03-07 |

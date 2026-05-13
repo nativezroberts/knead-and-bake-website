@@ -148,8 +148,19 @@ Sitemap: ${siteUrl}/sitemap.xml`;
 fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
 console.log('  Generated robots.txt');
 
-// 11. Minify CSS and JS with esbuild
+// 11. Bundle markdown.js with npm deps (markdown-it + dompurify) for browser
 const esbuild = require('esbuild');
+esbuild.buildSync({
+  entryPoints: [path.join(ROOT, 'src', 'js', 'markdown.js')],
+  bundle: true,
+  format: 'esm',
+  outfile: path.join(DIST, 'src', 'js', 'markdown.js'),
+  platform: 'browser',
+  allowOverwrite: true,
+});
+console.log('  Bundled markdown.js with npm dependencies');
+
+// 12. Minify CSS and JS with esbuild
 
 function getFilesRecursive(dir, ext) {
   const results = [];

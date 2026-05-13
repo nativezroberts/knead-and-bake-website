@@ -13,5 +13,9 @@
   "devDependencies": {
     "esbuild": "^0.27.3",
     "sharp": "^0.34.5"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.3",
+    "markdown-it": "^14.1.1"
   }
 }
