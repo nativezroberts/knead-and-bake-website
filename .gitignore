@@ -15,6 +15,9 @@ infra/cdk.out/
 .vscode/
 .idea/
 
+# Claude Code worktrees (local scratch copies of the repo)
+.claude/worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
