@@ -1010,10 +1010,16 @@ function buildWeekOptions(currentWeekStart) {
     { offset: -1, label: 'Last week' },
     { offset: 0, label: 'Current Week' },
     { offset: 1, label: 'Next week' },
-  ].map(({ offset, label }) => ({
-    value: toYMD(addDays(currentWeekStart, offset * 7)),
-    label,
-  }));
+    { offset: 2, label: 'In 2 weeks' },
+    { offset: 3, label: 'In 3 weeks' },
+    { offset: 4, label: 'In 4 weeks' },
+  ].map(({ offset, label }) => {
+    const start = addDays(currentWeekStart, offset * 7);
+    return {
+      value: toYMD(start),
+      label: `${label} (${formatWeekRange(start, addDays(start, 6))})`,
+    };
+  });
 }
 
 function setPreordersError(message = '') {
