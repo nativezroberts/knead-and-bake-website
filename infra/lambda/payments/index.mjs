@@ -135,6 +135,61 @@ function buildItemsHtml(items = []) {
     .join('');
 }
 
+// ── Shared customer email sections (keep in sync with orders/index.mjs) ──
+const MARKET_LOCATION = 'Castell Street Market, New Braunfels';
+const REVIEW_URL = 'https://g.page/r/CX0SXLHZkEShEBM/review';
+const INSTAGRAM_URL = 'https://www.instagram.com/knead_and_baketx';
+const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61557154273182';
+
+// "2026-11-07" -> "Saturday, November 7, 2026"
+function formatPickupDate(ymd) {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  if (!ymd || Number.isNaN(d.getTime())) return ymd || '';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+function buildPickupDeadlineHtml(order) {
+  return `<div style="margin:0 0 20px;padding:16px;border-radius:14px;background:#fff3cd;border:2px solid #e8a020;">
+  <p style="margin:0 0 6px;font-size:16px;font-weight:bold;color:#7a4a00;">&#9888;&#65039; Pick up by 12:00 PM (noon)</p>
+  <p style="margin:0 0 8px;font-size:15px;line-height:1.5;color:#3b2a1f;"><strong>${escapeHtml(formatPickupDate(order.pickupDate))}</strong> at ${escapeHtml(MARKET_LOCATION)}</p>
+  <p style="margin:0;font-size:14px;line-height:1.6;color:#5e4a3d;">Orders not picked up by noon will be released for walk-up sale. If you need to make other arrangements, contact Allyson at <a href="tel:4253284109" style="color:#8a5a44;">425-328-4109</a> day of market.</p>
+</div>`;
+}
+
+function buildPickupDeadlineText(order) {
+  return `⚠️ PICK UP BY 12:00 PM (NOON): ${formatPickupDate(order.pickupDate)} at ${MARKET_LOCATION}
+Orders not picked up by noon will be released for walk-up sale unless you've made
+other arrangements with Allyson directly at 425-328-4109 day of market.`;
+}
+
+function buildReviewHtml() {
+  return `<div style="margin:24px 0 16px;padding:20px 20px 22px;border-radius:14px;background:#f5f0e8;border:1px solid #ddd0bc;text-align:center;">
+  <p style="margin:0 0 6px;font-size:19px;">🍞</p>
+  <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#3b2a1f;line-height:1.3;">Loved your bread? Tell New Braunfels!</p>
+  <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#6e5645;">A quick Google review goes a long way for our small family bakery — and helps other locals find fresh, handcrafted sourdough right here in town.</p>
+  <a href="${REVIEW_URL}" style="display:inline-block;padding:12px 28px;background:#5c3d2e;color:#fff;text-decoration:none;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:0.03em;">⭐⭐⭐⭐⭐ Leave a Google Review</a>
+  <p style="margin:12px 0 0;font-size:12px;color:#a08878;">It only takes a minute and means the world to us.</p>
+</div>`;
+}
+
+function buildSocialHtml() {
+  const btn = 'display:inline-block;margin:4px;padding:10px 20px;border-radius:999px;border:2px solid #5c3d2e;color:#5c3d2e;text-decoration:none;font-size:14px;font-weight:700;';
+  return `<div style="margin:0;padding:20px;border-radius:14px;background:#fffdf9;border:1px solid #e7d7c3;text-align:center;">
+  <p style="margin:0 0 6px;font-size:16px;font-weight:bold;color:#3b2a1f;">Follow us on social media</p>
+  <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#6e5645;">See what's coming out of the oven each week, new flavors, and market updates.</p>
+  <a href="${INSTAGRAM_URL}" style="${btn}">📸 Instagram</a>
+  <a href="${FACEBOOK_URL}" style="${btn}">👍 Facebook</a>
+</div>`;
+}
+
+function buildFollowUpText() {
+  return `Loved your bread? Leave us a Google review: ${REVIEW_URL}
+
+Follow us for weekly bakes and market updates:
+- Instagram: ${INSTAGRAM_URL}
+- Facebook: ${FACEBOOK_URL}`;
+}
+
 function buildOwnerPaymentEmailHtml(order, orderId, subtotalStr, processingFeeStr, totalPaidStr, squarePaymentId) {
   const shortOrderId = orderId.slice(0, 8);
   const commentsHtml = order.notes
@@ -151,7 +206,7 @@ function buildOwnerPaymentEmailHtml(order, orderId, subtotalStr, processingFeeSt
 <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
-  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(formatPickupDate(order.pickupDate))} at ${escapeHtml(MARKET_LOCATION)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Subtotal:</strong> ${escapeHtml(subtotalStr)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Card processing fee:</strong> ${escapeHtml(processingFeeStr)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Total paid:</strong> ${escapeHtml(totalPaidStr)}</p>
@@ -234,6 +289,7 @@ Order ID: ${orderId}`
       heading: 'Payment Confirmed',
       intro: 'Your card payment was successful and your preorder is fully confirmed.',
       bodyHtml: `
+${buildPickupDeadlineHtml(order)}
 <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;">Hi ${escapeHtml(order.name)}, we received your payment and your order is locked in.</p>
 <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
   ${buildItemsHtml(order.items)}
@@ -242,11 +298,13 @@ Order ID: ${orderId}`
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Subtotal:</strong> ${escapeHtml(subtotalStr)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Card processing fee:</strong> ${escapeHtml(processingFeeStr)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Total paid:</strong> ${escapeHtml(totalPaidStr)}</p>
-  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(formatPickupDate(order.pickupDate))} at ${escapeHtml(MARKET_LOCATION)}</p>
   <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Square payment reference:</strong> ${escapeHtml(squarePaymentId || 'unknown')}</p>
 </div>
 ${commentsHtml}
-<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>`,
+<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>
+${buildReviewHtml()}
+${buildSocialHtml()}`,
     });
 
     emailTasks.push(
@@ -258,7 +316,9 @@ ${commentsHtml}
           Body: {
             Text: {
               Data:
-`Hi ${order.name},
+`${buildPickupDeadlineText(order)}
+
+Hi ${order.name},
 
 Your payment was received and your preorder is confirmed.
 
@@ -268,14 +328,16 @@ Subtotal: ${subtotalStr}
 Card processing fee: ${processingFeeStr}
 Total paid: ${totalPaidStr}
 
-Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
+Pickup: ${formatPickupDate(order.pickupDate)} at ${MARKET_LOCATION}
 ${order.notes ? `Comments: ${order.notes}\n` : ''}Payment method: Card
 Square payment reference: ${squarePaymentId || 'unknown'}
 
 We'll text you at ${order.phone} closer to pickup day.
 
 See you Saturday!
-- Knead & Bake TX`
+- Knead & Bake TX
+
+${buildFollowUpText()}`
             },
             Html: { Data: paymentHtml },
           },

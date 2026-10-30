@@ -156,31 +156,86 @@ function buildItemsHtml(items = []) {
     .join('');
 }
 
+// ── Shared customer email sections (keep in sync with payments/index.mjs) ──
+const MARKET_LOCATION = 'Castell Street Market, New Braunfels';
+const REVIEW_URL = 'https://g.page/r/CX0SXLHZkEShEBM/review';
+const INSTAGRAM_URL = 'https://www.instagram.com/knead_and_baketx';
+const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61557154273182';
+
+// "2026-11-07" -> "Saturday, November 7, 2026"
+function formatPickupDate(ymd) {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  if (!ymd || Number.isNaN(d.getTime())) return ymd || '';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+function buildPickupDeadlineHtml(order) {
+  return `<div style="margin:0 0 20px;padding:16px;border-radius:14px;background:#fff3cd;border:2px solid #e8a020;">
+  <p style="margin:0 0 6px;font-size:16px;font-weight:bold;color:#7a4a00;">&#9888;&#65039; Pick up by 12:00 PM (noon)</p>
+  <p style="margin:0 0 8px;font-size:15px;line-height:1.5;color:#3b2a1f;"><strong>${escapeHtml(formatPickupDate(order.pickupDate))}</strong> at ${escapeHtml(MARKET_LOCATION)}</p>
+  <p style="margin:0;font-size:14px;line-height:1.6;color:#5e4a3d;">Orders not picked up by noon will be released for walk-up sale. If you need to make other arrangements, contact Allyson at <a href="tel:4253284109" style="color:#8a5a44;">425-328-4109</a> day of market.</p>
+</div>`;
+}
+
+function buildPickupDeadlineText(order) {
+  return `⚠️ PICK UP BY 12:00 PM (NOON): ${formatPickupDate(order.pickupDate)} at ${MARKET_LOCATION}
+Orders not picked up by noon will be released for walk-up sale unless you've made
+other arrangements with Allyson directly at 425-328-4109 day of market.`;
+}
+
+function buildReviewHtml() {
+  return `<div style="margin:24px 0 16px;padding:20px 20px 22px;border-radius:14px;background:#f5f0e8;border:1px solid #ddd0bc;text-align:center;">
+  <p style="margin:0 0 6px;font-size:19px;">🍞</p>
+  <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#3b2a1f;line-height:1.3;">Loved your bread? Tell New Braunfels!</p>
+  <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#6e5645;">A quick Google review goes a long way for our small family bakery — and helps other locals find fresh, handcrafted sourdough right here in town.</p>
+  <a href="${REVIEW_URL}" style="display:inline-block;padding:12px 28px;background:#5c3d2e;color:#fff;text-decoration:none;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:0.03em;">⭐⭐⭐⭐⭐ Leave a Google Review</a>
+  <p style="margin:12px 0 0;font-size:12px;color:#a08878;">It only takes a minute and means the world to us.</p>
+</div>`;
+}
+
+function buildSocialHtml() {
+  const btn = 'display:inline-block;margin:4px;padding:10px 20px;border-radius:999px;border:2px solid #5c3d2e;color:#5c3d2e;text-decoration:none;font-size:14px;font-weight:700;';
+  return `<div style="margin:0;padding:20px;border-radius:14px;background:#fffdf9;border:1px solid #e7d7c3;text-align:center;">
+  <p style="margin:0 0 6px;font-size:16px;font-weight:bold;color:#3b2a1f;">Follow us on social media</p>
+  <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#6e5645;">See what's coming out of the oven each week, new flavors, and market updates.</p>
+  <a href="${INSTAGRAM_URL}" style="${btn}">📸 Instagram</a>
+  <a href="${FACEBOOK_URL}" style="${btn}">👍 Facebook</a>
+</div>`;
+}
+
+function buildFollowUpText() {
+  return `Loved your bread? Leave us a Google review: ${REVIEW_URL}
+
+Follow us for weekly bakes and market updates:
+- Instagram: ${INSTAGRAM_URL}
+- Facebook: ${FACEBOOK_URL}`;
+}
+
 function buildPendingPaymentEmailText(order) {
   const itemList = buildItemsText(order.items);
   const totalStr = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
 
-  return `Hi ${order.name},
+  return `${buildPickupDeadlineText(order)}
+
+Hi ${order.name},
 
 Your preorder is confirmed. Payment is still pending.
 
 ${itemList}
 
 Order total: ${totalStr}
-Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
+Pickup: ${formatPickupDate(order.pickupDate)} at ${MARKET_LOCATION}
 ${order.notes ? `Comments: ${order.notes}\n` : ''}Payment status: Pending payment
 Payment options:
 - Pre-pay via Venmo: @Allyson-Roberts1
 - Or pay at pickup (cash or card)
 
-⚠️ PICKUP DEADLINE: Please pick up your order by 12:00 PM (noon) on market day.
-Orders not picked up by noon will be released for walk-up sale unless you've made
-other arrangements with Allyson directly at 425-328-4109 day of market.
-
 We'll text you at ${order.phone} closer to pickup day.
 
 See you Saturday!
-- Knead & Bake TX`;
+- Knead & Bake TX
+
+${buildFollowUpText()}`;
 }
 
 function buildPendingPaymentEmailHtml(order) {
@@ -195,29 +250,21 @@ function buildPendingPaymentEmailHtml(order) {
     heading: 'Preorder Confirmed',
     intro: 'Your items are reserved for market pickup and payment is still pending.',
     bodyHtml: `
+${buildPickupDeadlineHtml(order)}
 <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;">Hi ${escapeHtml(order.name)}, your preorder is in and we have your loaves reserved.</p>
 <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
   ${buildItemsHtml(order.items)}
 </table>
 <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Order total:</strong> ${escapeHtml(totalStr)}</p>
-  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(formatPickupDate(order.pickupDate))} at ${escapeHtml(MARKET_LOCATION)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Payment status:</strong> Pending payment</p>
   <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Payment options:</strong> Pre-pay via Venmo <a href="https://venmo.com/Allyson-Roberts1" style="color:#8a5a44;">@Allyson-Roberts1</a>, or pay at pickup with cash or card.</p>
 </div>
 ${commentsHtml}
-<div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fff3cd;border:2px solid #e8a020;">
-  <p style="margin:0 0 8px;font-size:15px;font-weight:bold;color:#7a4a00;">&#9888;&#65039; Pickup Deadline: 12:00 PM (noon) on market day</p>
-  <p style="margin:0;font-size:14px;line-height:1.6;color:#5e4a3d;">Orders not picked up by noon will be released for walk-up sale. If you need to make other arrangements, contact Allyson at <a href="tel:4253284109" style="color:#8a5a44;">425-328-4109</a> day of market.</p>
-</div>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>
-<div style="margin:0 0 8px;padding:20px 20px 22px;border-radius:14px;background:#f5f0e8;border:1px solid #ddd0bc;text-align:center;">
-  <p style="margin:0 0 6px;font-size:19px;">🍞</p>
-  <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#3b2a1f;line-height:1.3;">Loved your bread? Tell New Braunfels!</p>
-  <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#6e5645;">A quick Google review goes a long way for our small family bakery — and helps other locals find fresh, handcrafted sourdough right here in town.</p>
-  <a href="https://g.page/r/CX0SXLHZkEShEBM/review" style="display:inline-block;padding:12px 28px;background:#5c3d2e;color:#fff;text-decoration:none;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:0.03em;">⭐⭐⭐⭐⭐ Leave a Google Review</a>
-  <p style="margin:12px 0 0;font-size:12px;color:#a08878;">It only takes a minute and means the world to us.</p>
-</div>`,
+<p style="margin:0;font-size:15px;line-height:1.7;color:#5e4a3d;">We'll text you at ${escapeHtml(order.phone)} closer to pickup day.</p>
+${buildReviewHtml()}
+${buildSocialHtml()}`,
   });
 }
 
@@ -238,7 +285,7 @@ function buildOwnerPreorderEmailHtml(order, orderId) {
 <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
-  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(order.pickupDate)} at the New Braunfels Farmers Market</p>
+  <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Pickup:</strong> ${escapeHtml(formatPickupDate(order.pickupDate))} at ${escapeHtml(MARKET_LOCATION)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Total:</strong> ${escapeHtml(totalStr)}</p>
   <p style="margin:0;font-size:15px;line-height:1.6;"><strong>Payment status:</strong> Pending payment</p>
 </div>
@@ -581,7 +628,7 @@ ${itemList}
 
 Total: ${totalStr}
 
-Pickup: ${order.pickupDate} at the New Braunfels Farmers Market
+Pickup: ${formatPickupDate(order.pickupDate)} at ${MARKET_LOCATION}
 ${order.notes ? `Comments: ${order.notes}\n` : ''}
 Payment Options:
 - Pay online with card (a $0.30 processing fee applies)
