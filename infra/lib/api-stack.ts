@@ -13,6 +13,7 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -428,16 +429,20 @@ export class ApiStack extends cdk.Stack {
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '..', 'lambda', 'scheduler')),
       memorySize: 128,
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(60),
       environment: {
         ORDERS_TABLE: ordersTable.tableName,
         OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
         FROM_EMAIL: 'noreply@kneadandbaketx.com',
+        REPLY_TO_EMAIL: 'allyson.m.roberts@gmail.com',
+        SES_SANDBOX: (props.sesSandbox ?? true).toString(),
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
     ordersTable.grantReadData(schedulerFn);
+    // Customer reminder marks each order with reminderSentAt to prevent double-sends
+    ordersTable.grant(schedulerFn, 'dynamodb:UpdateItem');
 
     schedulerFn.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -463,6 +468,27 @@ export class ApiStack extends cdk.Stack {
       description: 'Trigger preorder summary email every Saturday at 9 AM CDT',
       schedule: events.Schedule.cron({ minute: '0', hour: '14', weekDay: 'SAT' }),
       targets: [new eventsTargets.LambdaFunction(schedulerFn)],
+    });
+
+    // Saturday 7 AM Central — customer pickup reminder. Uses EventBridge Scheduler
+    // (not an events.Rule) so the time stays 7 AM local across daylight saving.
+    const reminderRole = new iam.Role(this, 'CustomerReminderScheduleRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
+    });
+    schedulerFn.grantInvoke(reminderRole);
+
+    new scheduler.CfnSchedule(this, 'CustomerReminderSchedule', {
+      name: 'knead-bake-customer-reminder',
+      description: 'Email each customer a pickup reminder every Saturday at 7 AM Central',
+      scheduleExpression: 'cron(0 7 ? * SAT *)',
+      scheduleExpressionTimezone: 'America/Chicago',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: schedulerFn.functionArn,
+        roleArn: reminderRole.roleArn,
+        input: JSON.stringify({ type: 'customer-reminder' }),
+        retryPolicy: { maximumRetryAttempts: 2 },
+      },
     });
 
     // Saturday 9:01 AM CDT (14:01 UTC) — auto-reset inventory for next week
