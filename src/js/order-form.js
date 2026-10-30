@@ -49,7 +49,47 @@ async function ensureSquareSdkLoaded() {
   }
 }
 
-export async function initOrderForm({ preorderOpen = true } = {}) {
+// "2026-11-07" -> "Sat, Nov 7" (parsed as a local date to avoid UTC day shifts)
+function formatShortDate(ymd) {
+  const [y, m, d] = (ymd || '').split('-').map(Number);
+  if (!y || !m || !d) return ymd || '';
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/**
+ * Shows the skip-week notice and resolves true if the buyer confirms the new
+ * pickup date, false if they go back. Falls through to true when <dialog>
+ * isn't supported — the pickup date is already set to the next market.
+ */
+function confirmSkipWeek(marketInfo) {
+  const dialog = document.getElementById('skip-week-dialog');
+  if (!dialog || typeof dialog.showModal !== 'function') return Promise.resolve(true);
+
+  const setText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+  setText('skip-week-skipped', marketInfo.skippedDate);
+  setText('skip-week-next', marketInfo.nextMarket.date);
+  setText('skip-week-skipped-short', formatShortDate(marketInfo.skippedDateISO));
+  setText('skip-week-next-short', formatShortDate(marketInfo.nextMarket.dateISO));
+  setText('skip-week-confirm', `Confirm pickup ${formatShortDate(marketInfo.nextMarket.dateISO)}`);
+
+  const reasonEl = document.getElementById('skip-week-reason');
+  if (reasonEl) {
+    reasonEl.hidden = !marketInfo.skipReason;
+    setText('skip-week-reason-text', marketInfo.skipReason || '');
+  }
+
+  return new Promise((resolve) => {
+    dialog.returnValue = '';
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.showModal();
+    document.getElementById('skip-week-confirm')?.focus();
+  });
+}
+
+export async function initOrderForm({ preorderOpen = true, marketInfo = null } = {}) {
   const container = document.getElementById('order-items');
   const form = document.getElementById('order-form');
   const summaryEl = document.getElementById('order-summary');
@@ -154,6 +194,12 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
 
   updateSummary();
 
+  // Clicking the backdrop (outside the card) closes the skip-week notice
+  const skipDialog = document.getElementById('skip-week-dialog');
+  skipDialog?.addEventListener('click', (e) => {
+    if (e.target === skipDialog) skipDialog.close('cancel');
+  });
+
   // ── Form submission ──
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -204,6 +250,9 @@ export async function initOrderForm({ preorderOpen = true } = {}) {
       showError('Please enter a valid email address or leave it blank.');
       return;
     }
+
+    // This Saturday is a skip date — confirm the buyer is OK with the next market
+    if (marketInfo?.skippedThisWeek && !(await confirmSkipWeek(marketInfo))) return;
 
     // Submit order
     submitBtn.disabled = true;

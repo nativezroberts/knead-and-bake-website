@@ -214,6 +214,34 @@
 
   </main>
 
+  <!-- Skip-week notice: shown on submit when this Saturday's market is skipped -->
+  <dialog class="skip-dialog" id="skip-week-dialog" aria-labelledby="skip-week-title" aria-describedby="skip-week-msg">
+    <form method="dialog" class="skip-dialog__card">
+      <div class="skip-dialog__grabber" aria-hidden="true"></div>
+      <div class="skip-dialog__head">
+        <div class="skip-dialog__icon" aria-hidden="true">&#129530;</div>
+        <div>
+          <h2 class="skip-dialog__title" id="skip-week-title">Whoops! Please double-check</h2>
+          <p class="skip-dialog__sub">The baker is away this Saturday.</p>
+        </div>
+      </div>
+      <div class="skip-dialog__body">
+        <p class="skip-dialog__msg" id="skip-week-msg">It looks like you're ordering for this week, but there's no market on <strong id="skip-week-skipped"></strong>. The baker will be back at the next available market on <strong id="skip-week-next"></strong>, and your order will be ready for pickup then.</p>
+        <div class="skip-dialog__dates">
+          <div class="skip-dialog__date skip-dialog__date--off"><small>No market</small><strong id="skip-week-skipped-short"></strong></div>
+          <div class="skip-dialog__arrow" aria-hidden="true">&rarr;</div>
+          <div class="skip-dialog__date skip-dialog__date--on"><small>Your pickup</small><strong id="skip-week-next-short"></strong></div>
+        </div>
+        <p class="skip-dialog__reason" id="skip-week-reason" hidden><strong>Why we're out:</strong> <span id="skip-week-reason-text"></span></p>
+        <p class="skip-dialog__meta">Castell Street Market &middot; 9:00 AM &ndash; 1:00 PM<br>Please pick up by 12 PM (noon).</p>
+      </div>
+      <div class="skip-dialog__actions">
+        <button type="submit" value="confirm" id="skip-week-confirm" class="btn btn--primary btn--lg">Confirm pickup</button>
+        <button type="submit" value="cancel" class="btn btn--outline btn--lg">Go back</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer class="footer" role="contentinfo">
     <div class="container">
       <div class="footer__grid">
@@ -294,7 +322,11 @@
 
       // Dynamic cutoff banner
       const cutoffBanner = document.getElementById('cutoff-banner');
-      if (marketInfo.preorderOpen) {
+      if (marketInfo.preorderOpen && marketInfo.skippedThisWeek) {
+        cutoffBanner.className = 'banner banner--warning mb-8';
+        const reason = marketInfo.skipReason ? ` (${marketInfo.skipReason})` : '';
+        cutoffBanner.textContent = `No market on ${marketInfo.skippedDate}${reason}. Preorders are for our next market on ${marketInfo.nextMarket.date} and close ${marketInfo.nextMarket.preorderCutoff}.`;
+      } else if (marketInfo.preorderOpen) {
         cutoffBanner.textContent = `Preorders for ${marketInfo.nextMarket.date} close ${marketInfo.nextMarket.preorderCutoff}.`;
       } else {
         cutoffBanner.className = 'banner banner--warning mb-8';
@@ -322,7 +354,7 @@
         }
       }
 
-      initOrderForm({ preorderOpen: marketInfo.preorderOpen });
+      initOrderForm({ preorderOpen: marketInfo.preorderOpen, marketInfo });
     });
   </script>
 

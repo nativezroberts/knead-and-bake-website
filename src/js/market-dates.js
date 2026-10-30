@@ -139,5 +139,7 @@ export async function getMarketInfo() {
     announcements,
     skippedThisWeek,
     skipReason,
+    skippedDate: skippedThisWeek ? formatMarketDate(rawNextSaturday) : '',
+    skippedDateISO: skippedThisWeek ? rawNextSaturdayStr : '',
   };
 }
