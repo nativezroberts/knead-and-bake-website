@@ -168,7 +168,7 @@ jobs:
       - name: Audit infra dependencies
         if: steps.infra-check.outputs.changed == 'true'
         working-directory: infra
-        run: npm audit --production --audit-level=moderate
+        run: node scripts/audit.mjs
 
       - name: Configure AWS credentials
         if: steps.infra-check.outputs.changed == 'true'
