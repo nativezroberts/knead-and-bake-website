@@ -1113,13 +1113,14 @@ function renderPreorderOrders(summary) {
         </thead>
         <tbody>
           ${orders.map((order) => {
+            renderedOrdersById.set(order.orderId, order);
             const paymentStatus = String(order.paymentStatus || '').toUpperCase();
             const paymentMethod = String(order.paymentMethod || '').toUpperCase();
             const isOnlinePaid = paymentStatus === 'PAID' && paymentMethod === 'SQUARE';
             const isPaid = isOnlinePaid || !!order.paid;
             const smsHref = buildSmsHref(order.phone, buildConfirmationText(order, { paid: isPaid }));
             const textHtml = smsHref
-              ? `<a class="btn btn--text-customer" href="${escapeHtml(smsHref)}">💬 Text ${escapeHtml(getFirstName(order.name) || 'customer')}</a>`
+              ? `<a class="btn btn--text-customer" data-order-id="${escapeHtml(order.orderId || '')}" href="${escapeHtml(smsHref)}">💬 Text ${escapeHtml(getFirstName(order.name) || 'customer')}</a>`
               : '';
             const actionsHtml = textHtml + (isOnlinePaid
               ? '<span class="preorders-status-pill preorders-status-pill--online">Paid via Online</span>'
@@ -1169,6 +1170,19 @@ function renderPreorderOrders(summary) {
   });
 }
 
+// Orders as last rendered in the preorders table, so the Text link can be rebuilt
+// when payment status changes without a full reload.
+const renderedOrdersById = new Map();
+
+function refreshTextLink(orderId, paid) {
+  const order = renderedOrdersById.get(orderId);
+  const link = document.querySelector(`.btn--text-customer[data-order-id="${CSS.escape(orderId)}"]`);
+  if (!order || !link) return;
+  order.paid = paid;
+  const href = buildSmsHref(order.phone, buildConfirmationText(order, { paid }));
+  if (href) link.href = href;
+}
+
 async function handleTogglePayment(btn) {
   const orderId = btn.dataset.orderId;
   if (!orderId) return;
@@ -1192,6 +1206,7 @@ async function handleTogglePayment(btn) {
     }
     // Update button state
     btn.dataset.paid = newPaid ? 'true' : 'false';
+    refreshTextLink(orderId, newPaid);
     btn.textContent = newPaid ? 'Paid' : 'Mark Paid';
     btn.className = `btn ${newPaid ? 'btn--paid' : 'btn--mark-paid'}`;
     btn.disabled = false;

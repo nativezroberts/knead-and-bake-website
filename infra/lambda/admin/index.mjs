@@ -913,14 +913,17 @@ function buildPreorderSummary(orders, weekStart, weekEnd) {
   const activeOrders = orders
     .filter(order => String(order.status || 'NEW').toUpperCase() !== 'CANCELLED')
     .map(order => {
-      const items = Array.isArray(order.items)
-        ? order.items
-            .filter(item => item && typeof item.qty === 'number' && item.qty > 0)
-            .map(item => ({
-              name: sanitize(item.name || '', 200),
-              qty: Math.round(item.qty),
-            }))
+      const rawItems = Array.isArray(order.items)
+        ? order.items.filter(item => item && typeof item.qty === 'number' && item.qty > 0)
         : [];
+      const items = rawItems.map(item => ({
+        name: sanitize(item.name || '', 200),
+        qty: Math.round(item.qty),
+      }));
+      // Authoritative total (set server-side at order time); fall back to line prices for older orders.
+      const totalCents = Number.isFinite(Number(order.totalCents)) && Number(order.totalCents) > 0
+        ? Math.round(Number(order.totalCents))
+        : Math.round(rawItems.reduce((sum, item) => sum + Number(item.price || 0) * Math.round(item.qty), 0) * 100);
 
       const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
       const paymentStatus = sanitize(
@@ -944,6 +947,7 @@ function buildPreorderSummary(orders, weekStart, weekEnd) {
         paid,
         items,
         totalQty,
+        totalCents,
       };
     });
 
