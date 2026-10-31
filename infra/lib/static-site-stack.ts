@@ -111,6 +111,20 @@ export class StaticSiteStack extends cdk.Stack {
       enableAcceptEncodingBrotli: true,
     });
 
+    // ── Versioned asset cache policy (/src/* JS/CSS) ──
+    // Assets are served immutable under ?v=<content hash> URLs, so the version must be
+    // part of the edge cache key; otherwise a new ?v= could be answered with the previous
+    // version still cached at that edge, and browsers would keep those bytes for a year.
+    const versionedAssetCachePolicy = new cloudfront.CachePolicy(this, 'VersionedAssetCachePolicy', {
+      cachePolicyName: 'KneadBakeVersionedAssets',
+      defaultTtl: cdk.Duration.days(1),
+      maxTtl: cdk.Duration.days(365),
+      minTtl: cdk.Duration.seconds(1),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList('v'),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+    });
+
     // ── S3 origin (shared by all behaviors) ──
     const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket, {
       originAccessControl: oac,
@@ -136,6 +150,12 @@ export class StaticSiteStack extends cdk.Stack {
       },
 
       additionalBehaviors: {
+        '/src/*': {
+          origin: s3Origin,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: versionedAssetCachePolicy,
+          responseHeadersPolicy: securityHeaders,
+        },
         '/content/*': {
           origin: s3Origin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
