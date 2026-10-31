@@ -191,5 +191,42 @@ for (const file of [...cssFiles, ...jsFiles]) {
 }
 console.log(`  Minified ${cssFiles.length} CSS + ${jsFiles.length} JS files (saved ~${(totalSaved / 1024).toFixed(1)} KB)`);
 
+// 13. Cache-bust JS/CSS: S3 serves them as "immutable" for a year, so every URL must
+// change when its content does. Each file gets ?v=<content hash>, and a module's hash
+// covers the hashes of the modules it imports, so a change deep in the import chain
+// still changes the URL the page loads. Replaces any hand-written ?v=N.
+const { createHash } = require('crypto');
+const shortHash = (s) => createHash('sha256').update(s).digest('hex').slice(0, 10);
+const JS_IMPORT_RE = /((?:\bfrom|\bimport)\s*\(?\s*)(['"])(\.{1,2}\/[\w./-]+\.js)(?:\?v=\w+)?\2/g;
+const ASSET_REF_RE = /(['"])(\/src\/(?:js|css)\/[\w./-]+\.(?:js|css))(?:\?v=\w+)?\1/g;
+
+const assetHashes = new Map();
+const inProgress = new Set();
+function versionOf(file) {
+  if (assetHashes.has(file)) return assetHashes.get(file);
+  if (!fs.existsSync(file)) throw new Error(`Cache-bust: referenced asset not found: ${path.relative(DIST, file)}`);
+  let code = fs.readFileSync(file, 'utf-8');
+  if (file.endsWith('.js')) {
+    if (inProgress.has(file)) return shortHash(code); // import cycle: fall back to own content
+    inProgress.add(file);
+    code = code.replace(JS_IMPORT_RE, (_, pre, q, spec) =>
+      `${pre}${q}${spec}?v=${versionOf(path.resolve(path.dirname(file), spec))}${q}`);
+    inProgress.delete(file);
+    fs.writeFileSync(file, code);
+  }
+  const v = shortHash(code);
+  assetHashes.set(file, v);
+  return v;
+}
+
+const htmlFiles = getFilesRecursive(DIST, '.html');
+for (const file of htmlFiles) {
+  const html = fs.readFileSync(file, 'utf-8');
+  const out = html.replace(ASSET_REF_RE, (_, q, ref) => `${q}${ref}?v=${versionOf(path.join(DIST, ref))}${q}`);
+  if (out !== html) fs.writeFileSync(file, out);
+}
+for (const file of jsFiles) versionOf(file); // stamp imports in modules not referenced from HTML
+console.log(`  Cache-busted ${assetHashes.size} JS/CSS files across ${htmlFiles.length} HTML pages`);
+
 console.log('\nBuild complete! Output: /dist');
 console.log(`  ${fs.readdirSync(DIST).length} top-level files/dirs`);

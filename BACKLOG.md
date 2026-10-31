@@ -31,7 +31,7 @@ All open bugs, security fixes, and improvements. Check this file before starting
 | 9 | Add npm audit to CI/CD | 🟠 Moderate Security | XS | 🔲 Open |
 | 10 | Move hardcoded emails to SSM | 🟠 Moderate Security | M | 🔲 Open |
 | 11 | SRI hashes on Google Analytics | 🟠 Moderate Security | S | ❌ Dropped — GTM rotates scripts, SRI would break on every GA update |
-| 12 | Fix browser cache stale JS | 🐛 Bug | M | 🔲 Open |
+| 12 | Fix browser cache stale JS | 🐛 Bug | M | ✅ Done 2026-10-31 |
 | 13 | Backfill old announcements | 🐛 Bug | S | ⚠️ Needs DynamoDB verify first |
 | 14 | Magic byte validation for image uploads | 🟡 Low Security | L | ⏸ Deferred — architectural change, low ROI now |
 | 15 | Pin GitHub Actions to commit SHAs | 🟡 Low Security | S | 🔲 Open |
@@ -367,6 +367,7 @@ Target keyword themes for posts:
 | 1 | Switch GitHub Actions to OIDC auth | 2026-04-11 |
 | 2 | Upgrade password hashing to bcrypt | 2026-04-20 |
 | 3 | Replace markdown renderer with markdown-it + DOMPurify | 2026-05-13 |
+| 12 | Fix browser cache stale JS (content-hash ?v= on all JS/CSS, incl. module imports) | 2026-10-31 |
 | 8 | Fix inventory race condition | Already done — TransactWriteCommand with ConditionExpression |
 | 11 | SRI hashes on Google Analytics | ❌ Dropped — GTM scripts rotate, SRI breaks on every GA update |
 | 14 | Magic byte validation for image uploads | ⏸ Deferred — requires architectural change (S3 event trigger + new Lambda) |
