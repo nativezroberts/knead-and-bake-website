@@ -30,9 +30,16 @@ try {
   process.exit(1);
 }
 
+// Fail closed: a registry/network error still prints JSON (with "error" and no
+// "vulnerabilities"), which must not be mistaken for a clean report.
+if (report.error || !report.vulnerabilities || typeof report.metadata?.vulnerabilities !== 'object') {
+  console.error('npm audit did not return a complete report:', report.error?.summary || report.error?.code || 'missing vulnerabilities data');
+  process.exit(1);
+}
+
 const failures = [];
 const allowed = new Set();
-for (const [pkg, vuln] of Object.entries(report.vulnerabilities || {})) {
+for (const [pkg, vuln] of Object.entries(report.vulnerabilities)) {
   for (const via of vuln.via || []) {
     if (typeof via !== 'object') continue; // transitive pointer; its root advisory is checked on its own entry
     if (!BLOCKING.has(via.severity)) continue;
