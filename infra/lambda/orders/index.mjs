@@ -162,6 +162,52 @@ const REVIEW_URL = 'https://g.page/r/CX0SXLHZkEShEBM/review';
 const INSTAGRAM_URL = 'https://www.instagram.com/knead_and_baketx';
 const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61557154273182';
 
+// ── Tap-to-text confirmation (keep wording in sync with src/js/text-confirmation.js) ──
+const SITE_URL = 'https://kneadandbaketx.com';
+
+function getFirstName(name) {
+  const first = String(name || '').trim().split(/\s+/)[0] || '';
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : '';
+}
+
+function formatShortPickupDate(ymd) {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  if (!ymd || Number.isNaN(d.getTime())) return 'Saturday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+function formatItemsSentence(items = []) {
+  const parts = items.filter((i) => i && i.name).map((i) => `${Number(i.qty) || 1} ${String(i.name).trim()}`);
+  if (parts.length === 0) return 'your order';
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+function buildConfirmationText(order, { paid = false } = {}) {
+  const first = getFirstName(order.name);
+  const greeting = first ? `Hi ${first}!` : 'Hi there!';
+  const total = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
+  const paymentLine = paid
+    ? "You're all paid up, so just swing by before noon and grab it."
+    : `Your total is ${total}, and you can pay online, by Venmo, or with cash/card at pickup. Just swing by before noon.`;
+  return [
+    `${greeting} It's Allyson from Knead & Bake 🍞`,
+    `Thank you so much for your preorder! I've got ${formatItemsSentence(order.items)} set aside for you on ${formatShortPickupDate(order.pickupDate)} at Castell Street Market.`,
+    `${paymentLine} Can't wait to see you!`,
+  ].join(' ');
+}
+
+// Link to /text.html with details in the #fragment (not sent to the server);
+// that page opens Messages, since email apps often block sms: links directly.
+function buildTextConfirmationUrl(order) {
+  const params = new URLSearchParams({
+    to: order.phone,
+    name: getFirstName(order.name) || order.name || '',
+    body: buildConfirmationText(order),
+  });
+  return `${SITE_URL}/text.html#${params.toString()}`;
+}
+
 // "2026-11-07" -> "Saturday, November 7, 2026"
 function formatPickupDate(ymd) {
   const d = new Date(`${ymd}T12:00:00Z`);
@@ -282,6 +328,7 @@ function buildOwnerPreorderEmailHtml(order, orderId) {
     intro: 'A customer placed a new preorder and payment is still pending.',
     bodyHtml: `
 <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>${escapeHtml(order.name)}</strong> just submitted order <strong>#${escapeHtml(shortOrderId)}</strong>.</p>
+<p style="margin:0 0 20px;text-align:center;"><a href="${escapeHtml(buildTextConfirmationUrl(order))}" style="display:inline-block;padding:14px 24px;border-radius:999px;background:#2e7d4f;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">&#128172; Text ${escapeHtml(getFirstName(order.name) || 'customer')} a confirmation</a></p>
 <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
@@ -602,6 +649,9 @@ Total: ${totalStr}
 Payment: Pending (customer will pay online or at pickup)
 
 Comments: ${order.notes || 'None'}
+
+Text ${getFirstName(order.name) || 'customer'} a confirmation:
+${buildTextConfirmationUrl(order)}
 
 Order ID: ${orderId}
 Created: ${order.createdAt}`
