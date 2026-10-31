@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Text Confirmation | Knead &amp; Bake TX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
+</head>
+<body class="page">
+  <main class="page__content" style="display:flex;justify-content:center;padding:var(--space-8) var(--space-4)">
+    <div style="width:100%;max-width:480px">
+      <div id="text-form">
+        <h1 id="text-heading" style="font-family:var(--font-heading);font-size:var(--text-3xl);margin-bottom:var(--space-2)">Text your customer</h1>
+        <p style="color:var(--text-secondary);margin-bottom:var(--space-4)">To <strong id="text-phone"></strong>. Tweak the message if you like, then send.</p>
+        <label for="text-message" class="form-label">Message</label>
+        <textarea id="text-message" class="form-input" rows="10" style="width:100%;margin-bottom:var(--space-4);font-size:16px;line-height:1.5"></textarea>
+        <a id="text-open" href="#" class="btn btn--primary btn--lg" style="display:block;text-align:center;margin-bottom:var(--space-3)">💬 Open in Messages</a>
+        <button id="text-copy" type="button" class="btn btn--secondary" style="width:100%">Copy message</button>
+        <p id="text-status" role="status" style="color:var(--text-secondary);margin-top:var(--space-3);min-height:1.5em"></p>
+      </div>
+      <div id="text-error" hidden style="text-align:center">
+        <h1 style="font-family:var(--font-heading);font-size:var(--text-2xl);margin-bottom:var(--space-4)">This text link is incomplete.</h1>
+        <p style="color:var(--text-secondary);margin-bottom:var(--space-6)">Open the order in the admin page and use its Text button instead.</p>
+        <a href="/admin.html" class="btn btn--primary">Go to admin</a>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/src/js/text-redirect.js"></script>
+</body>
+</html>

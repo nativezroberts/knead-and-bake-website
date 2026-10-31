@@ -4,6 +4,7 @@
  */
 
 import { renderMarkdown } from './markdown.js';
+import { buildConfirmationText, buildSmsHref, getFirstName } from './text-confirmation.js';
 
 const API_BASE = window.__API_BASE || '';
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -1116,10 +1117,14 @@ function renderPreorderOrders(summary) {
             const paymentMethod = String(order.paymentMethod || '').toUpperCase();
             const isOnlinePaid = paymentStatus === 'PAID' && paymentMethod === 'SQUARE';
             const isPaid = isOnlinePaid || !!order.paid;
-            const actionsHtml = isOnlinePaid
+            const smsHref = buildSmsHref(order.phone, buildConfirmationText(order, { paid: isPaid }));
+            const textHtml = smsHref
+              ? `<a class="btn btn--text-customer" href="${escapeHtml(smsHref)}">💬 Text ${escapeHtml(getFirstName(order.name) || 'customer')}</a>`
+              : '';
+            const actionsHtml = textHtml + (isOnlinePaid
               ? '<span class="preorders-status-pill preorders-status-pill--online">Paid via Online</span>'
               : `<button class="btn ${isPaid ? 'btn--paid' : 'btn--mark-paid'}" data-order-id="${escapeHtml(order.orderId || '')}" data-paid="${isPaid ? 'true' : 'false'}">${isPaid ? 'Paid' : 'Mark Paid'}</button>
-                 <button class="btn btn--reject" data-order-id="${escapeHtml(order.orderId || '')}" data-order-name="${escapeHtml(order.name || 'this customer')}">Reject</button>`;
+                 <button class="btn btn--reject" data-order-id="${escapeHtml(order.orderId || '')}" data-order-name="${escapeHtml(order.name || 'this customer')}">Reject</button>`);
 
             return `
               <tr>
