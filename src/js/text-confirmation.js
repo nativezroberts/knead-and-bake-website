@@ -37,10 +37,11 @@ export function formatItemsSentence(items = []) {
 export function buildConfirmationText(order, { paid = false } = {}) {
   const first = getFirstName(order.name);
   const greeting = first ? `Hi ${first}!` : 'Hi there!';
-  const total = `$${(Number(order.totalCents || 0) / 100).toFixed(2)}`;
+  const cents = Math.round(Number(order.totalCents) || 0);
+  const totalPart = cents > 0 ? `Your total is $${(cents / 100).toFixed(2)}, and you` : 'You';
   const paymentLine = paid
     ? "You're all paid up, so just swing by before noon and grab it."
-    : `Your total is ${total}, and you can pay online, by Venmo, or with cash/card at pickup. Just swing by before noon.`;
+    : `${totalPart} can pay online, by Venmo, or with cash/card at pickup. Just swing by before noon.`;
 
   return [
     `${greeting} It's Allyson from Knead & Bake 🍞`,
