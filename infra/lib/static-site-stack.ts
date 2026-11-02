@@ -1,11 +1,18 @@
 import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import * as path from 'path';
+
+// The custom domain must stay in code: any CDK deploy that changes the distribution
+// rewrites its whole config, so aliases set only in the console get removed.
+const SITE_DOMAIN_NAME = 'www.kneadandbaketx.com';
+const SITE_CERTIFICATE_ARN =
+  'arn:aws:acm:us-east-1:771397891596:certificate/efc67bc4-1e00-4646-8110-c97b973424d3';
 
 export class StaticSiteStack extends cdk.Stack {
   public readonly distribution: cloudfront.Distribution;
@@ -133,6 +140,8 @@ export class StaticSiteStack extends cdk.Stack {
     // ── CloudFront Distribution ──
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       comment: 'Knead & Bake TX',
+      domainNames: [SITE_DOMAIN_NAME],
+      certificate: acm.Certificate.fromCertificateArn(this, 'SiteCertificate', SITE_CERTIFICATE_ARN),
       defaultRootObject: 'index.html',
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
