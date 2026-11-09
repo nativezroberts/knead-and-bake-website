@@ -188,4 +188,7 @@ jobs:
       - name: CDK Deploy
         if: steps.infra-check.outputs.changed == 'true'
         working-directory: infra
-        run: npx cdk deploy --all --require-approval broadening
+        # API stack only. KneadBakeSite in code is out of sync with live CloudFront
+        # (custom domain, cert, /src/* cache policy) and deploying it would strip the domain.
+        # --exclusively stops CDK from also deploying KneadBakeSite as a dependency.
+        run: npx cdk deploy KneadBakeApi --exclusively --require-approval broadening

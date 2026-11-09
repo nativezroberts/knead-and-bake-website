@@ -195,9 +195,10 @@ export class ApiStack extends cdk.Stack {
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '..', 'lambda', 'payments')),
       memorySize: 256,
-      timeout: cdk.Duration.seconds(15),
+      timeout: cdk.Duration.seconds(20),
       environment: {
         ORDERS_TABLE: ordersTable.tableName,
+        CONFIG_TABLE: configTable.tableName,
         OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
         FROM_EMAIL: 'noreply@kneadandbaketx.com',
         SEND_EMAILS: 'true',
@@ -207,6 +208,8 @@ export class ApiStack extends cdk.Stack {
     });
 
     ordersTable.grantReadWriteData(paymentFn);
+    // Special market checkout reads event config + reserves SPECIAL_INV stock
+    configTable.grantReadWriteData(paymentFn);
 
     // SSM read access for Square credentials
     paymentFn.addToRolePolicy(new iam.PolicyStatement({
@@ -282,6 +285,20 @@ export class ApiStack extends cdk.Stack {
       path: '/api/payments/config',
       methods: [apigwv2.HttpMethod.GET],
       integration: new apigwv2integrations.HttpLambdaIntegration('PaymentConfigIntegration', paymentFn),
+    });
+
+    // POST /api/special-orders (public — prepaid special market checkout: reserve + charge in one call)
+    httpApi.addRoutes({
+      path: '/api/special-orders',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: new apigwv2integrations.HttpLambdaIntegration('SpecialOrderIntegration', paymentFn),
+    });
+
+    // GET /api/special-markets/{id} (public — published event + live stock)
+    httpApi.addRoutes({
+      path: '/api/special-markets/{id}',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: new apigwv2integrations.HttpLambdaIntegration('SpecialMarketPublicIntegration', adminFn),
     });
 
     // POST /api/auth/login (public)
@@ -383,6 +400,28 @@ export class ApiStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/api/admin/inventory/{sku}',
       methods: [apigwv2.HttpMethod.PUT],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Admin special market routes (protected by JWT authorizer)
+    httpApi.addRoutes({
+      path: '/api/admin/special-markets',
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: '/api/admin/special-markets/{id}',
+      methods: [apigwv2.HttpMethod.PUT, apigwv2.HttpMethod.DELETE],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: '/api/admin/special-markets/{id}/orders',
+      methods: [apigwv2.HttpMethod.GET],
       integration: adminIntegration,
       authorizer: jwtAuthorizer,
     });

@@ -144,6 +144,7 @@ Allow: /
 Disallow: /admin.html
 Disallow: /preorder.html
 Disallow: /text.html
+Disallow: /special-preorder.html
 
 Sitemap: ${siteUrl}/sitemap.xml`;
 fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
