@@ -21,7 +21,7 @@ let preordersReady = false;
 let preorderSummaryCache = null;
 
 // -- Tabs --
-const TAB_KEYS = ['skipDates', 'announcements', 'news', 'inventory', 'preorders'];
+const TAB_KEYS = ['skipDates', 'announcements', 'news', 'inventory', 'preorders', 'specialMarkets'];
 const TAB_STORAGE_KEY = 'admin_active_tab';
 const loadedTabs = new Set();
 let isDirty = false;
@@ -89,6 +89,7 @@ function loadTabData(key) {
     case 'news': loadNewsPosts(); break;
     case 'inventory': loadInventory(); break;
     case 'preorders': loadPreorderSummary(); break;
+    case 'specialMarkets': loadSpecialMarkets(); break;
   }
 }
 
@@ -1551,6 +1552,8 @@ export function initAdmin() {
   // Inventory reset button
   $('reset-inventory-btn').addEventListener('click', resetInventory);
 
+  initSpecialMarketsTab();
+
   initNewsEditor();
   initAnnouncementEditor();
   initTabs();
@@ -1559,5 +1562,438 @@ export function initAdmin() {
   document.querySelectorAll('#admin-content input:not([data-no-dirty]), #admin-content textarea:not([data-no-dirty]), #admin-content select:not([data-no-dirty])').forEach(el => {
     el.addEventListener('input', markDirty);
     el.addEventListener('change', markDirty);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Special Markets — one-off prepaid preorder events
+// ═══════════════════════════════════════════════════════════════════
+
+const SM_TZ = 'America/Chicago';
+const SM_PREVIEW_KEY = 'kb_special_preview';
+const SM_STATE_LABEL = {
+  draft: 'Draft',
+  scheduled: 'Published · hidden until announce time',
+  announced: 'Announced · not open yet',
+  open: 'Open for orders',
+  soldout: 'Sold out',
+  closed: 'Closed',
+  archived: 'Archived',
+};
+let smCache = [];
+let smProducts = [];
+let smEditing = null; // event object being edited, or null for new
+
+function smChip(state, id = '') {
+  const idAttr = id ? ` id="${id}"` : '';
+  return `<span${idAttr} class="sm-chip sm-chip--${escapeHtml(state)}">${escapeHtml(SM_STATE_LABEL[state] || state)}</span>`;
+}
+
+function smFormatCT(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', { timeZone: SM_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function smFormatDate(ymd) {
+  const [y, m, d] = String(ymd || '').split('-').map(Number);
+  if (!y) return ymd || '';
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/** "2026-11-21T23:59" Central -> epoch ms (mirrors the server helper; used for Preview only). */
+function smCentralToMs(local) {
+  const asUtc = Date.parse(`${local}:00Z`);
+  if (Number.isNaN(asUtc)) return NaN;
+  const offset = (date) => {
+    const tz = new Intl.DateTimeFormat('en-US', { timeZone: SM_TZ, timeZoneName: 'longOffset' })
+      .formatToParts(date).find(p => p.type === 'timeZoneName')?.value || '';
+    const m = /GMT([+-])(\d{2}):?(\d{2})?/.exec(tz);
+    return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] || 0)) : -360;
+  };
+  const off = offset(new Date(asUtc));
+  let utc = asUtc - off * 60000;
+  const off2 = offset(new Date(utc));
+  if (off2 !== off) utc = asUtc - off2 * 60000;
+  return utc;
+}
+
+async function smEnsureProducts() {
+  if (smProducts.length) return smProducts;
+  const res = await authFetch(`${API_BASE}/api/admin/inventory`);
+  const data = await res.json();
+  smProducts = (data.products || []).slice().sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name));
+  if (!smProducts.length) throw new Error('No products found. Open the Inventory tab and click "Initialize from Menu" first.');
+  return smProducts;
+}
+
+async function loadSpecialMarkets() {
+  const list = $('sm-list');
+  const errorEl = $('sm-list-error');
+  errorEl.classList.add('hidden');
+  if (!smCache.length) list.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/special-markets`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load special markets.');
+    smCache = data.specialMarkets || [];
+    renderSpecialMarketList();
+  } catch (e) {
+    list.innerHTML = '';
+    showError(errorEl, e.message);
+  }
+}
+
+function renderSpecialMarketList() {
+  const list = $('sm-list');
+  if (!smCache.length) {
+    list.innerHTML = '<p style="color:var(--text-secondary)">No special markets yet. Click <strong>+ New Special Market</strong> to set up your first one.</p>';
+    return;
+  }
+  list.innerHTML = `<div class="sm-cards">${smCache.map(ev => {
+    const total = ev.items.reduce((s, i) => s + i.totalQty, 0);
+    const sold = ev.items.reduce((s, i) => s + i.sold, 0);
+    return `
+      <article class="sm-card">
+        <div class="sm-card__top">
+          <h3 class="sm-card__name">${escapeHtml(ev.name)}</h3>
+          ${smChip(ev.state)}
+        </div>
+        <div class="sm-card__meta">
+          <span><strong>Orders:</strong> ${escapeHtml(smFormatCT(ev.opensAt))} &rarr; ${escapeHtml(smFormatCT(ev.closesAt))}</span>
+          <span><strong>Pickup:</strong> ${escapeHtml(smFormatDate(ev.pickupDate))}${ev.pickupWindow ? `, ${escapeHtml(ev.pickupWindow)}` : ''}</span>
+          <span><strong>Sold:</strong> ${sold} / ${total}</span>
+        </div>
+        <div class="sm-card__actions">
+          <button type="button" class="btn btn--sm btn--outline" data-sm-edit="${escapeHtml(ev.id)}">Edit</button>
+          <button type="button" class="btn btn--sm btn--outline" data-sm-orders="${escapeHtml(ev.id)}">Orders &amp; bake list</button>
+          ${ev.status === 'PUBLISHED' ? `<a class="btn btn--sm btn--outline" href="/special-preorder.html?event=${encodeURIComponent(ev.id)}" target="_blank" rel="noopener">View live page</a>` : ''}
+        </div>
+      </article>`;
+  }).join('')}</div>`;
+}
+
+function smRenderItems(ev) {
+  const byKey = new Map((ev?.items || []).map(i => [i.sku, i]));
+  const rows = smProducts.map(p => {
+    const it = byKey.get(p.sku);
+    const on = !!it && it.totalQty > 0;
+    const sold = it?.sold || 0;
+    return `
+      <tr data-sm-sku="${escapeHtml(p.sku)}" class="${on ? '' : 'is-off'}">
+        <td><input type="checkbox" data-sm-field="on" ${on ? 'checked' : ''} ${sold > 0 ? 'disabled title="Has orders"' : ''} aria-label="Offer ${escapeHtml(p.name)}"></td>
+        <td>${escapeHtml(p.name)}${p.available ? '' : ' <span style="color:var(--text-secondary);font-size:var(--text-xs)">(hidden on weekly menu)</span>'}</td>
+        <td>$${Number(p.price).toFixed(2)}</td>
+        <td><input type="number" min="${sold}" max="999" value="${it ? it.totalQty : 0}" data-sm-field="qty" aria-label="Quantity for ${escapeHtml(p.name)}"></td>
+        <td><input type="number" min="1" max="99" value="${it ? it.maxPerOrder : 6}" data-sm-field="max" aria-label="Max per order for ${escapeHtml(p.name)}"></td>
+        <td>${sold}</td>
+      </tr>`;
+  }).join('');
+  const soldTotal = (ev?.items || []).reduce((s, i) => s + (i.sold || 0), 0);
+  $('sm-items').innerHTML = `
+    <table>
+      <thead><tr><th>Offer</th><th>Product</th><th>Price</th><th>Qty to bake</th><th>Max / order</th><th>Sold</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="sm-items__total"><td></td><td>Total</td><td></td><td id="sm-items-total">0</td><td></td><td>${soldTotal}</td></tr></tfoot>
+    </table>`;
+  smUpdateItemTotal();
+}
+
+function smUpdateItemTotal() {
+  let total = 0;
+  document.querySelectorAll('#sm-items tr[data-sm-sku]').forEach(row => {
+    const box = row.querySelector('[data-sm-field="on"]');
+    const on = box.checked;
+    row.classList.toggle('is-off', !on);
+    if (on) total += Math.max(0, parseInt(row.querySelector('[data-sm-field="qty"]').value, 10) || 0);
+  });
+  const el = $('sm-items-total');
+  if (el) el.textContent = total;
+}
+
+async function openSpecialEditor(ev = null) {
+  const form = $('sm-form');
+  $('sm-error').classList.add('hidden');
+  $('sm-orders').classList.add('hidden');
+  try {
+    await smEnsureProducts();
+  } catch (e) {
+    showError($('sm-list-error'), e.message);
+    return;
+  }
+  smEditing = ev;
+  $('sm-form-title').textContent = ev ? `Edit: ${ev.name}` : 'New Special Market';
+  $('sm-form-state').outerHTML = ev ? smChip(ev.state, 'sm-form-state') : '<span id="sm-form-state" class="sm-chip"></span>';
+  $('sm-name').value = ev?.name || '';
+  $('sm-button-label').value = ev?.buttonLabel || '';
+  $('sm-tagline').value = ev?.tagline || '';
+  $('sm-description').value = ev?.description || '';
+  $('sm-opens-at').value = ev?.opensAtLocal || '';
+  $('sm-closes-at').value = ev?.closesAtLocal || '';
+  $('sm-announce-at').value = ev?.announceAtLocal || '';
+  $('sm-pickup-date').value = ev?.pickupDate || '';
+  $('sm-pickup-window').value = ev ? (ev.pickupWindow || '') : '9:00 AM – 12:00 PM';
+  $('sm-pickup-location').value = ev ? (ev.pickupLocation || '') : 'Castell Street Market, New Braunfels';
+  $('sm-pickup-notes').value = ev?.pickupNotes || '';
+  smRenderItems(ev);
+
+  const published = ev?.status === 'PUBLISHED';
+  $('sm-publish-btn').textContent = published ? 'Save Changes (stays live)' : 'Publish';
+  $('sm-save-btn').classList.toggle('hidden', published);
+  $('sm-unpublish-btn').classList.toggle('hidden', !published);
+  $('sm-archive-btn').classList.toggle('hidden', !ev || ev.status === 'ARCHIVED');
+  const anySold = (ev?.items || []).some(i => i.sold > 0);
+  $('sm-delete-btn').classList.toggle('hidden', !ev || anySold);
+
+  form.classList.remove('hidden');
+  clearDirty();
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeSpecialEditor() {
+  $('sm-form').classList.add('hidden');
+  smEditing = null;
+  clearDirty();
+}
+
+function collectSpecialForm(status) {
+  const items = [];
+  document.querySelectorAll('#sm-items tr[data-sm-sku]').forEach(row => {
+    const box = row.querySelector('[data-sm-field="on"]');
+    const qty = parseInt(row.querySelector('[data-sm-field="qty"]').value, 10) || 0;
+    const maxPerOrder = parseInt(row.querySelector('[data-sm-field="max"]').value, 10) || 6;
+    // Disabled boxes are items with orders: always keep them on the event
+    if (box.checked || box.disabled) items.push({ sku: row.dataset.smSku, qty, maxPerOrder });
+  });
+  return {
+    name: $('sm-name').value.trim(),
+    buttonLabel: $('sm-button-label').value.trim(),
+    tagline: $('sm-tagline').value.trim(),
+    description: $('sm-description').value.trim(),
+    opensAtLocal: $('sm-opens-at').value,
+    closesAtLocal: $('sm-closes-at').value,
+    announceAtLocal: $('sm-announce-at').value,
+    pickupDate: $('sm-pickup-date').value,
+    pickupWindow: $('sm-pickup-window').value.trim(),
+    pickupLocation: $('sm-pickup-location').value.trim(),
+    pickupNotes: $('sm-pickup-notes').value.trim(),
+    status,
+    items,
+  };
+}
+
+async function saveSpecialMarketForm(status) {
+  const errorEl = $('sm-error');
+  errorEl.classList.add('hidden');
+  const payload = collectSpecialForm(status);
+
+  if (status === 'PUBLISHED' && smEditing?.status !== 'PUBLISHED') {
+    const totalQty = payload.items.reduce((s, i) => s + i.qty, 0);
+    if (!confirm(`Publish "${payload.name}"?\n\nThe SPECIAL button goes live on the website and customers can order up to ${totalQty} items once preorders open.`)) return;
+  }
+  if (status === 'DRAFT' && smEditing?.status === 'PUBLISHED') {
+    if (!confirm('Unpublish? The button disappears from the website and no new orders can be placed. Existing orders are kept.')) return;
+  }
+  if (status === 'ARCHIVED') {
+    if (!confirm('Archive this event? It will be hidden from the website. Orders are kept.')) return;
+  }
+
+  const isNew = !smEditing;
+  const url = isNew
+    ? `${API_BASE}/api/admin/special-markets`
+    : `${API_BASE}/api/admin/special-markets/${encodeURIComponent(smEditing.id)}`;
+  const buttons = document.querySelectorAll('#sm-form .sm-actions .btn');
+  buttons.forEach(b => { b.disabled = true; });
+  try {
+    const res = await authFetch(url, { method: isNew ? 'POST' : 'PUT', body: JSON.stringify(payload) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Failed to save.');
+    showToast(status === 'PUBLISHED' ? 'Published' : status === 'ARCHIVED' ? 'Archived' : 'Saved');
+    await loadSpecialMarkets();
+    const fresh = smCache.find(e => e.id === data.specialMarket?.id) || data.specialMarket;
+    if (status === 'ARCHIVED') closeSpecialEditor();
+    else await openSpecialEditor(fresh);
+  } catch (e) {
+    showError(errorEl, e.message);
+  } finally {
+    buttons.forEach(b => { b.disabled = false; });
+  }
+}
+
+async function deleteSpecialMarketForm() {
+  if (!smEditing) return;
+  if (!confirm(`Delete "${smEditing.name}" permanently? This can't be undone.`)) return;
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/special-markets/${encodeURIComponent(smEditing.id)}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Failed to delete.');
+    showToast('Deleted');
+    closeSpecialEditor();
+    loadSpecialMarkets();
+  } catch (e) {
+    showError($('sm-error'), e.message);
+  }
+}
+
+function previewSpecialMarket() {
+  const f = collectSpecialForm(smEditing?.status || 'DRAFT');
+  const productMap = new Map(smProducts.map(p => [p.sku, p]));
+  const soldMap = new Map((smEditing?.items || []).map(i => [i.sku, i.sold || 0]));
+  const opensMs = smCentralToMs(f.opensAtLocal);
+  const closesMs = smCentralToMs(f.closesAtLocal) + 59999;
+  const preview = {
+    id: smEditing?.id || 'preview',
+    name: f.name || 'Untitled special market',
+    tagline: f.tagline,
+    description: f.description,
+    buttonLabel: f.buttonLabel || f.name,
+    opensAt: Number.isNaN(opensMs) ? '' : new Date(opensMs).toISOString(),
+    closesAt: Number.isNaN(closesMs) ? '' : new Date(closesMs).toISOString(),
+    pickupDate: f.pickupDate,
+    pickupWindow: f.pickupWindow,
+    pickupLocation: f.pickupLocation,
+    pickupNotes: f.pickupNotes,
+    state: 'open',
+    items: f.items.filter(i => i.qty > 0 && productMap.has(i.sku)).map(i => ({
+      sku: i.sku,
+      name: productMap.get(i.sku).name,
+      price: Number(productMap.get(i.sku).price),
+      maxPerOrder: i.maxPerOrder,
+      currentQty: Math.max(0, i.qty - (soldMap.get(i.sku) || 0)),
+    })),
+  };
+  try {
+    localStorage.setItem(SM_PREVIEW_KEY, JSON.stringify(preview));
+  } catch {
+    showError($('sm-error'), 'Preview needs browser storage enabled.');
+    return;
+  }
+  window.open('/special-preorder.html?preview=1', '_blank');
+}
+
+async function loadSpecialOrders(id) {
+  const wrap = $('sm-orders');
+  closeSpecialEditor();
+  wrap.classList.remove('hidden');
+  wrap.innerHTML = '<p style="color:var(--text-secondary)">Loading orders...</p>';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/special-markets/${encodeURIComponent(id)}/orders`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load orders.');
+    renderSpecialOrders(id, data);
+  } catch (e) {
+    wrap.innerHTML = `<p class="form-error">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderSpecialOrders(id, data) {
+  const ev = data.specialMarket;
+  const money = c => `$${(Number(c || 0) / 100).toFixed(2)}`;
+  const totalItems = data.totals.reduce((s, t) => s + t.qty, 0);
+  const stuckCount = data.orders.filter(o => o.stuck).length;
+  const orderRows = data.orders.map(o => {
+    const cancelled = o.status === 'CANCELLED';
+    const statusText = cancelled ? 'Cancelled' : o.paymentStatus === 'PAID' ? 'Paid' : o.stuck ? 'Stuck: payment not confirmed' : 'Processing payment';
+    let action = '';
+    if (!cancelled && o.paymentStatus === 'PAID') {
+      action = `<button type="button" class="btn btn--sm btn--outline sm-btn-danger" data-sm-reject="${escapeHtml(o.orderId)}" data-sm-paid="1">Cancel</button>`;
+    } else if (!cancelled && o.stuck) {
+      action = `<button type="button" class="btn btn--sm btn--outline" data-sm-reject="${escapeHtml(o.orderId)}">Release</button>`;
+    }
+    return `<tr class="${cancelled ? 'sm-order-row--cancelled' : ''} ${o.stuck ? 'sm-order-row--stuck' : ''}">
+      <td><strong>${escapeHtml(o.name)}</strong><br><span style="font-size:var(--text-xs);color:var(--text-secondary)">#${escapeHtml(o.orderId.slice(0, 8))}</span></td>
+      <td>${escapeHtml(o.phone)}<br>${escapeHtml(o.email)}</td>
+      <td>${o.items.map(i => `${Number(i.qty)}&times; ${escapeHtml(i.name)}`).join('<br>')}</td>
+      <td>${money(o.totalPaidCents || o.totalCents)}</td>
+      <td>${escapeHtml(statusText)}</td>
+      <td>${escapeHtml(o.notes)}</td>
+      <td class="no-print">${action}</td>
+    </tr>`;
+  }).join('');
+
+  $('sm-orders').innerHTML = `
+    <div class="sm-orders__head">
+      <div>
+        <h3 class="print-heading" style="margin:0">${escapeHtml(ev.name)} &middot; Orders</h3>
+        <p style="margin:var(--space-1) 0 0;color:var(--text-secondary);font-size:var(--text-sm)">Pickup ${escapeHtml(smFormatDate(ev.pickupDate))}${ev.pickupWindow ? `, ${escapeHtml(ev.pickupWindow)}` : ''}${ev.pickupLocation ? ` &middot; ${escapeHtml(ev.pickupLocation)}` : ''}</p>
+      </div>
+      <div class="sm-actions no-print">
+        <button type="button" class="btn btn--sm btn--outline" data-sm-refresh-orders="${escapeHtml(id)}">Refresh</button>
+        <button type="button" class="btn btn--sm btn--primary" data-sm-print>Print</button>
+        <button type="button" class="btn btn--sm btn--outline" data-sm-close-orders>Close</button>
+      </div>
+    </div>
+    <div class="sm-orders__stats">
+      <div class="sm-stat"><strong>${data.paidOrderCount}</strong><span>Paid orders</span></div>
+      <div class="sm-stat"><strong>${totalItems}</strong><span>Items to bake</span></div>
+      <div class="sm-stat"><strong>${money(data.revenueCents)}</strong><span>Sales (before fees)</span></div>
+    </div>
+    ${stuckCount ? `<div class="banner banner--warning mb-4">${stuckCount} order${stuckCount > 1 ? 's are' : ' is'} stuck waiting on payment. Check Square for a matching charge. If there isn't one, click <strong>Release</strong> to put the items back in stock.</div>` : ''}
+    <h4 style="margin:var(--space-4) 0 var(--space-2)">Bake list</h4>
+    ${data.totals.length ? `<div class="sm-table-wrap"><table class="admin-table" style="min-width:0"><thead><tr><th>Product</th><th>Qty</th></tr></thead><tbody>
+      ${data.totals.map(t => `<tr><td>${escapeHtml(t.name)}</td><td>${Number(t.qty)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p style="color:var(--text-secondary)">No paid orders yet.</p>'}
+    <h4 style="margin:var(--space-6) 0 var(--space-2)">Customers</h4>
+    ${data.orders.length ? `<div class="sm-table-wrap"><table class="admin-table"><thead><tr>
+      <th>Customer</th><th>Contact</th><th>Items</th><th>Paid</th><th>Status</th><th>Comments</th><th class="no-print"></th>
+    </tr></thead><tbody>${orderRows}</tbody></table></div>` : '<p style="color:var(--text-secondary)">No orders yet.</p>'}`;
+}
+
+async function rejectSpecialOrder(orderId, wasPaid, eventId) {
+  const msg = wasPaid
+    ? 'Cancel this paid order?\n\nThe items go back in stock and the customer gets a cancellation email.\n\nYou must issue the refund yourself in the Square dashboard.'
+    : 'Release this stuck order? The items go back in stock.';
+  if (!confirm(msg)) return;
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: wasPaid ? '' : 'Payment was not completed.' }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Failed to cancel order.');
+    showToast(wasPaid ? 'Order cancelled. Refund it in Square.' : 'Released', 'success', 4000);
+    loadSpecialOrders(eventId);
+    loadSpecialMarkets();
+  } catch (e) {
+    showToast(e.message, 'error', 4000);
+  }
+}
+
+function initSpecialMarketsTab() {
+  const panel = $('panel-specialMarkets');
+  if (!panel) return;
+  let ordersEventId = null;
+
+  $('sm-new-btn').addEventListener('click', () => openSpecialEditor(null));
+  $('sm-cancel-btn').addEventListener('click', closeSpecialEditor);
+  $('sm-save-btn').addEventListener('click', () => saveSpecialMarketForm('DRAFT'));
+  $('sm-publish-btn').addEventListener('click', () => saveSpecialMarketForm('PUBLISHED'));
+  $('sm-unpublish-btn').addEventListener('click', () => saveSpecialMarketForm('DRAFT'));
+  $('sm-archive-btn').addEventListener('click', () => saveSpecialMarketForm('ARCHIVED'));
+  $('sm-delete-btn').addEventListener('click', deleteSpecialMarketForm);
+  $('sm-preview-btn').addEventListener('click', previewSpecialMarket);
+  $('sm-items').addEventListener('input', smUpdateItemTotal);
+  $('sm-items').addEventListener('change', (e) => {
+    // Checking an item with qty 0 gives it a starting quantity
+    if (e.target.matches('[data-sm-field="on"]') && e.target.checked) {
+      const qty = e.target.closest('tr').querySelector('[data-sm-field="qty"]');
+      if (!parseInt(qty.value, 10)) qty.value = 10;
+    }
+    smUpdateItemTotal();
+  });
+
+  panel.addEventListener('click', (e) => {
+    const edit = e.target.closest('[data-sm-edit]');
+    if (edit) { openSpecialEditor(smCache.find(ev => ev.id === edit.dataset.smEdit)); return; }
+    const orders = e.target.closest('[data-sm-orders]');
+    if (orders) { ordersEventId = orders.dataset.smOrders; loadSpecialOrders(ordersEventId); return; }
+    const refresh = e.target.closest('[data-sm-refresh-orders]');
+    if (refresh) { loadSpecialOrders(refresh.dataset.smRefreshOrders); return; }
+    if (e.target.closest('[data-sm-print]')) { window.print(); return; }
+    if (e.target.closest('[data-sm-close-orders]')) { $('sm-orders').classList.add('hidden'); return; }
+    const reject = e.target.closest('[data-sm-reject]');
+    if (reject) rejectSpecialOrder(reject.dataset.smReject, reject.dataset.smPaid === '1', ordersEventId);
   });
 }

@@ -10,6 +10,15 @@ import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
+import {
+  getPublicSpecialMarketSummaries,
+  getPublicSpecialMarket,
+  listSpecialMarkets,
+  saveSpecialMarket,
+  deleteSpecialMarket,
+  listSpecialMarketOrders,
+  inventoryKeyForOrderItem,
+} from './special-markets.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const s3 = new S3Client({});
@@ -159,9 +168,14 @@ async function getByTypeAndId(type, id) {
 
 // ── Public endpoint ──
 async function handlePublicRead() {
-  const [skipItems, announcementItems] = await Promise.all([
+  const [skipItems, announcementItems, specialMarkets] = await Promise.all([
     queryByType('SKIP_DATE'),
     queryByType('ANNOUNCEMENT'),
+    getPublicSpecialMarketSummaries().catch((err) => {
+      // Never let special-market issues break the core market config
+      console.error('Special market summary failed (non-fatal):', err);
+      return [];
+    }),
   ]);
 
   const now = new Date().toISOString().slice(0, 10);
@@ -182,7 +196,7 @@ async function handlePublicRead() {
       startDate: a.startDate,
     }));
 
-  return response(200, { _nocache: true, skipDates, announcements });
+  return response(200, { _nocache: true, skipDates, announcements, specialMarkets });
 }
 
 // ── Audit Log Helper ──
@@ -912,6 +926,8 @@ function resolveWeekStartDate(weekStartInput) {
 function buildPreorderSummary(orders, weekStart, weekEnd) {
   const activeOrders = orders
     .filter(order => String(order.status || 'NEW').toUpperCase() !== 'CANCELLED')
+    // Special market orders have their own stock + bake list in the Special Markets tab
+    .filter(order => order.orderType !== 'SPECIAL')
     .map(order => {
       const items = Array.isArray(order.items)
         ? order.items
@@ -1349,7 +1365,7 @@ async function rejectOrder(orderId, body = {}) {
         transactItems.push({
           Update: {
             TableName: TABLE_NAME,
-            Key: { type: 'PRODUCT_INVENTORY', id: item.sku },
+            Key: inventoryKeyForOrderItem(order, item.sku),
             UpdateExpression: 'SET currentQty = if_not_exists(currentQty, :zero) + :qty, updatedAt = :now',
             ExpressionAttributeValues: {
               ':zero': 0,
@@ -1392,6 +1408,9 @@ async function rejectOrder(orderId, body = {}) {
                 '',
                 'Your preorder with Knead & Bake TX has been cancelled.',
                 ...(rejectReason ? ['', `Reason: ${rejectReason}`] : []),
+                ...(order.orderType === 'SPECIAL' && order.paymentStatus === 'PAID'
+                  ? ['', 'Your card payment will be refunded to the original card within 5-10 business days.']
+                  : []),
                 '',
                 'Order details:',
                 itemsList,
@@ -1438,6 +1457,10 @@ export async function handler(event) {
 
   if (method === 'GET' && path === '/api/inventory') {
     return handlePublicInventory();
+  }
+
+  if (method === 'GET' && path.startsWith('/api/special-markets/')) {
+    return getPublicSpecialMarket(decodeURIComponent(path.split('/').pop()), response);
   }
 
   // Admin endpoints — auth is handled by the Lambda authorizer at API Gateway level
@@ -1491,6 +1514,22 @@ export async function handler(event) {
     const id = decodeURIComponent(path.split('/').pop());
     if (method === 'PUT') return updateNewsPost(id, body);
     if (method === 'DELETE') return deleteNewsPost(id);
+  }
+
+  // Special markets
+  if (path === '/api/admin/special-markets') {
+    if (method === 'GET') return listSpecialMarkets(response);
+    if (method === 'POST') return saveSpecialMarket(null, body, { response, writeAuditLog });
+  }
+
+  if (path.startsWith('/api/admin/special-markets/')) {
+    const segments = path.split('/');
+    if (path.endsWith('/orders') && method === 'GET') {
+      return listSpecialMarketOrders(decodeURIComponent(segments[segments.length - 2]), response);
+    }
+    const id = decodeURIComponent(segments.pop());
+    if (method === 'PUT') return saveSpecialMarket(id, body, { response, writeAuditLog });
+    if (method === 'DELETE') return deleteSpecialMarket(id, { response, writeAuditLog });
   }
 
   // Toggle payment status

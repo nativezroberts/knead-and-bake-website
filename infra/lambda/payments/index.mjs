@@ -8,6 +8,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { handleSpecialOrder } from './special-orders.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ssm = new SSMClient({});
@@ -350,9 +351,70 @@ ${buildFollowUpText()}`
   await Promise.all(emailTasks);
 }
 
+/**
+ * Charge a tokenized card via Square CreatePayment.
+ * Returns { ok: true, paymentId } or { ok: false, statusCode, message }.
+ */
+async function chargeSquareCard({ nonce, amountCents, idempotencyKey, note }) {
+  let accessToken, locationId, environment;
+  try {
+    ({ accessToken, locationId, environment } = await getSquareCredentials());
+  } catch (err) {
+    console.error('Failed to read Square credentials from SSM:', err);
+    return { ok: false, statusCode: 500, message: 'Payment service configuration error.' };
+  }
+
+  try {
+    const squareRes = await fetch(SQUARE_ENVIRONMENTS[environment], {
+      method: 'POST',
+      headers: {
+        'Square-Version': '2024-12-18',
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        source_id: nonce,
+        idempotency_key: idempotencyKey,
+        amount_money: {
+          amount: amountCents,
+          currency: 'USD',
+        },
+        location_id: locationId,
+        note,
+      }),
+    });
+
+    const squareData = await squareRes.json();
+
+    if (!squareRes.ok) {
+      console.error('Square API error:', JSON.stringify(squareData));
+      const errorDetail = squareData.errors?.[0]?.detail || 'Payment was declined. Please try again.';
+      return { ok: false, statusCode: 400, message: errorDetail };
+    }
+
+    return { ok: true, paymentId: squareData.payment?.id };
+  } catch (err) {
+    console.error('Square API call failed:', err);
+    return { ok: false, statusCode: 500, message: 'Payment processing failed. Please try again.' };
+  }
+}
+
 export async function handler(event) {
   const method = event.requestContext?.http?.method;
   const rawPath = event.rawPath || '';
+
+  if (method === 'POST' && rawPath === '/api/special-orders') {
+    return handleSpecialOrder(event, {
+      response,
+      chargeSquareCard,
+      processingFeeCents: PROCESSING_FEE_CENTS,
+      email: {
+        ses, FROM_EMAIL, OWNER_EMAIL, SEND_EMAILS, SES_SANDBOX,
+        isValidEmail, escapeHtml, buildCustomerEmailShell, buildItemsHtml,
+        buildReviewHtml, buildSocialHtml, buildFollowUpText, formatPickupDate,
+      },
+    });
+  }
 
   if (method === 'GET' && rawPath.endsWith('/config')) {
     try {
@@ -416,50 +478,16 @@ export async function handler(event) {
 
   const amountCents = order.totalCents + PROCESSING_FEE_CENTS;
 
-  // Get Square credentials
-  let accessToken, locationId, environment;
-  try {
-    ({ accessToken, locationId, environment } = await getSquareCredentials());
-  } catch (err) {
-    console.error('Failed to read Square credentials from SSM:', err);
-    return response(500, { message: 'Payment service configuration error.' });
+  const charge = await chargeSquareCard({
+    nonce,
+    amountCents,
+    idempotencyKey: orderId,
+    note: `Knead & Bake TX - Order #${orderId.slice(0, 8)}`,
+  });
+  if (!charge.ok) {
+    return response(charge.statusCode, { message: charge.message });
   }
-
-  // Call Square Payments API
-  let squarePaymentId;
-  try {
-    const squareRes = await fetch(SQUARE_ENVIRONMENTS[environment], {
-      method: 'POST',
-      headers: {
-        'Square-Version': '2024-12-18',
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        source_id: nonce,
-        idempotency_key: orderId,
-        amount_money: {
-          amount: amountCents,
-          currency: 'USD',
-        },
-        location_id: locationId,
-        note: `Knead & Bake TX - Order #${orderId.slice(0, 8)}`,
-      }),
-    });
-
-    const squareData = await squareRes.json();
-
-    if (!squareRes.ok) {
-      console.error('Square API error:', JSON.stringify(squareData));
-      const errorDetail = squareData.errors?.[0]?.detail || 'Payment was declined. Please try again.';
-      return response(400, { message: errorDetail });
-    }
-
-    squarePaymentId = squareData.payment?.id;
-  } catch (err) {
-    console.error('Square API call failed:', err);
-    return response(500, { message: 'Payment processing failed. Please try again.' });
-  }
+  const squarePaymentId = charge.paymentId;
 
   // Update order record with payment info
   const now = new Date().toISOString();

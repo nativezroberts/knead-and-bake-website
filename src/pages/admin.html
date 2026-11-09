@@ -257,6 +257,48 @@
         text-transform: uppercase;
       }
     }
+    /* -- Special Markets -- */
+    .sm-toolbar { margin:var(--space-4) 0 var(--space-6); }
+    .sm-cards { display:grid; gap:var(--space-4); }
+    .sm-card { border:1px solid var(--border-color); border-left:4px solid #8E2B3A; border-radius:var(--radius-md); padding:var(--space-4) var(--space-5); background:var(--color-white); display:grid; gap:var(--space-2); }
+    .sm-card__top { display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; justify-content:space-between; }
+    .sm-card__name { font-family:var(--font-heading); font-size:var(--text-lg); font-weight:700; margin:0; }
+    .sm-card__meta { font-size:var(--text-sm); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:var(--space-2) var(--space-5); }
+    .sm-card__actions { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-2); }
+    .sm-chip { display:inline-flex; align-items:center; padding:2px 10px; border-radius:999px; font-size:var(--text-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase; background:var(--color-gray-200); color:var(--text-primary); }
+    .sm-chip:empty { display:none; }
+    .sm-chip--open { background:#E3F1E1; color:#2E6B2A; }
+    .sm-chip--announced, .sm-chip--scheduled { background:#FBF0D3; color:#7A5A00; }
+    .sm-chip--soldout { background:#FBE3E6; color:#8E2B3A; }
+    .sm-chip--closed, .sm-chip--archived { background:var(--color-gray-200); color:var(--color-gray-700); }
+    .sm-form { margin-top:var(--space-6); border:2px solid #8E2B3A; border-radius:var(--radius-md); padding:var(--space-5); display:grid; gap:var(--space-5); }
+    .sm-form__head { display:flex; gap:var(--space-3); align-items:center; flex-wrap:wrap; }
+    .sm-fieldset { border:1px solid var(--border-color); border-radius:var(--radius-md); padding:var(--space-4); margin:0; min-width:0; }
+    .sm-fieldset legend { font-weight:700; padding:0 var(--space-2); }
+    .sm-legend-note { font-weight:normal; color:var(--text-secondary); font-size:var(--text-sm); }
+    .sm-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:0 var(--space-4); }
+    .sm-items { overflow-x:auto; }
+    .sm-items table { width:100%; border-collapse:collapse; min-width:560px; }
+    .sm-items th, .sm-items td { padding:var(--space-2) var(--space-3); border-bottom:1px solid var(--border-color); text-align:left; font-size:var(--text-sm); }
+    .sm-items th { font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); }
+    .sm-items input[type="number"] { width:80px; padding:6px 8px; border:1px solid var(--border-color); border-radius:4px; font-size:var(--text-sm); }
+    .sm-items tr.is-off td:not(:first-child) { opacity:.45; }
+    .sm-items__total td { font-weight:700; border-bottom:none; }
+    .sm-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+    .sm-btn-publish { background:#8E2B3A; color:#FFF4E6; }
+    .sm-btn-publish:hover { background:#6E1F2C; }
+    .sm-btn-danger { color:var(--color-error); border-color:var(--color-error); }
+    .sm-btn-danger:hover { background:var(--color-error); color:#fff; }
+    #sm-orders { margin-top:var(--space-6); }
+    .sm-orders__head { display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; justify-content:space-between; }
+    .sm-orders__stats { display:flex; flex-wrap:wrap; gap:var(--space-3); margin:var(--space-4) 0; }
+    .sm-stat { border:1px solid var(--border-color); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); min-width:140px; background:var(--color-white); }
+    .sm-stat strong { display:block; font-size:var(--text-xl); font-variant-numeric:tabular-nums; }
+    .sm-stat span { font-size:var(--text-xs); color:var(--text-secondary); text-transform:uppercase; letter-spacing:.05em; }
+    .sm-order-row--cancelled td { opacity:.5; }
+    .sm-order-row--stuck td { background:#FFF6E0; }
+    .sm-table-wrap { overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-md); margin-top:var(--space-3); }
+    .sm-table-wrap .admin-table { margin-top:0; min-width:760px; }
   </style>
 </head>
 <body class="page">
@@ -319,6 +361,7 @@
               <option value="news">News</option>
               <option value="inventory">Inventory</option>
               <option value="preorders">Preorders</option>
+              <option value="specialMarkets">Special Markets</option>
             </select>
           </div>
 
@@ -328,6 +371,7 @@
             <button role="tab" id="tab-news" aria-controls="panel-news" aria-selected="false" tabindex="-1">News</button>
             <button role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
             <button role="tab" id="tab-preorders" aria-controls="panel-preorders" aria-selected="false" tabindex="-1">Preorders</button>
+            <button role="tab" id="tab-specialMarkets" aria-controls="panel-specialMarkets" aria-selected="false" tabindex="-1">&#9733; Special Markets</button>
           </nav>
 
           <!-- Skip Dates -->
@@ -543,6 +587,111 @@
           </div>
           </div><!-- /panel-preorders -->
 
+          <!-- Special Markets -->
+          <div role="tabpanel" id="panel-specialMarkets" aria-labelledby="tab-specialMarkets" class="hidden">
+          <div class="admin-section">
+            <h2>Special Markets</h2>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm)">One-off preorder events (Thanksgiving, Christmas, etc.) with their own pickup date, order window, and quantities. Customers must pay by card when ordering. Weekly inventory is never affected.</p>
+
+            <div class="sm-toolbar no-print">
+              <button type="button" id="sm-new-btn" class="btn btn--primary btn--sm">+ New Special Market</button>
+            </div>
+
+            <div id="sm-list" class="no-print"></div>
+            <div id="sm-list-error" class="form-error hidden" role="alert"></div>
+
+            <!-- Editor -->
+            <form id="sm-form" class="admin-form sm-form hidden no-print" novalidate>
+              <div class="sm-form__head">
+                <h3 id="sm-form-title" style="margin:0">New Special Market</h3>
+                <span id="sm-form-state" class="sm-chip"></span>
+              </div>
+
+              <fieldset class="sm-fieldset">
+                <legend>Basics</legend>
+                <div class="sm-grid">
+                  <div class="form-group">
+                    <label for="sm-name" class="form-label form-label--required">Event name</label>
+                    <input type="text" id="sm-name" class="form-input" maxlength="80" placeholder="Thanksgiving Preorders" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="sm-button-label" class="form-label">Button text</label>
+                    <input type="text" id="sm-button-label" class="form-input" maxlength="40" placeholder="Thanksgiving Preorder">
+                    <p class="editor-hint">Shown on the cranberry SPECIAL button next to Preorder.</p>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="sm-tagline" class="form-label">Tagline</label>
+                  <input type="text" id="sm-tagline" class="form-input" maxlength="140" placeholder="Fresh holiday loaves for your Thanksgiving table">
+                </div>
+                <div class="form-group">
+                  <label for="sm-description" class="form-label">Description</label>
+                  <textarea id="sm-description" class="form-textarea" rows="3" maxlength="2000" placeholder="Anything customers should know (shown on the order page)."></textarea>
+                </div>
+              </fieldset>
+
+              <fieldset class="sm-fieldset">
+                <legend>Calendar <span class="sm-legend-note">(all times Central)</span></legend>
+                <div class="sm-grid">
+                  <div class="form-group">
+                    <label for="sm-opens-at" class="form-label form-label--required">Preorders open</label>
+                    <input type="datetime-local" id="sm-opens-at" class="form-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="sm-closes-at" class="form-label form-label--required">Preorders close</label>
+                    <input type="datetime-local" id="sm-closes-at" class="form-input" required>
+                    <p class="editor-hint">11:59 PM accepts orders through 11:59:59 PM.</p>
+                  </div>
+                  <div class="form-group">
+                    <label for="sm-announce-at" class="form-label">Show button early from <span style="font-weight:normal;color:var(--text-secondary)">(optional)</span></label>
+                    <input type="datetime-local" id="sm-announce-at" class="form-input">
+                    <p class="editor-hint">Blank = button shows "Opens &hellip;" as soon as you publish.</p>
+                  </div>
+                </div>
+                <div class="sm-grid">
+                  <div class="form-group">
+                    <label for="sm-pickup-date" class="form-label form-label--required">Pickup date</label>
+                    <input type="date" id="sm-pickup-date" class="form-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="sm-pickup-window" class="form-label">Pickup time</label>
+                    <input type="text" id="sm-pickup-window" class="form-input" maxlength="60" placeholder="9:00 AM &ndash; 12:00 PM">
+                  </div>
+                  <div class="form-group">
+                    <label for="sm-pickup-location" class="form-label">Pickup location</label>
+                    <input type="text" id="sm-pickup-location" class="form-input" maxlength="120" placeholder="Castell Street Market, New Braunfels">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="sm-pickup-notes" class="form-label">Pickup notes</label>
+                  <input type="text" id="sm-pickup-notes" class="form-input" maxlength="500" placeholder="e.g. Look for the cranberry tent by the entrance.">
+                </div>
+              </fieldset>
+
+              <fieldset class="sm-fieldset">
+                <legend>Items &amp; quantities</legend>
+                <p class="editor-hint" style="margin-top:0">Check the items to offer and set how many you'll bake. Prices come from the current menu.</p>
+                <div id="sm-items" class="sm-items"></div>
+              </fieldset>
+
+              <div id="sm-error" class="form-error hidden" role="alert"></div>
+
+              <div class="sm-actions">
+                <button type="button" id="sm-save-btn" class="btn btn--outline btn--sm">Save Draft</button>
+                <button type="button" id="sm-preview-btn" class="btn btn--outline btn--sm">Preview</button>
+                <button type="button" id="sm-publish-btn" class="btn btn--sm sm-btn-publish">Publish</button>
+                <button type="button" id="sm-unpublish-btn" class="btn btn--outline btn--sm hidden">Unpublish</button>
+                <button type="button" id="sm-archive-btn" class="btn btn--outline btn--sm hidden">Archive</button>
+                <button type="button" id="sm-delete-btn" class="btn btn--outline btn--sm sm-btn-danger hidden">Delete</button>
+                <button type="button" id="sm-cancel-btn" class="btn btn--outline btn--sm">Close</button>
+              </div>
+            </form>
+
+            <!-- Orders for one event -->
+            <div id="sm-orders" class="hidden"></div>
+          </div>
+          </div><!-- /panel-specialMarkets -->
+
         </div>
 
       </div>
@@ -596,7 +745,7 @@
 
   <script src="/src/js/config.js"></script>
   <script type="module">
-    import { initAdmin } from '/src/js/admin.js?v=4';
+    import { initAdmin } from '/src/js/admin.js?v=5';
     document.addEventListener('DOMContentLoaded', () => { initAdmin(); });
   </script>
 
