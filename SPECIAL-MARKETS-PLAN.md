@@ -1,6 +1,6 @@
 # Special Market Preorders — Implementation Plan
 
-**Status:** Phase 1 built on `feat/special-markets` (not deployed) · **Owner:** Zach · **Created:** 2026-11-09
+**Status:** Phase 1 shipped 2026-11-09 (API deployed; site via CI) · **Owner:** Zach · **Created:** 2026-11-09
 
 > **Decisions (2026-11-09):** Button style **Option D: Cranberry Holiday**. **Card only.** Items come **only from current menu products**, with event-specific quantities (no custom items, so prices come from inventory). The $0.30 card fee is kept. All event fields can be edited in admin.
 >
@@ -11,7 +11,7 @@
 > - Special orders are excluded from the weekly Preorders summary.
 > - Email is required on special orders.
 >
-> **Deploy only `KneadBakeApi`.** `cdk deploy --all` would strip the custom domain (see section 7).
+> Site-stack drift (section 7) was fixed upstream in #59; `cdk deploy --all` is safe again.
 **First use:** Thanksgiving 2026. Preorders open Tue 11/10 and close Sat 11/21 at 11:59 PM CT.
 
 ---
