@@ -518,7 +518,8 @@ export async function handler(event) {
     }
   }
 
-  // Check inventory availability for each item
+  // Check inventory availability for each item (inventory rows are the product catalog)
+  const inventoryBySku = new Map();
   if (CONFIG_TABLE) {
     for (const item of items) {
       const result = await ddb.send(new GetCommand({
@@ -527,7 +528,8 @@ export async function handler(event) {
       }));
 
       const inv = result.Item;
-      if (!inv || !inv.available) {
+      if (inv) inventoryBySku.set(item.sku, inv);
+      if (!inv || !inv.available || inv.archived) {
         return response(400, {
           message: `${item.name} is not available for preorder.`,
           unavailableItems: [item.sku],
@@ -546,18 +548,20 @@ export async function handler(event) {
     }
   }
 
-  // Build order record with server-side prices from menu.json
+  // Build order record with server-side prices: inventory price (editable in admin),
+  // falling back to the bundled menu.json for legacy rows without a price.
   const orderId = randomUUID();
   const orderItems = items.map(i => {
     const sku = sanitize(i.sku);
-    const price = PRICE_MAP[sku];
+    const inv = inventoryBySku.get(i.sku);
+    const invPrice = Number(inv?.price);
+    const price = Number.isFinite(invPrice) && invPrice > 0 ? invPrice : PRICE_MAP[sku];
     if (price == null) {
-      // Should not happen if frontend and menu.json are in sync
       console.error(`Unknown SKU price: ${sku}`);
     }
     return {
       sku,
-      name: sanitize(i.name),
+      name: sanitize(inv?.name || i.name),
       qty: Math.min(Math.max(Math.round(i.qty), 1), 99),
       price: price ?? 0,
     };

@@ -36,7 +36,10 @@ export function renderCard({ name, description, price, allergens, image, availab
 
   const safeName = escapeHtml(name);
   const safeImage = escapeHtml(image || '/images/placeholder-bread.svg');
-  const safeImageWebp = image ? escapeHtml(image.replace(/\.(png|jpe?g)$/i, '.webp')) : '';
+  // Only the built-in /images/ photos ship a .webp twin; admin-uploaded photos are a single file
+  const safeImageWebp = image && image.startsWith('/images/') && /\.(png|jpe?g)$/i.test(image)
+    ? escapeHtml(image.replace(/\.(png|jpe?g)$/i, '.webp'))
+    : '';
 
   return `
     <article class="card${displayStatus !== 'available' ? ' card--unavailable' : ''}">

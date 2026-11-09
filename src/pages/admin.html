@@ -301,6 +301,23 @@
     .sm-order-row--stuck td { background:#FFF6E0; }
     .sm-table-wrap { overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-md); margin-top:var(--space-3); }
     .sm-table-wrap .admin-table { margin-top:0; min-width:760px; }
+    /* -- Product catalog form -- */
+    .product-form { margin-bottom:var(--space-6); border:2px solid var(--color-brown); border-radius:var(--radius-md); padding:var(--space-5); display:grid; gap:var(--space-4); }
+    .product-form__grid { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:var(--space-6); }
+    .product-form__fields { min-width:0; }
+    .product-form__flags { display:flex; flex-wrap:wrap; gap:var(--space-2) var(--space-5); font-size:var(--text-sm); }
+    .product-form__flags label { display:flex; gap:var(--space-2); align-items:center; }
+    .product-form__photo { display:flex; flex-direction:column; gap:var(--space-2); align-items:stretch; }
+    .product-photo { aspect-ratio:4/3; width:100%; border:2px dashed var(--border-color); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--color-gray-100); }
+    .product-photo img { width:100%; height:100%; object-fit:cover; }
+    .product-photo__empty { color:var(--text-secondary); font-size:var(--text-sm); }
+    .product-photo__btn { cursor:pointer; text-align:center; }
+    .visually-hidden { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .inv-product { display:flex; gap:var(--space-3); align-items:center; }
+    .inv-thumb { width:44px; height:33px; border-radius:4px; object-fit:cover; flex:none; background:var(--color-gray-100); }
+    .inv-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:1px 6px; border-radius:999px; background:var(--color-gray-200); color:var(--text-secondary); margin-left:4px; }
+    .inv-row--archived td { opacity:.55; }
+    @media (max-width: 720px) { .product-form__grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body class="page">
@@ -534,9 +551,72 @@
             <p style="color:var(--text-secondary);font-size:var(--text-sm)">Manage weekly production quantities for each product. When current quantity reaches 0, the item cannot be preordered. Reset inventory at the start of each week.</p>
 
             <div style="margin-bottom:var(--space-6);display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap">
-              <button id="reset-inventory-btn" class="btn btn--primary btn--sm">Reset All to Weekly Defaults</button>
-              <span style="color:var(--text-secondary);font-size:var(--text-sm)">Use this at the start of each preorder week.</span>
+              <button type="button" id="product-new-btn" class="btn btn--primary btn--sm">+ Add New Product</button>
+              <button id="reset-inventory-btn" class="btn btn--outline btn--sm">Reset All to Weekly Defaults</button>
+              <span style="color:var(--text-secondary);font-size:var(--text-sm)">Use reset at the start of each preorder week.</span>
+              <label style="display:flex;gap:var(--space-2);align-items:center;font-size:var(--text-sm);margin-left:auto">
+                <input type="checkbox" id="inventory-show-archived" data-no-dirty> Show archived
+              </label>
             </div>
+
+            <!-- Add / edit product -->
+            <form id="product-form" class="admin-form product-form hidden" novalidate>
+              <h3 id="product-form-title" style="margin:0">Add New Product</h3>
+              <div class="product-form__grid">
+                <div class="product-form__fields">
+                  <div class="form-group">
+                    <label for="product-name" class="form-label form-label--required">Product name</label>
+                    <input type="text" id="product-name" class="form-input" maxlength="80" placeholder="Honey Oat Sourdough" required>
+                  </div>
+                  <div class="sm-grid">
+                    <div class="form-group">
+                      <label for="product-category" class="form-label form-label--required">Category</label>
+                      <select id="product-category" class="form-input" required></select>
+                    </div>
+                    <div class="form-group">
+                      <label for="product-price" class="form-label form-label--required">Price ($)</label>
+                      <input type="number" id="product-price" class="form-input" min="0.5" max="500" step="0.01" placeholder="13.00" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="product-weekly-qty" class="form-label">Weekly qty</label>
+                      <input type="number" id="product-weekly-qty" class="form-input" min="0" max="9999" step="1" value="0">
+                      <p class="editor-hint">How many you bake each week. Reset sets current qty to this.</p>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="product-description" class="form-label">Description</label>
+                    <textarea id="product-description" class="form-textarea" rows="3" maxlength="500" placeholder="Shown on the menu card."></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label for="product-allergens" class="form-label">Allergens</label>
+                    <input type="text" id="product-allergens" class="form-input" maxlength="200" placeholder="wheat, dairy">
+                    <p class="editor-hint">Separate with commas. Shown as "Contains: ...".</p>
+                  </div>
+                  <div class="product-form__flags">
+                    <label><input type="checkbox" id="product-available"> Available to order</label>
+                    <label><input type="checkbox" id="product-top-seller"> Top seller (home page)</label>
+                    <label><input type="checkbox" id="product-seasonal"> Seasonal</label>
+                  </div>
+                </div>
+                <div class="product-form__photo">
+                  <span class="form-label">Photo</span>
+                  <div class="product-photo" id="product-photo-preview">
+                    <span class="product-photo__empty">No photo yet</span>
+                  </div>
+                  <label for="product-photo-input" class="btn btn--outline btn--sm product-photo__btn">Upload photo</label>
+                  <input type="file" id="product-photo-input" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" class="visually-hidden" data-no-dirty>
+                  <button type="button" id="product-photo-remove" class="btn btn--outline btn--sm hidden">Remove photo</button>
+                  <p id="product-photo-status" class="editor-hint" role="status"></p>
+                  <p class="editor-hint">Phone photos are fine. They're resized automatically. A 4:3 landscape shot looks best.</p>
+                </div>
+              </div>
+              <div id="product-error" class="form-error hidden" role="alert"></div>
+              <div class="sm-actions">
+                <button type="submit" id="product-save-btn" class="btn btn--primary btn--sm">Add Product</button>
+                <button type="button" id="product-archive-btn" class="btn btn--outline btn--sm sm-btn-danger hidden">Archive</button>
+                <button type="button" id="product-cancel-btn" class="btn btn--outline btn--sm">Cancel</button>
+              </div>
+            </form>
 
             <div id="inventory-list"></div>
             <div id="inventory-error" class="form-error hidden" role="alert"></div>

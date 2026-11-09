@@ -96,6 +96,8 @@ jobs:
         run: |
           aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} \
             --delete \
+            --exclude "news-images/*" \
+            --exclude "product-images/*" \
             --cache-control "public, max-age=31536000, immutable" \
             --exclude "*.html" \
             --exclude "sitemap.xml" \

@@ -60,14 +60,38 @@ export async function loadProducts() {
     (inventoryData.products || []).map(p => [p.sku, p])
   );
 
-  const items = menuData.items.map(item => {
+  // Inventory (editable in admin) is the product catalog. menu.json supplies defaults
+  // for the original products; any field set in inventory overrides it. Products added
+  // from the admin page exist only in inventory and are appended to their category.
+  // Archived products are left out of the public inventory response entirely.
+  const menuSkus = new Set(menuData.items.map(i => i.sku));
+  const hasInventory = inventoryMap.size > 0;
+  const merged = [
+    // If the inventory API is down, fall back to the full static menu
+    ...menuData.items.filter(item => !hasInventory || inventoryMap.has(item.sku)),
+    ...[...inventoryMap.values()].filter(p => !menuSkus.has(p.sku)),
+  ];
+
+  const items = merged.map(item => {
     const inv = inventoryMap.get(item.sku);
-    const qty = inv ? inv.currentQty : 0;
+    const qty = inv ? Number(inv.currentQty) || 0 : 0;
     // Inventory availability is authoritative when present.
     // menu.json availability is used as fallback when inventory entry is missing.
     const available = inv ? !!inv.available : !!item.available;
-    return {
+    const overrides = {};
+    for (const field of ['name', 'price', 'category', 'description', 'allergens', 'image', 'seasonal', 'topSeller']) {
+      const v = inv?.[field];
+      if (v !== undefined && v !== null && v !== '') overrides[field] = v;
+    }
+    const product = {
+      description: '',
+      allergens: [],
       ...item,
+      ...overrides,
+    };
+    product.price = Number(product.price) || 0;
+    return {
+      ...product,
       available,
       qty,
       currentQty: qty, // alias kept for renderOrderItem compat

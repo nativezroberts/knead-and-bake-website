@@ -296,6 +296,11 @@ export async function saveSpecialMarket(id, body, { response, writeAuditLog }) {
   }
 
   const invMap = existing ? await getInventoryForEvent(eventId) : new Map();
+  for (const item of value.items) {
+    if (products.get(item.sku).archived && item.qty > 0 && !invMap.has(item.sku)) {
+      return response(400, { message: `${products.get(item.sku).name} is archived and can't be added.` });
+    }
+  }
   const now = new Date().toISOString();
   const keptItems = value.items.filter(i => i.qty > 0 || (invMap.get(i.sku)?.totalQty || 0) > 0);
   const transactItems = [];

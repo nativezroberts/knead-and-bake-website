@@ -169,7 +169,7 @@ function updateInventoryBadge() {
   const tab = $('tab-inventory');
   if (!tab) return;
   let badge = tab.querySelector('.tab-badge');
-  const lowCount = inventoryCache.filter(p => p.available && p.currentQty <= 3).length;
+  const lowCount = inventoryCache.filter(p => p.available && !p.archived && p.currentQty <= 3).length;
   if (lowCount > 0) {
     if (!badge) {
       badge = document.createElement('span');
@@ -1390,13 +1390,17 @@ async function sendPreorderSummaryEmail() {
 // -- Product Inventory --
 async function loadInventory() {
   const container = $('inventory-list');
-  container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
+  if (!inventoryCache.length) container.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
 
   try {
-    const res = await authFetch(`${API_BASE}/api/admin/inventory`);
+    const [res] = await Promise.all([
+      authFetch(`${API_BASE}/api/admin/inventory`),
+      loadMenuDefaults(),
+    ]);
     const data = await res.json();
-    const products = data.products || [];
+    const products = sortProducts(data.products || []);
     inventoryCache = products;
+    smProducts = []; // special markets editor re-reads the catalog
 
     if (products.length === 0) {
       container.innerHTML = `
@@ -1409,6 +1413,10 @@ async function loadInventory() {
       if (initBtn) initBtn.addEventListener('click', initInventory);
       return;
     }
+
+    const showArchived = $('inventory-show-archived')?.checked;
+    const visible = products.filter(p => showArchived || !p.archived);
+    const archivedCount = products.length - products.filter(p => !p.archived).length;
 
     container.innerHTML = `
       <table class="admin-table">
@@ -1423,22 +1431,38 @@ async function loadInventory() {
           </tr>
         </thead>
         <tbody>
-          ${products.map(p => `
-            <tr data-inv-sku="${p.sku}">
-              <td>${p.name}</td>
-              <td>${p.sku}</td>
-              <td><input type="number" min="0" value="${p.weeklyQty}" data-field="weeklyQty" style="width:80px;padding:4px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:var(--text-sm)"></td>
-              <td><input type="number" min="0" value="${p.currentQty}" data-field="currentQty" style="width:80px;padding:4px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:var(--text-sm)"></td>
-              <td><input type="checkbox" ${p.available ? 'checked' : ''} data-field="available"></td>
-              <td><button class="btn btn--sm btn--primary" onclick="saveInventoryItem('${p.sku}')">Save</button></td>
-            </tr>
-          `).join('')}
+          ${visible.map(p => {
+            const d = productWithDefaults(p);
+            const thumb = d.image
+              ? `<img class="inv-thumb" src="${escapeHtml(d.image)}" alt="" loading="lazy">`
+              : '<span class="inv-thumb" aria-hidden="true"></span>';
+            const tags = [
+              p.archived ? '<span class="inv-tag">Archived</span>' : '',
+              p.custom ? '<span class="inv-tag">New</span>' : '',
+            ].join('');
+            const sku = escapeHtml(p.sku);
+            return `
+            <tr data-inv-sku="${sku}" class="${p.archived ? 'inv-row--archived' : ''}">
+              <td><span class="inv-product">${thumb}<span>${escapeHtml(d.name)} <span style="color:var(--text-secondary);font-size:var(--text-xs)">$${Number(d.price).toFixed(2)}</span>${tags}</span></span></td>
+              <td>${sku}</td>
+              <td><input type="number" min="0" value="${Number(p.weeklyQty) || 0}" data-field="weeklyQty" style="width:80px;padding:4px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:var(--text-sm)" ${p.archived ? 'disabled' : ''}></td>
+              <td><input type="number" min="0" value="${Number(p.currentQty) || 0}" data-field="currentQty" style="width:80px;padding:4px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:var(--text-sm)" ${p.archived ? 'disabled' : ''}></td>
+              <td><input type="checkbox" ${p.available ? 'checked' : ''} data-field="available" ${p.archived ? 'disabled' : ''}></td>
+              <td>
+                ${p.archived
+                  ? `<button class="btn btn--sm btn--outline" data-product-restore="${sku}">Restore</button>`
+                  : `<button class="btn btn--sm btn--primary" onclick="saveInventoryItem('${sku}')">Save</button>
+                     <button class="btn btn--sm btn--outline" data-product-edit="${sku}">Edit details</button>`}
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
+      ${archivedCount && !showArchived ? `<p class="editor-hint">${archivedCount} archived product${archivedCount > 1 ? 's' : ''} hidden.</p>` : ''}
     `;
     updateInventoryBadge();
   } catch (e) {
-    container.innerHTML = `<p class="form-error">${e.message}</p>`;
+    container.innerHTML = `<p class="form-error">${escapeHtml(e.message)}</p>`;
   }
 }
 
@@ -1573,6 +1597,7 @@ export function initAdmin() {
   $('reset-inventory-btn').addEventListener('click', resetInventory);
 
   initSpecialMarketsTab();
+  initProductCatalog();
 
   initNewsEditor();
   initAnnouncementEditor();
@@ -1643,7 +1668,7 @@ async function smEnsureProducts() {
   if (smProducts.length) return smProducts;
   const res = await authFetch(`${API_BASE}/api/admin/inventory`);
   const data = await res.json();
-  smProducts = (data.products || []).slice().sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name));
+  smProducts = (data.products || []).filter(p => !p.archived).slice().sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name));
   if (!smProducts.length) throw new Error('No products found. Open the Inventory tab and click "Initialize from Menu" first.');
   return smProducts;
 }
@@ -2015,5 +2040,236 @@ function initSpecialMarketsTab() {
     if (e.target.closest('[data-sm-close-orders]')) { $('sm-orders').classList.add('hidden'); return; }
     const reject = e.target.closest('[data-sm-reject]');
     if (reject) rejectSpecialOrder(reject.dataset.smReject, reject.dataset.smPaid === '1', ordersEventId);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Product catalog — add new products, edit details, upload photos, archive
+// ═══════════════════════════════════════════════════════════════════
+
+const PRODUCT_MAX_PHOTO_PX = 1200;
+let menuDefaults = null; // { categories, bySku } from /content/menu.json
+let productEditing = null; // product being edited, or null for new
+let productImage = '';
+
+async function loadMenuDefaults() {
+  if (menuDefaults) return menuDefaults;
+  try {
+    const res = await fetch('/content/menu.json', { cache: 'no-cache' });
+    const data = await res.json();
+    menuDefaults = {
+      categories: data.categories || [],
+      order: new Map((data.items || []).map((i, idx) => [i.sku, idx])),
+      bySku: new Map((data.items || []).map(i => [i.sku, i])),
+    };
+  } catch {
+    menuDefaults = { categories: [], order: new Map(), bySku: new Map() };
+  }
+  return menuDefaults;
+}
+
+/** Inventory fields override menu.json defaults (same rule as the public site). */
+function productWithDefaults(p) {
+  const base = menuDefaults?.bySku.get(p.sku) || {};
+  const merged = { description: '', allergens: [], image: '', seasonal: false, topSeller: false, ...base };
+  for (const [k, v] of Object.entries(p)) {
+    if (v !== undefined && v !== null && v !== '') merged[k] = v;
+  }
+  return merged;
+}
+
+function sortProducts(products) {
+  const catOrder = new Map((menuDefaults?.categories || []).map((c, i) => [c.id, i]));
+  const menuOrder = menuDefaults?.order || new Map();
+  return products.slice().sort((a, b) =>
+    (catOrder.get(a.category) ?? 99) - (catOrder.get(b.category) ?? 99)
+    || (menuOrder.get(a.sku) ?? 999) - (menuOrder.get(b.sku) ?? 999)
+    || String(a.createdAt || '').localeCompare(String(b.createdAt || ''))
+    || a.sku.localeCompare(b.sku));
+}
+
+function setProductPhoto(url) {
+  productImage = url || '';
+  const preview = $('product-photo-preview');
+  preview.innerHTML = productImage
+    ? `<img src="${escapeHtml(productImage)}" alt="Product photo preview">`
+    : '<span class="product-photo__empty">No photo yet</span>';
+  $('product-photo-remove').classList.toggle('hidden', !productImage);
+}
+
+async function openProductForm(product = null) {
+  await loadMenuDefaults();
+  productEditing = product;
+  const d = product ? productWithDefaults(product) : null;
+  const form = $('product-form');
+  $('product-error').classList.add('hidden');
+  $('product-photo-status').textContent = '';
+  $('product-form-title').textContent = product ? `Edit: ${d.name} (${product.sku})` : 'Add New Product';
+  $('product-save-btn').textContent = product ? 'Save Changes' : 'Add Product';
+  $('product-archive-btn').classList.toggle('hidden', !product);
+
+  $('product-category').innerHTML = menuDefaults.categories
+    .map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+  $('product-category').value = d?.category || menuDefaults.categories[0]?.id || '';
+  // A product's category is part of its SKU; keep it fixed after creation
+  $('product-category').disabled = !!product;
+  $('product-name').value = d?.name || '';
+  $('product-price').value = d ? Number(d.price).toFixed(2) : '';
+  $('product-weekly-qty').value = product ? (Number(product.weeklyQty) || 0) : 0;
+  $('product-description').value = d?.description || '';
+  $('product-allergens').value = (d?.allergens || ['wheat']).join(', ');
+  $('product-available').checked = product ? !!product.available : true;
+  $('product-top-seller').checked = !!d?.topSeller;
+  $('product-seasonal').checked = !!d?.seasonal;
+  setProductPhoto(d?.image || '');
+
+  form.classList.remove('hidden');
+  clearDirty();
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('product-name').focus();
+}
+
+function closeProductForm() {
+  $('product-form').classList.add('hidden');
+  productEditing = null;
+  clearDirty();
+}
+
+/** Resize to fit 1200px and re-encode (WebP when the browser supports it, else JPEG). */
+async function prepareProductPhoto(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error('That photo format could not be read. Please choose a JPG or PNG.');
+  }
+  const scale = Math.min(1, PRODUCT_MAX_PHOTO_PX / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close?.();
+  const toBlob = (type, q) => new Promise(resolve => canvas.toBlob(resolve, type, q));
+  let blob = await toBlob('image/webp', 0.82);
+  if (!blob || blob.type !== 'image/webp') blob = await toBlob('image/jpeg', 0.85);
+  if (!blob) throw new Error('Could not process the photo.');
+  return blob;
+}
+
+async function uploadProductPhoto(file) {
+  const status = $('product-photo-status');
+  const errorEl = $('product-error');
+  errorEl.classList.add('hidden');
+  status.textContent = 'Preparing photo...';
+  try {
+    if (file.size > 25 * 1024 * 1024) throw new Error('That photo is over 25 MB. Please choose a smaller one.');
+    const blob = await prepareProductPhoto(file);
+    if (blob.size > MAX_IMAGE_SIZE_BYTES) throw new Error('Photo is still over 5 MB after resizing. Try a different photo.');
+    status.textContent = 'Uploading...';
+    const baseName = ($('product-name').value.trim() || file.name.replace(/\.[^.]+$/, '') || 'product');
+    const prepRes = await authFetch(`${API_BASE}/api/admin/products/upload-url`, {
+      method: 'POST',
+      body: JSON.stringify({ fileName: baseName, contentType: blob.type, size: blob.size }),
+    });
+    const prep = await prepRes.json();
+    if (!prepRes.ok) throw new Error(prep.message || 'Could not prepare the upload.');
+    const putRes = await fetch(prep.uploadUrl, { method: 'PUT', headers: { 'Content-Type': blob.type }, body: blob });
+    if (!putRes.ok) throw new Error('Photo upload failed. Please try again.');
+    setProductPhoto(prep.publicUrl);
+    markDirty();
+    status.textContent = `Uploaded (${Math.round(blob.size / 1024)} KB). Click ${productEditing ? 'Save Changes' : 'Add Product'} to keep it.`;
+  } catch (e) {
+    status.textContent = '';
+    showError(errorEl, e.message);
+  } finally {
+    $('product-photo-input').value = '';
+  }
+}
+
+async function saveProductForm(e) {
+  e.preventDefault();
+  const errorEl = $('product-error');
+  errorEl.classList.add('hidden');
+
+  const payload = {
+    name: $('product-name').value.trim(),
+    price: Number($('product-price').value),
+    weeklyQty: parseInt($('product-weekly-qty').value, 10) || 0,
+    description: $('product-description').value.trim(),
+    allergens: $('product-allergens').value,
+    available: $('product-available').checked,
+    topSeller: $('product-top-seller').checked,
+    seasonal: $('product-seasonal').checked,
+    image: productImage,
+  };
+  if (!productEditing) payload.category = $('product-category').value;
+
+  if (payload.name.length < 2) return showError(errorEl, 'Product name is required.');
+  if (!(payload.price >= 0.5)) return showError(errorEl, 'Enter a price of at least $0.50.');
+
+  const btn = $('product-save-btn');
+  btn.disabled = true;
+  try {
+    const isNew = !productEditing;
+    if (isNew) payload.currentQty = payload.weeklyQty;
+    const res = await authFetch(
+      isNew ? `${API_BASE}/api/admin/products` : `${API_BASE}/api/admin/inventory/${encodeURIComponent(productEditing.sku)}`,
+      { method: isNew ? 'POST' : 'PUT', body: JSON.stringify(payload) },
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Failed to save product.');
+    showToast(isNew ? `Added ${data.product.name} (${data.product.sku})` : 'Product saved', 'success', 3500);
+    closeProductForm();
+    await loadInventory();
+  } catch (err) {
+    showError(errorEl, err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function setProductArchived(sku, archived) {
+  const p = inventoryCache.find(x => x.sku === sku);
+  const name = p ? productWithDefaults(p).name : sku;
+  const msg = archived
+    ? `Archive "${name}"?\n\nIt disappears from the menu, home page, and preorder page and can't be ordered. Past orders are not affected. You can restore it later.`
+    : `Restore "${name}"? It comes back unavailable. Check "Available" when you're ready to sell it.`;
+  if (!confirm(msg)) return;
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/inventory/${encodeURIComponent(sku)}`, {
+      method: 'PUT',
+      body: JSON.stringify(archived ? { archived: true } : { archived: false, available: false }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Failed to update product.');
+    showToast(archived ? 'Archived' : 'Restored');
+    closeProductForm();
+    loadInventory();
+  } catch (e) {
+    showToast(e.message, 'error', 4000);
+  }
+}
+
+function initProductCatalog() {
+  if (!$('product-form')) return;
+  $('product-new-btn').addEventListener('click', () => openProductForm(null));
+  $('product-cancel-btn').addEventListener('click', closeProductForm);
+  $('product-form').addEventListener('submit', saveProductForm);
+  $('product-archive-btn').addEventListener('click', () => productEditing && setProductArchived(productEditing.sku, true));
+  $('product-photo-input').addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) uploadProductPhoto(file);
+  });
+  $('product-photo-remove').addEventListener('click', () => {
+    setProductPhoto('');
+    markDirty();
+    $('product-photo-status').textContent = 'Photo removed. Save to apply.';
+  });
+  $('inventory-show-archived').addEventListener('change', loadInventory);
+  $('inventory-list').addEventListener('click', (e) => {
+    const edit = e.target.closest('[data-product-edit]');
+    if (edit) { openProductForm(inventoryCache.find(p => p.sku === edit.dataset.productEdit)); return; }
+    const restore = e.target.closest('[data-product-restore]');
+    if (restore) setProductArchived(restore.dataset.productRestore, false);
   });
 }

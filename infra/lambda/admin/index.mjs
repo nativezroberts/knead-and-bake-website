@@ -19,6 +19,7 @@ import {
   listSpecialMarketOrders,
   inventoryKeyForOrderItem,
 } from './special-markets.mjs';
+import { createProduct, updateProduct, toProductResponse } from './products.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const s3 = new S3Client({});
@@ -31,6 +32,7 @@ const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
 const SEND_EMAILS = process.env.SEND_EMAILS !== 'false';
 const SITE_BUCKET = process.env.SITE_BUCKET;
 const SITE_UPLOAD_PREFIX = process.env.SITE_UPLOAD_PREFIX || 'news-images';
+const PRODUCT_UPLOAD_PREFIX = 'product-images';
 const MAX_SKIP_DATES = 365;
 const MAX_ANNOUNCEMENTS = 50;
 const MAX_NEWS_POSTS = 200;
@@ -661,7 +663,7 @@ async function deleteNewsPost(id) {
   return response(200, { message: 'News post deleted.' });
 }
 
-async function createNewsImageUploadUrl(body) {
+async function createImageUploadUrl(body, prefix = SITE_UPLOAD_PREFIX) {
   if (!SITE_BUCKET) {
     return response(500, { message: 'Upload bucket is not configured.' });
   }
@@ -690,7 +692,7 @@ async function createNewsImageUploadUrl(body) {
   const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
   const safeBaseName = slugify(nameWithoutExt) || 'image';
   const datePrefix = new Date().toISOString().slice(0, 10);
-  const key = `${SITE_UPLOAD_PREFIX}/${datePrefix}/${randomUUID()}-${safeBaseName}.${ext}`;
+  const key = `${prefix}/${datePrefix}/${randomUUID()}-${safeBaseName}.${ext}`;
 
   try {
     const putCommand = new PutObjectCommand({
@@ -715,13 +717,8 @@ async function createNewsImageUploadUrl(body) {
 async function handlePublicInventory() {
   const items = await queryByType('PRODUCT_INVENTORY');
   const products = items
-    .map(i => ({
-      sku: i.id,
-      name: i.name,
-      price: i.price,
-      currentQty: i.currentQty,
-      available: i.available,
-    }));
+    .filter(i => !i.archived)
+    .map(i => toProductResponse(i));
   return response(200, { products });
 }
 
@@ -730,76 +727,8 @@ async function listProductInventory() {
   const items = await queryByType('PRODUCT_INVENTORY');
   return response(200, {
     _nocache: true,
-    products: items.map(i => ({
-      sku: i.id,
-      name: i.name,
-      weeklyQty: i.weeklyQty,
-      currentQty: i.currentQty,
-      price: i.price,
-      category: i.category || '',
-      available: i.available,
-      updatedAt: i.updatedAt,
-      createdAt: i.createdAt,
-    })),
+    products: items.map(i => toProductResponse(i, { admin: true })),
   });
-}
-
-async function updateProductInventory(sku, body) {
-  const existing = await getByTypeAndId('PRODUCT_INVENTORY', sku);
-  if (!existing) {
-    return response(404, { message: 'Product inventory not found.' });
-  }
-
-  const expNames = {
-    '#pkType': 'type',
-    '#pkId': 'id',
-  };
-  const expValues = {};
-  const setClauses = ['updatedAt = :now'];
-  expValues[':now'] = new Date().toISOString();
-
-  if (body.weeklyQty !== undefined) {
-    const qty = parseInt(body.weeklyQty, 10);
-    if (!Number.isFinite(qty) || qty < 0) {
-      return response(400, { message: 'Weekly quantity must be a non-negative integer.' });
-    }
-    setClauses.push('weeklyQty = :wq');
-    expValues[':wq'] = qty;
-  }
-
-  if (body.currentQty !== undefined) {
-    const qty = parseInt(body.currentQty, 10);
-    if (!Number.isFinite(qty) || qty < 0) {
-      return response(400, { message: 'Current quantity must be a non-negative integer.' });
-    }
-    setClauses.push('currentQty = :cq');
-    expValues[':cq'] = qty;
-  }
-
-  if (body.available !== undefined) {
-    setClauses.push('available = :avl');
-    expValues[':avl'] = !!body.available;
-  }
-
-  try {
-    const result = await ddb.send(new UpdateCommand({
-      TableName: TABLE_NAME,
-      Key: { type: 'PRODUCT_INVENTORY', id: sku },
-      UpdateExpression: 'SET ' + setClauses.join(', '),
-      ConditionExpression: 'attribute_exists(#pkType) AND attribute_exists(#pkId)',
-      ExpressionAttributeNames: expNames,
-      ExpressionAttributeValues: expValues,
-      ReturnValues: 'ALL_NEW',
-    }));
-    await writeAuditLog('UPDATE', 'PRODUCT_INVENTORY', sku, { fields: Object.keys(body) });
-    return response(200, { product: result.Attributes });
-  } catch (e) {
-    if (e.name === 'ConditionalCheckFailedException') {
-      return response(404, { message: 'Product inventory not found.' });
-    }
-    console.error('Update error:', e);
-    return response(500, { message: 'Failed to update product inventory.' });
-  }
 }
 
 async function resetAllInventory() {
@@ -1506,7 +1435,7 @@ export async function handler(event) {
 
   // News posts
   if (path === '/api/admin/news/upload-url' && method === 'POST') {
-    return createNewsImageUploadUrl(body);
+    return createImageUploadUrl(body);
   }
 
   if (path === '/api/admin/news') {
@@ -1572,7 +1501,16 @@ export async function handler(event) {
 
   if (path.startsWith('/api/admin/inventory/') && !path.includes('/reset')) {
     const sku = decodeURIComponent(path.split('/').pop());
-    if (method === 'PUT') return updateProductInventory(sku, body);
+    if (method === 'PUT') return updateProduct(sku, body, { response, writeAuditLog });
+  }
+
+  // Product catalog (create new products + photo uploads)
+  if (path === '/api/admin/products' && method === 'POST') {
+    return createProduct(body, { response, writeAuditLog });
+  }
+
+  if (path === '/api/admin/products/upload-url' && method === 'POST') {
+    return createImageUploadUrl(body, PRODUCT_UPLOAD_PREFIX);
   }
 
   return response(404, { message: 'Not found' });

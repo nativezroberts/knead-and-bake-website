@@ -148,7 +148,7 @@
 
   <script src="/src/js/config.js"></script>
   <script type="module">
-    import ContentLoader from '/src/js/content-loader.js';
+    import { loadProducts } from '/src/js/product-model.js';
     import { initNav } from '/src/js/nav.js';
     import { renderNextMarket, renderAnnouncementBanner, renderSkipNotice, escapeHtml } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
@@ -156,11 +156,9 @@
     document.addEventListener('DOMContentLoaded', async () => {
       initNav();
 
-      const API_BASE = window.__API_BASE || '';
-      const [marketInfo, menuData, inventoryRes] = await Promise.all([
+      const [marketInfo, menuData] = await Promise.all([
         getMarketInfo(),
-        ContentLoader.menu(),
-        fetch(`${API_BASE}/api/inventory`).then(r => r.ok ? r.json() : null).catch(() => null),
+        loadProducts(),
       ]);
 
       // Announcements and skip notices
@@ -179,25 +177,11 @@
       // Market panel
       document.getElementById('market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
 
-      // Quick menu — merge static menu with live inventory for real-time availability
+      // Quick menu: shared product model (live inventory + admin-added products)
       if (menuData?.items) {
-        // Build lookup from live inventory (sku → {available, currentQty})
-        const invMap = new Map();
-        if (inventoryRes?.products) {
-          for (const p of inventoryRes.products) {
-            invMap.set(p.sku, { available: p.available, currentQty: p.currentQty });
-          }
-        }
-
-        const available = menuData.items.filter(item => {
-          const inv = invMap.get(item.sku);
-          // If live inventory is available, use it; otherwise fall back to static
-          return inv ? inv.available : item.available;
-        });
-
-        document.getElementById('market-items').innerHTML = available.map(item => {
-          const inv = invMap.get(item.sku);
-          const soldOut = inv && inv.available && inv.currentQty <= 0;
+        const shown = menuData.items.filter(item => item.status !== 'not_available');
+        document.getElementById('market-items').innerHTML = shown.map(item => {
+          const soldOut = item.status === 'sold_out';
           return `
             <div class="market-quick-menu__item${soldOut ? ' market-quick-menu__item--sold-out' : ''}">
               <span>${escapeHtml(item.name)}${item.seasonal ? ' <span class="badge badge--seasonal">Seasonal</span>' : ''}${soldOut ? ' <span class="badge badge--sold-out">Sold Out</span>' : ''}</span>

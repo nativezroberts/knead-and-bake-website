@@ -177,6 +177,7 @@ export class ApiStack extends cdk.Stack {
     ordersTable.grantReadWriteData(adminFn);
     auditTable.grantWriteData(adminFn);
     props.siteBucket.grantPut(adminFn, 'news-images/*');
+    props.siteBucket.grantPut(adminFn, 'product-images/*');
 
     adminFn.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -400,6 +401,21 @@ export class ApiStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/api/admin/inventory/{sku}',
       methods: [apigwv2.HttpMethod.PUT],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Admin product catalog routes (protected by JWT authorizer)
+    httpApi.addRoutes({
+      path: '/api/admin/products',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    httpApi.addRoutes({
+      path: '/api/admin/products/upload-url',
+      methods: [apigwv2.HttpMethod.POST],
       integration: adminIntegration,
       authorizer: jwtAuthorizer,
     });
