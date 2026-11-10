@@ -69,6 +69,12 @@ const distCssDir = path.join(DIST, 'src', 'css');
 fs.mkdirSync(distCssDir, { recursive: true });
 fs.writeFileSync(path.join(distCssDir, 'main.css'), concatenatedCss);
 console.log('  Concatenated CSS into single main.css');
+// Standalone stylesheets (e.g. home-v2.css) are loaded directly by their page, so copy them as-is
+for (const f of fs.readdirSync(cssDir)) {
+  if (f.endsWith('.css') && f !== 'main.css' && !cssOrder.includes(f)) {
+    fs.copyFileSync(path.join(cssDir, f), path.join(distCssDir, f));
+  }
+}
 
 // 4. Copy JS
 copyDir(path.join(ROOT, 'src', 'js'), path.join(DIST, 'src', 'js'));
@@ -145,6 +151,7 @@ Disallow: /admin.html
 Disallow: /preorder.html
 Disallow: /text.html
 Disallow: /special-preorder.html
+Disallow: /home-preview.html
 
 Sitemap: ${siteUrl}/sitemap.xml`;
 fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt);
