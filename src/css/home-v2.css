@@ -182,13 +182,21 @@ body.kb2 {
 .mobile-nav__cta { margin-top: 20px; }
 
 /* ── Announcements (rendered by components.js) ── */
-.kb-announcements .wrap { padding-top: 16px; }
+/* Red so announcements and "no market this Saturday" notices can't be missed */
+.kb-announcements .wrap { padding-top: 16px; padding-bottom: 6px; }
 .banner {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 14px 18px; border-radius: 14px; font-size: 15px; line-height: 1.5; margin-bottom: 10px;
-  background: var(--kb-green-tint); color: var(--kb-ink); border: 1px solid rgba(16, 84, 51, .18);
+  position: relative; display: block;
+  padding: 14px 18px 14px 50px; border-radius: 14px; font-size: 15px; font-weight: 500; line-height: 1.5; margin-bottom: 10px;
+  background: #FDEDEB; color: #6E1710;
+  border: 2px solid #B42318; border-left-width: 6px;
+  box-shadow: 0 6px 18px -10px rgba(180, 35, 24, .45);
 }
-.banner--warning { background: #FBEFD2; border-color: rgba(222, 165, 40, .55); color: #5A3E07; }
+.banner::before {
+  content: '!'; position: absolute; left: 14px; top: 14px; width: 24px; height: 24px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #B42318; color: #FFFFFF; font-weight: 800; font-size: 15px; line-height: 1;
+}
+.banner strong { color: #8A1A12; font-weight: 800; }
 
 /* ── Hero ── */
 .hero {
