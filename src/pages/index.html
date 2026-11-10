@@ -57,29 +57,45 @@
     ]
   }
   </script>
+  <meta name="theme-color" content="#FBF7EF">
   <!-- Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/src/css/main.css">
-  <link rel="icon" href="/images/favicon.png" type="image/png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,500..800,100,0..1;1,9..144,500..800,100,0..1&family=Montserrat:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/src/css/home.css">
+  <link rel="icon" href="/images/logo-badge-96.png" type="image/png">
 </head>
-<body class="page">
+<body class="kb2">
 
   <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Wheat sprite, reused in decorations -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="wheat" viewBox="0 0 120 240">
+      <path d="M60 236 C60 170 60 110 60 20" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <g fill="currentColor">
+        <ellipse cx="60" cy="18" rx="9" ry="20"/>
+        <ellipse cx="44" cy="50" rx="9" ry="21" transform="rotate(-28 44 50)"/>
+        <ellipse cx="76" cy="50" rx="9" ry="21" transform="rotate(28 76 50)"/>
+        <ellipse cx="44" cy="84" rx="9" ry="21" transform="rotate(-28 44 84)"/>
+        <ellipse cx="76" cy="84" rx="9" ry="21" transform="rotate(28 76 84)"/>
+        <ellipse cx="44" cy="118" rx="9" ry="21" transform="rotate(-28 44 118)"/>
+        <ellipse cx="76" cy="118" rx="9" ry="21" transform="rotate(28 76 118)"/>
+        <ellipse cx="45" cy="152" rx="8" ry="19" transform="rotate(-28 45 152)"/>
+        <ellipse cx="75" cy="152" rx="8" ry="19" transform="rotate(28 75 152)"/>
+      </g>
+    </symbol>
+  </svg>
 
   <!-- Header -->
   <header class="header" role="banner">
     <div class="header__inner">
       <a href="/" class="header__logo" aria-label="Knead &amp; Bake TX &mdash; Home">
-         
-        <svg class="header__logo-icon" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-          <circle cx="18" cy="18" r="17" fill="#E8C872" stroke="#5C3D2E" stroke-width="2"/>
-          <text x="18" y="23" text-anchor="middle" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#5C3D2E">K</text>
-        </svg>
-      
-        <!--<img class="header__logo-icon" src="/images/favicon.png" alt="" aria-hidden="true">-->
-        <span>Knead &amp; Bake</span>
+        <picture>
+          <source srcset="/images/logo-badge-96.webp 1x, /images/logo-badge-192.webp 2x" type="image/webp">
+          <img src="/images/logo-badge-96.png" alt="" width="60" height="60">
+        </picture>
+        <span class="header__wordmark"><strong>Knead &amp; Bake</strong><span>New Braunfels, TX</span></span>
       </a>
       <nav class="nav" aria-label="Main navigation">
         <a href="/" class="nav__link">Home</a>
@@ -89,7 +105,7 @@
         <a href="/starter-kit.html" class="nav__link">Starter Kit</a>
         <a href="/news.html" class="nav__link">News</a>
         <a href="/social.html" class="nav__link">Social</a>
-        <a href="/preorder.html" class="btn btn--primary btn--sm nav__cta">Preorder</a>
+        <a href="/preorder.html" class="btn btn--green btn--sm nav__cta">Preorder</a>
       </nav>
       <button class="header__menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -111,96 +127,145 @@
       <a href="/starter-kit.html" class="mobile-nav__link">Starter Kit</a>
       <a href="/news.html" class="mobile-nav__link">News</a>
       <a href="/social.html" class="mobile-nav__link">Social</a>
-      <a href="/preorder.html" class="btn btn--primary btn--full mobile-nav__cta">Preorder</a>
+      <a href="/preorder.html" class="btn btn--green btn--lg btn--full mobile-nav__cta">Preorder</a>
     </div>
   </div>
 
-  <!-- Main Content -->
-  <main id="main" class="page__content">
+  <main id="main">
 
     <!-- Announcements / Skip Notices -->
-    <div id="announcements"></div>
+    <div id="announcements" class="kb-announcements"></div>
 
     <!-- Hero -->
     <section class="hero">
-      <div class="hero__inner">
-        <div data-reveal="up">
-          <span class="hero__kicker">Castell Street Market &middot; New Braunfels, TX</span>
-          <h1 class="hero__title">Small-batch sourdough,<br>made by hand.</h1>
+      <div class="wrap hero__inner">
+        <div data-reveal>
+          <span class="eyebrow">Castell Street Market &middot; New Braunfels, TX</span>
+          <h1 class="hero__title display">Small-batch sourdough, <em>made by hand.</em></h1>
           <p class="hero__desc">Slow-fermented artisan bread baked fresh every Saturday. Simple ingredients, no shortcuts, incredible flavor.</p>
+          <a class="hero__verified" href="https://homemadetexas.org/places/united-states/texas/comal-county/bread/knead-bake-tx/" target="_blank" rel="noopener">
+            <img src="/images/homemade-texas-verified-96.png" srcset="/images/homemade-texas-verified-192.png 2x" alt="" width="44" height="44">
+            <span>
+              <strong>Homemade Texas Verified.</strong>
+              Homemade Texas personally reviewed our labels, food handler training and Texas cottage food law compliance &mdash; so you know your bread is made safely and by the book, right here in a Texas home kitchen.
+              <span class="hero__verified-link">See our verified listing &rarr;</span>
+            </span>
+          </a>
           <div class="hero__actions">
-            <a href="/preorder.html" class="btn btn--primary btn--lg">Preorder for Next Market</a>
-            <a href="/menu.html" class="btn btn--outline btn--lg">View Menu</a>
+            <a href="/preorder.html" class="btn btn--green btn--lg">Preorder for Next Market</a>
+            <a href="/menu.html" class="btn btn--ghost btn--lg">View Menu</a>
+          </div>
+          <div class="hero__proof">
+            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>Slow-fermented</span>
+            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>Simple ingredients</span>
+            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>Baked Fresh for your pickup!</span>
           </div>
         </div>
-        <div data-reveal="right">
-          <picture>
-            <source srcset="/images/home-sourdough.webp" type="image/webp">
-            <img class="hero__image" src="/images/home-sourdough.jpg" alt="Fresh sourdough loaf with golden crust" width="600" height="450" loading="eager">
-          </picture>
+        <div class="hero__media" data-reveal>
+          <div class="hero__arc" aria-hidden="true"></div>
+          <div class="hero__arch">
+            <picture>
+              <source srcset="/images/home-sourdough.webp" type="image/webp">
+              <img src="/images/home-sourdough.jpg" alt="Fresh sourdough loaf with golden crust" width="600" height="750" loading="eager" fetchpriority="high">
+            </picture>
+          </div>
+          <div class="hero__seal">
+            <picture>
+              <source srcset="/images/logo-badge-192.webp 1x, /images/logo-badge-400.webp 2x" type="image/webp">
+              <img src="/images/logo-badge-192.png" alt="Knead &amp; Bake TX, est. 2024" width="132" height="132">
+            </picture>
+          </div>
+          <a class="hero__seal hero__seal--verified" href="https://homemadetexas.org/places/united-states/texas/comal-county/bread/knead-bake-tx/" target="_blank" rel="noopener" title="Homemade Texas Verified seller">
+            <picture>
+              <source srcset="/images/homemade-texas-verified-192.webp 1x, /images/homemade-texas-verified-400.webp 2x" type="image/webp">
+              <img src="/images/homemade-texas-verified-192.png" alt="Homemade Texas Verified seller — view our listing" width="132" height="132">
+            </picture>
+          </a>
         </div>
       </div>
-    </section>
-
-    <!-- Next Market Panel -->
-    <section class="section section--white">
-      <div class="container">
-        <div id="next-market-panel" data-reveal="up"></div>
+      <div class="hero__wave" aria-hidden="true">
+        <svg viewBox="0 0 1440 64" preserveAspectRatio="none"><path fill="currentColor" d="M0 40 C 240 0, 480 64, 720 36 S 1200 8, 1440 34 L1440 64 L0 64 Z"/></svg>
       </div>
     </section>
 
-    <!-- Top Sellers -->
-    <section class="section section--cream">
-      <div class="container">
-        <div class="section__header" data-reveal="up">
-          <h2 class="section__title">Customer Favorites</h2>
+    <!-- Next Market -->
+    <div class="next-market-wrap">
+      <div class="wrap">
+        <div id="next-market-panel" class="ticket ticket--loading" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- Customer Favorites -->
+    <section class="section">
+      <div class="wrap">
+        <div class="section__head section__head--split" data-reveal>
+          <div>
+            <span class="eyebrow">Top Sellers</span>
+            <h2 class="section__title display" style="margin-top:12px">Customer <em>Favorites</em></h2>
+          </div>
           <p class="section__subtitle">Our most-loved loaves &mdash; the ones that sell out first every Saturday.</p>
         </div>
-        <div id="top-sellers" class="top-sellers reveal-stagger" data-reveal="up"></div>
-        <div class="text-center mt-8">
-          <a href="/menu.html" class="btn btn--outline">See Full Menu</a>
+        <div id="top-sellers" class="products">
+          <div class="pcard pcard--skeleton"></div><div class="pcard pcard--skeleton"></div>
+          <div class="pcard pcard--skeleton"></div><div class="pcard pcard--skeleton"></div>
+        </div>
+        <div class="section__more">
+          <a href="/menu.html" class="btn btn--ghost">See Full Menu</a>
         </div>
       </div>
     </section>
 
-    <!-- Seasonal Spotlight -->
-    <section class="section section--white">
-      <div class="container">
-        <div class="section__header" data-reveal="up">
-          <h2 class="section__title">Seasonal Spotlight</h2>
+    <!-- Seasonal Spotlight (hidden when nothing seasonal is available) -->
+    <section class="section section--tight-top" id="seasonal-section">
+      <div class="wrap">
+        <div class="section__head" data-reveal>
+          <span class="eyebrow">Limited Time</span>
+          <h2 class="section__title display">Seasonal <em>Spotlight</em></h2>
         </div>
-        <div id="seasonal-spotlight" class="spotlight" data-reveal="up"></div>
+        <div id="seasonal-spotlight" class="spotlight" data-reveal></div>
       </div>
     </section>
 
-    <!-- Social Proof -->
-    <section class="section section--cream">
-      <div class="container">
-        <div class="section__header" data-reveal="up">
-          <h2 class="section__title">What Our Customers Say</h2>
+    <!-- What Our Customers Say -->
+    <section class="section testimonials-section">
+      <div class="wrap">
+        <div class="section__head section__head--center" data-reveal>
+          <span class="eyebrow">Kind Words</span>
+          <h2 class="section__title display">What Our <em>Customers</em> Say</h2>
         </div>
-        <div id="testimonials" class="testimonials reveal-stagger" data-reveal="up"></div>
+        <div id="testimonials" class="quotes"></div>
       </div>
     </section>
 
     <!-- Leave a Review -->
-    <section class="section section--white">
-      <div class="container" data-reveal="up">
-        <div class="review-cta">
-          <div class="review-cta__stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <h2 class="review-cta__title">Loved your bread? Tell the world!</h2>
-          <p class="review-cta__body">Your review helps other locals discover fresh, handcrafted sourdough right here in New Braunfels &mdash; and it means the world to our small family bakery.</p>
-          <a href="https://g.page/r/CX0SXLHZkEShEBM/review" class="btn btn--primary btn--lg" target="_blank" rel="noopener">Leave a Google Review</a>
+    <section class="section">
+      <div class="wrap" data-reveal>
+        <div class="review">
+          <div class="review__badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></svg>
+          </div>
+          <div>
+            <div class="review__stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <h2 class="review__title display">Loved your bread? Tell the world!</h2>
+            <p class="review__body">Your review helps other locals discover fresh, handcrafted sourdough right here in New Braunfels &mdash; and it means the world to our small family bakery.</p>
+          </div>
+          <a href="https://g.page/r/CX0SXLHZkEShEBM/review" class="btn btn--green btn--lg" target="_blank" rel="noopener">Leave a Google Review</a>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="section section--brown">
-      <div class="container text-center" data-reveal="up">
-        <h2 class="section__title">Ready to Try Real Sourdough?</h2>
-        <p class="section__subtitle mb-8">Preorder your loaves now and pick them up fresh at the market this Saturday.</p>
-        <a href="/preorder.html" class="btn btn--wheat btn--lg">Place Your Preorder</a>
+    <section class="section cta">
+      <svg class="cta__wheat cta__wheat--l" viewBox="0 0 120 240" aria-hidden="true"><use href="#wheat"/></svg>
+      <svg class="cta__wheat cta__wheat--r" viewBox="0 0 120 240" aria-hidden="true"><use href="#wheat"/></svg>
+      <div class="wrap cta__inner" data-reveal>
+        <picture>
+          <source srcset="/images/logo-badge-96.webp 1x, /images/logo-badge-192.webp 2x" type="image/webp">
+          <img class="cta__logo" src="/images/logo-badge-96.png" alt="" width="96" height="96">
+        </picture>
+        <h2 class="cta__title display">Ready to Try <em>Real</em> Sourdough?</h2>
+        <p class="cta__sub">Preorder your loaves now and pick them up fresh at the market this Saturday.</p>
+        <a href="/preorder.html" class="btn btn--green btn--lg">Place Your Preorder</a>
       </div>
     </section>
 
@@ -208,10 +273,16 @@
 
   <!-- Footer -->
   <footer class="footer" role="contentinfo">
-    <div class="container">
+    <div class="wrap">
       <div class="footer__grid">
         <div class="footer__brand">
-          <div class="footer__logo">Knead &amp; Bake TX</div>
+          <div class="footer__logo">
+            <picture>
+              <source srcset="/images/logo-badge-96.webp 1x, /images/logo-badge-192.webp 2x" type="image/webp">
+              <img src="/images/logo-badge-96.png" alt="" width="64" height="64">
+            </picture>
+            <span>Knead &amp; Bake TX</span>
+          </div>
           <p class="footer__desc">Small-batch artisan sourdough, baked with love in New Braunfels, Texas. Find us every Saturday at the Castell Street Market.</p>
           <div class="footer__social">
             <a href="https://www.instagram.com/knead_and_baketx" class="footer__social-link" aria-label="Instagram" target="_blank" rel="noopener">
@@ -254,116 +325,181 @@
   <script src="/src/js/config.js"></script>
   <script type="module">
     import ContentLoader from '/src/js/content-loader.js';
-    import { loadProducts } from '/src/js/product-model.js';
+    import { loadProducts, STATUS_LABEL } from '/src/js/product-model.js';
     import { initNav } from '/src/js/nav.js';
-    import { renderCard, renderTestimonial, renderNextMarket, renderAnnouncementBanner, renderSkipNotice, escapeHtml } from '/src/js/components.js';
+    import { renderAnnouncementBanner, renderSkipNotice, escapeHtml } from '/src/js/components.js';
     import { getMarketInfo } from '/src/js/market-dates.js';
 
-    // Init nav immediately &mdash; don't wait for DOMContentLoaded which may
-    // have already fired by the time module imports resolve on slow connections.
     initNav();
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
 
-    // Scroll-reveal: observe all [data-reveal] elements
-    const revealEls = document.querySelectorAll('[data-reveal]');
+    // Scroll reveal
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('is-revealed');
-          revealObserver.unobserve(entry.target);
+          const el = entry.target;
+          el.classList.add('is-revealed');
+          revealObserver.unobserve(el);
+          // Once revealed, drop the reveal styles so hover effects run at normal speed
+          const delay = parseFloat(el.style.transitionDelay) || 0;
+          setTimeout(() => { el.classList.remove('reveal', 'is-revealed'); el.style.transitionDelay = ''; }, 750 + delay);
         }
       });
-    }, { threshold: 0.15 });
-    revealEls.forEach(el => {
-      el.classList.add('reveal');
-      revealObserver.observe(el);
-    });
+    }, { threshold: 0.12 });
+    function reveal(els) {
+      els.forEach(el => { el.classList.add('reveal'); revealObserver.observe(el); });
+    }
+    reveal(document.querySelectorAll('[data-reveal]'));
 
-    // Helper: load and render a section once it scrolls near the viewport
+    const ICON_CLOCK = '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-12.5a.75.75 0 00-1.5 0V10c0 .2.08.39.22.53l2.5 2.5a.75.75 0 101.06-1.06l-2.28-2.28V5.5z" clip-rule="evenodd"/></svg>';
+    const ICON_PIN = '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18s6-5.2 6-10a6 6 0 10-12 0c0 4.8 6 10 6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" clip-rule="evenodd"/></svg>';
+
+    function webpFor(image) {
+      // Only the built-in /images/ photos ship a .webp twin
+      return image && image.startsWith('/images/') && /\.(png|jpe?g)$/i.test(image)
+        ? image.replace(/\.(png|jpe?g)$/i, '.webp') : '';
+    }
+
+    function renderTicket(m) {
+      const d = m.dateISO ? new Date(`${m.dateISO}T12:00:00`) : null;
+      const tile = d && !Number.isNaN(d.getTime()) ? `
+        <div class="ticket__date" aria-hidden="true">
+          <div class="ticket__month">${d.toLocaleDateString('en-US', { month: 'short' })}</div>
+          <div class="ticket__day">${d.getDate()}</div>
+          <div class="ticket__dow">${d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+        </div>` : '';
+      return `
+        ${tile}
+        <div>
+          <div class="ticket__label">Next Market</div>
+          <div class="ticket__title">${escapeHtml(m.date)}</div>
+          <div class="ticket__meta">
+            <span>${ICON_CLOCK}${escapeHtml(m.time)}</span>
+            <span>${ICON_PIN}${escapeHtml(m.location)}</span>
+          </div>
+        </div>
+        <div class="ticket__cta"><a href="/preorder.html" class="btn btn--green">Preorder Now</a></div>`;
+    }
+
+    function renderProduct(p) {
+      const status = p.status || (p.available ? 'available' : 'not_available');
+      const tag = p.seasonal
+        ? `<span class="pcard__tag pcard__tag--seasonal">${escapeHtml(p.seasonalLabel || 'Seasonal')}</span>`
+        : p.topSeller ? '<span class="pcard__tag">Top Seller</span>' : '';
+      const img = p.image || '/images/placeholder-bread.svg';
+      const webp = webpFor(p.image);
+      return `
+        <article class="pcard${status !== 'available' ? ' pcard--off' : ''}">
+          <div class="pcard__media">
+            <picture>
+              ${webp ? `<source srcset="${escapeHtml(webp)}" type="image/webp">` : ''}
+              <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name)}" loading="lazy" width="400" height="300">
+            </picture>
+            ${tag}
+            ${status === 'sold_out' ? '<span class="sold-stamp" aria-hidden="true">Sold Out</span>' : ''}
+          </div>
+          <div class="pcard__body">
+            <h3 class="pcard__title">${escapeHtml(p.name)}</h3>
+            <p class="pcard__desc">${escapeHtml(p.description)}</p>
+            ${p.allergens?.length ? `<p class="pcard__allergens">Contains: ${escapeHtml(p.allergens.join(', '))}</p>` : ''}
+            <div class="pcard__foot">
+              <span class="pcard__price">$${p.price.toFixed(2)}</span>
+              <span class="status status--${status}">${STATUS_LABEL[status] || STATUS_LABEL.not_available}</span>
+            </div>
+          </div>
+        </article>`;
+    }
+
+    function renderQuote({ text, author, source }) {
+      const initial = (String(author || '?').trim()[0] || '?').toUpperCase();
+      return `
+        <figure class="quote">
+          <blockquote class="quote__text" style="margin:0">&ldquo;${escapeHtml(text)}&rdquo;</blockquote>
+          <figcaption class="quote__author">
+            <span class="quote__avatar" aria-hidden="true">${escapeHtml(initial)}</span>
+            <span><span class="quote__name">${escapeHtml(author)}</span>${source ? `<span class="quote__source">${escapeHtml(source)}</span>` : ''}</span>
+          </figcaption>
+        </figure>`;
+    }
+
     function lazyLoadSection(elementId, loadFn) {
       const el = document.getElementById(elementId);
       if (!el) return;
       const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          observer.disconnect();
-          loadFn(el);
-        }
-      }, { rootMargin: '200px' });
+        if (entries[0].isIntersecting) { observer.disconnect(); loadFn(el); }
+      }, { rootMargin: '300px' });
       observer.observe(el);
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Above-the-fold: fetch market info eagerly
+    async function init() {
       const marketInfo = await getMarketInfo();
 
       // Announcements and skip notices
-      const announcementEl = document.getElementById('announcements');
       let bannerHtml = '';
-      if (marketInfo.skippedThisWeek) {
-        bannerHtml += renderSkipNotice(marketInfo.skipReason, marketInfo.nextMarket.date);
-      }
-      if (marketInfo.announcements.length > 0) {
-        bannerHtml += marketInfo.announcements.map(renderAnnouncementBanner).join('');
-      }
-      if (bannerHtml) {
-        announcementEl.innerHTML = `<section class="section section--white" style="padding-bottom:0"><div class="container">${bannerHtml}</div></section>`;
+      if (marketInfo.skippedThisWeek) bannerHtml += renderSkipNotice(marketInfo.skipReason, marketInfo.nextMarket.date);
+      if (marketInfo.announcements.length) bannerHtml += marketInfo.announcements.map(renderAnnouncementBanner).join('');
+      if (bannerHtml) document.getElementById('announcements').innerHTML = `<div class="wrap">${bannerHtml}</div>`;
+
+      // Next market ticket
+      const ticket = document.getElementById('next-market-panel');
+      if (marketInfo.nextMarket) {
+        ticket.innerHTML = renderTicket(marketInfo.nextMarket);
+        ticket.classList.remove('ticket--loading');
+      } else {
+        ticket.parentElement.parentElement.remove();
       }
 
-      // Next Market
-      document.getElementById('next-market-panel').innerHTML = renderNextMarket(marketInfo.nextMarket);
-
-      // Below-the-fold: defer product + testimonial fetches until near viewport
       let menuDataCache = null;
-      async function getMenuData() {
-        if (!menuDataCache) menuDataCache = await loadProducts();
-        return menuDataCache;
-      }
+      const getMenuData = async () => (menuDataCache ??= await loadProducts());
 
-      // Top Sellers
       lazyLoadSection('top-sellers', async (el) => {
         const menuData = await getMenuData();
-        if (menuData?.items) {
-          const topSellers = menuData.items.filter(i => i.topSeller && i.available);
-          el.innerHTML = topSellers.map(renderCard).join('');
-        }
+        const top = (menuData?.items || []).filter(i => i.topSeller && i.available);
+        el.innerHTML = top.map(renderProduct).join('');
+        const cards = [...el.querySelectorAll('.pcard')];
+        cards.forEach((c, i) => { c.style.transitionDelay = `${i * 80}ms`; });
+        reveal(cards);
       });
 
-      // Seasonal Spotlight (shares product data with top sellers)
       lazyLoadSection('seasonal-spotlight', async (el) => {
         const menuData = await getMenuData();
-        if (menuData?.items) {
-          const seasonal = menuData.items.find(i => i.seasonal && i.available);
-          if (seasonal) {
-            const isSoldOut = seasonal.status === 'sold_out';
-            const spotImg = seasonal.image || '/images/placeholder-bread.svg';
-            const spotWebp = seasonal.image ? seasonal.image.replace(/\.(png|jpe?g)$/i, '.webp') : '';
-            el.innerHTML = `
-              <picture>
-                ${spotWebp ? `<source srcset="${escapeHtml(spotWebp)}" type="image/webp">` : ''}
-                <img class="spotlight__image" src="${escapeHtml(spotImg)}" alt="${escapeHtml(seasonal.name)}" loading="lazy" width="600" height="450">
-              </picture>
-              <div>
-                <span class="card__tag card__tag--seasonal">${escapeHtml(seasonal.seasonalLabel || 'Seasonal')}</span>
-                <h3 class="spotlight__title">${escapeHtml(seasonal.name)}</h3>
-                <p class="spotlight__desc">${escapeHtml(seasonal.description)}</p>
-                <p class="spotlight__desc"><strong>$${seasonal.price.toFixed(2)}</strong></p>
-                ${isSoldOut
-                  ? '<span class="badge badge--sold-out">SOLD OUT</span>'
-                  : '<a href="/preorder.html" class="btn btn--secondary mt-4">Preorder This Loaf</a>'
-                }
-              </div>
-            `;
-          }
-        }
+        const s = (menuData?.items || []).find(i => i.seasonal && i.available);
+        if (!s) { document.getElementById('seasonal-section').remove(); return; }
+        const soldOut = s.status === 'sold_out';
+        const img = s.image || '/images/placeholder-bread.svg';
+        const webp = webpFor(s.image);
+        el.innerHTML = `
+          <div class="spotlight__media">
+            <picture>
+              ${webp ? `<source srcset="${escapeHtml(webp)}" type="image/webp">` : ''}
+              <img src="${escapeHtml(img)}" alt="${escapeHtml(s.name)}" loading="lazy" width="600" height="450">
+            </picture>
+            ${soldOut ? '<span class="sold-stamp" aria-hidden="true">Sold Out</span>' : ''}
+          </div>
+          <div class="spotlight__body">
+            <span class="spotlight__kicker">${escapeHtml(s.seasonalLabel || 'Seasonal')}</span>
+            <h3 class="spotlight__title display">${escapeHtml(s.name)}</h3>
+            <p class="spotlight__desc">${escapeHtml(s.description)}</p>
+            <div class="spotlight__price">$${s.price.toFixed(2)}</div>
+            <div class="spotlight__actions">
+              ${soldOut
+                ? '<span class="status status--sold_out">SOLD OUT</span>'
+                : '<a href="/preorder.html" class="btn btn--green">Preorder This Loaf</a>'}
+            </div>
+          </div>`;
       });
 
-      // Testimonials
       lazyLoadSection('testimonials', async (el) => {
-        const testimonialData = await ContentLoader.testimonials();
-        if (testimonialData?.testimonials) {
-          el.innerHTML = testimonialData.testimonials.map(renderTestimonial).join('');
-        }
+        const data = await ContentLoader.testimonials();
+        el.innerHTML = (data?.testimonials || []).map(renderQuote).join('');
+        const quotes = [...el.querySelectorAll('.quote')];
+        quotes.forEach((q, i) => { q.style.transitionDelay = `${i * 100}ms`; });
+        reveal(quotes);
       });
-    });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
   </script>
 
   <script type="module" src="/src/js/special-market.js?v=1"></script>

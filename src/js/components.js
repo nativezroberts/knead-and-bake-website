@@ -43,11 +43,14 @@ export function renderCard({ name, description, price, allergens, image, availab
 
   return `
     <article class="card${displayStatus !== 'available' ? ' card--unavailable' : ''}">
-      <picture>
-        ${safeImageWebp ? `<source srcset="${safeImageWebp}" type="image/webp">` : ''}
-        <img class="card__image" src="${safeImage}"
-             alt="${safeName}" loading="lazy" width="400" height="300">
-      </picture>
+      <div class="card__media">
+        <picture>
+          ${safeImageWebp ? `<source srcset="${safeImageWebp}" type="image/webp">` : ''}
+          <img class="card__image" src="${safeImage}"
+               alt="${safeName}" loading="lazy" width="400" height="300">
+        </picture>
+        ${displayStatus === 'sold_out' ? '<span class="sold-stamp" aria-hidden="true">Sold Out</span>' : ''}
+      </div>
       <div class="card__body">
         ${tagHtml}
         <h3 class="card__title">${safeName}</h3>
@@ -172,8 +175,9 @@ export function renderDayCard(day) {
 
 export function renderAnnouncementBanner(announcement) {
   const levelClass = announcement.level === 'warning' ? 'banner--warning' : 'banner--info';
+  // banner--alert (red) is the visible style; level classes kept for any page-specific rules
   return `
-    <div class="banner ${levelClass} mb-4" role="alert">
+    <div class="banner ${levelClass} banner--alert mb-4" role="alert">
       ${escapeHtml(announcement.message)}
     </div>
   `;
@@ -181,7 +185,7 @@ export function renderAnnouncementBanner(announcement) {
 
 export function renderSkipNotice(reason, nextAvailableDate) {
   return `
-    <div class="banner banner--warning mb-4" role="alert">
+    <div class="banner banner--warning banner--alert mb-4" role="alert">
       <strong>No market this Saturday.</strong> ${reason ? escapeHtml(reason) + ' ' : ''}
       Our next market is ${escapeHtml(nextAvailableDate)}.
     </div>
