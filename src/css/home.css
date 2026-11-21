@@ -218,6 +218,13 @@ body.kb2 {
   position: relative; display: grid; gap: 44px; align-items: center;
 }
 @media (min-width: 900px) { .hero__inner { grid-template-columns: 1.1fr .9fr; gap: 56px; } }
+/* Mobile: pin the single column to the viewport. Without an explicit track, Safari/WebKit
+   sizes the column from content min-widths (e.g. the 600px hero image) and the hero
+   text runs off the right edge. */
+@media (max-width: 899px) {
+  .hero__inner { grid-template-columns: minmax(0, 1fr); }
+  .hero__inner > * { min-width: 0; }
+}
 .hero__title {
   font-size: clamp(42px, 8.5vw, 76px); margin: 18px 0 20px; color: var(--kb-green);
 }
@@ -384,6 +391,7 @@ body.kb2 {
   border-radius: 28px; overflow: hidden; box-shadow: var(--kb-shadow-lg); border: 1px solid var(--kb-line);
 }
 @media (min-width: 860px) { .spotlight { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 859px) { .spotlight, .review { grid-template-columns: minmax(0, 1fr); } }
 .spotlight__media { position: relative; min-height: 280px; }
 .spotlight__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .spotlight__body {
