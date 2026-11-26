@@ -495,6 +495,7 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       environment: {
         ORDERS_TABLE: ordersTable.tableName,
+        CONFIG_TABLE: configTable.tableName,
         OWNER_EMAIL: 'allyson.m.roberts@gmail.com',
         FROM_EMAIL: 'noreply@kneadandbaketx.com',
         REPLY_TO_EMAIL: 'allyson.m.roberts@gmail.com',
@@ -504,6 +505,8 @@ export class ApiStack extends cdk.Stack {
     });
 
     ordersTable.grantReadData(schedulerFn);
+    // Special market day-of list reads the special market events
+    configTable.grantReadData(schedulerFn);
     // Customer reminder marks each order with reminderSentAt to prevent double-sends
     ordersTable.grant(schedulerFn, 'dynamodb:UpdateItem');
 
@@ -550,6 +553,22 @@ export class ApiStack extends cdk.Stack {
         arn: schedulerFn.functionArn,
         roleArn: reminderRole.roleArn,
         input: JSON.stringify({ type: 'customer-reminder' }),
+        retryPolicy: { maximumRetryAttempts: 2 },
+      },
+    });
+
+    // Daily 6:30 AM Central — day-of order list for any special market picking up today.
+    // No-op (no email) on days without a special market.
+    new scheduler.CfnSchedule(this, 'SpecialMarketSummarySchedule', {
+      name: 'knead-bake-special-market-summary',
+      description: 'Email Allyson the day-of order list for any special market picking up today',
+      scheduleExpression: 'cron(30 6 * * ? *)',
+      scheduleExpressionTimezone: 'America/Chicago',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: schedulerFn.functionArn,
+        roleArn: reminderRole.roleArn,
+        input: JSON.stringify({ type: 'special-market-summary' }),
         retryPolicy: { maximumRetryAttempts: 2 },
       },
     });

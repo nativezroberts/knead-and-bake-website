@@ -13,6 +13,16 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 
+// Each Lambda is packaged on its own, so the confirmation-button module is copied
+// into each one. Fail fast if the copies drift apart.
+const syncedLambdaModules = ['orders', 'payments', 'scheduler', 'admin']
+  .map((fn) => path.join(ROOT, 'infra', 'lambda', fn, 'confirmation-text.mjs'));
+const syncedContents = syncedLambdaModules.map((file) => fs.readFileSync(file, 'utf-8'));
+if (syncedContents.some((c) => c !== syncedContents[0])) {
+  console.error('infra/lambda/*/confirmation-text.mjs copies differ. Edit one and copy it to the others.');
+  process.exit(1);
+}
+
 // Directories to clean
 function cleanDist() {
   if (fs.existsSync(DIST)) {

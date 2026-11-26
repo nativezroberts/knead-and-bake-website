@@ -20,6 +20,7 @@ import {
   inventoryKeyForOrderItem,
 } from './special-markets.mjs';
 import { createProduct, updateProduct, toProductResponse } from './products.mjs';
+import { buildContactButtonsHtml, buildContactLinksText } from './confirmation-text.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const s3 = new S3Client({});
@@ -890,6 +891,10 @@ function buildPreorderSummary(orders, weekStart, weekEnd) {
         paymentStatus,
         paymentMethod,
         paid,
+        orderType: sanitize(order.orderType || '', 20),
+        specialMarketName: sanitize(order.specialMarketName || '', 200),
+        pickupWindow: sanitize(order.pickupWindow || '', 100),
+        pickupLocation: sanitize(order.pickupLocation || '', 200),
         textedAt: sanitize(order.textedAt || '', 40),
         items,
         totalQty,
@@ -1033,6 +1038,8 @@ function appendPreorderSummarySectionText(lines, title, orders, description) {
       `   Items: ${itemsText}`,
       `   Notes: ${order.notes || 'None'}`
     );
+    const contact = buildContactLinksText(order, { email: false });
+    if (contact) lines.push(`   ${contact}`);
   });
 }
 
@@ -1084,6 +1091,7 @@ function buildPreorderSummaryOrderCardHtml(order) {
     <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Created:</strong> ${escapeHtml(order.createdAt || '-')}</p>
     ${itemsHtml}
     <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Notes:</strong> ${escapeHtml(order.notes || 'None')}</p>
+    ${buildContactButtonsHtml(order, { size: 'sm' })}
   </div>`;
 }
 

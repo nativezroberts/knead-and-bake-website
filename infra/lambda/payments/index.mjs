@@ -9,6 +9,7 @@ import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { handleSpecialOrder } from './special-orders.mjs';
+import { buildContactButtonsHtml, buildContactLinksText } from './confirmation-text.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ssm = new SSMClient({});
@@ -204,6 +205,7 @@ function buildOwnerPaymentEmailHtml(order, orderId, subtotalStr, processingFeeSt
     intro: 'A preorder was successfully paid with Square.',
     bodyHtml: `
 <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>${escapeHtml(order.name)}</strong> completed payment for order <strong>#${escapeHtml(shortOrderId)}</strong>.</p>
+${buildContactButtonsHtml(order, { paid: true })}
 <div style="margin:0 0 18px;padding:16px;border-radius:14px;background:#fcf7ef;border:1px solid #efe1cd;">
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
   <p style="margin:0 0 10px;font-size:15px;line-height:1.6;"><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
@@ -270,6 +272,9 @@ Payment method: Square
 Square Payment ID: ${squarePaymentId || 'unknown'}
 
 Comments: ${order.notes || 'None'}
+
+Confirm with ${order.name || 'the customer'}:
+${buildContactLinksText(order, { paid: true })}
 
 Order ID: ${orderId}`
             },

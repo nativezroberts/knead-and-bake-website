@@ -3,19 +3,23 @@
  *   - Friday at 7 PM CDT (23:00 UTC): Friday preview (owner)
  *   - Saturday at 7 AM Central: "Rise and shine" pickup reminder (each customer)
  *   - Saturday at 9 AM CDT (14:00 UTC): Saturday morning final list (owner)
+ *   - Every day at 6:30 AM Central: day-of list for any special market picking up today (owner)
  *
  * Triggered by EventBridge rules / EventBridge Scheduler (no HTTP gateway).
  * The customer reminder is invoked with { "type": "customer-reminder" }.
+ * The special market list is invoked with { "type": "special-market-summary" }.
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { buildContactButtonsHtml, buildContactLinksText, isSpecialOrder } from './confirmation-text.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ses = new SESClient({});
 
 const ORDERS_TABLE = process.env.ORDERS_TABLE;
+const CONFIG_TABLE = process.env.CONFIG_TABLE;
 const OWNER_EMAIL = process.env.OWNER_EMAIL || 'allyson.m.roberts@gmail.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@kneadandbaketx.com';
 const REPLY_TO_EMAIL = process.env.REPLY_TO_EMAIL || 'allyson.m.roberts@gmail.com';
@@ -56,6 +60,9 @@ export async function handler(event = {}) {
   if (event.type === 'customer-reminder') {
     return sendCustomerReminders();
   }
+  if (event.type === 'special-market-summary') {
+    return sendSpecialMarketSummaries();
+  }
 
   const now = new Date();
   const dayOfWeek = now.getUTCDay();
@@ -77,7 +84,8 @@ export async function handler(event = {}) {
   const saturdayStr = saturdayDate.toISOString().slice(0, 10);
   console.log(`Running ${isFriday ? 'Friday preview' : 'Saturday morning'} scheduler for market date: ${saturdayStr}`);
 
-  const orders = await queryOrdersByPickupDate(saturdayStr);
+  // Special market orders get their own day-of list (sendSpecialMarketSummaries).
+  const orders = (await queryOrdersByPickupDate(saturdayStr)).filter((order) => !isSpecialOrder(order));
   const summary = buildDailySummary(orders, saturdayStr);
 
   console.log(`Found ${summary.totals.orderCount} active order(s) for ${saturdayStr} (${orders.length} total including cancelled)`);
@@ -92,8 +100,8 @@ export async function handler(event = {}) {
     Message: {
       Subject: { Data: subject },
       Body: {
-        Text: { Data: buildEmailText(summary, isFriday) },
-        Html: { Data: buildEmailHtml(summary, isFriday) },
+        Text: { Data: buildEmailText(summary, regularCopy(summary, isFriday)) },
+        Html: { Data: buildEmailHtml(summary, regularCopy(summary, isFriday)) },
       },
     },
   }));
@@ -139,6 +147,10 @@ function buildDailySummary(orders, saturdayStr) {
         : [];
 
       const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+      // Authoritative total (set server-side at order time); fall back to line prices for older orders.
+      const totalCents = Number(order.totalCents) > 0
+        ? Math.round(Number(order.totalCents))
+        : Math.round((order.items || []).reduce((sum, item) => sum + Number(item?.price || 0) * Number(item?.qty || 0), 0) * 100);
       const paymentStatus = String(order.paymentStatus || (order.paid ? 'PAID' : 'UNPAID')).toUpperCase();
       const paymentMethod = String(order.paymentMethod || '').toUpperCase();
 
@@ -154,6 +166,11 @@ function buildDailySummary(orders, saturdayStr) {
         paymentMethod,
         items,
         totalQty,
+        totalCents,
+        orderType: String(order.orderType || ''),
+        specialMarketName: String(order.specialMarketName || ''),
+        pickupWindow: String(order.pickupWindow || ''),
+        pickupLocation: String(order.pickupLocation || ''),
       };
     })
     .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
@@ -234,16 +251,34 @@ function appendSectionText(lines, title, orders, description) {
       `   Items: ${items}`,
       `   Notes: ${order.notes || 'none'}`
     );
+    const contact = buildContactLinksText(order, { email: false });
+    if (contact) lines.push(`   ${contact}`);
   });
 }
 
-function buildEmailText(summary, isFriday) {
+// Wording for the regular Saturday market emails.
+function regularCopy(summary, isFriday) {
+  return {
+    textHeader: isFriday
+      ? `Knead & Bake TX - Friday Evening Preview\nPreorders for Saturday ${summary.marketDate}`
+      : `Knead & Bake TX - Market Day Final List\nPreorders for Saturday ${summary.marketDate}`,
+    badgeText: isFriday ? 'Friday Preview' : 'Market Day List',
+    heading: isFriday
+      ? `Preorders for Saturday ${summary.marketDate}`
+      : `Market Day Orders for ${summary.marketDate}`,
+    intro: isFriday
+      ? 'Your preview is grouped by payment status so you can see what is already covered before market day.'
+      : 'Your final market day list is grouped by payment status so pickup prep is easier to scan.',
+    footer: isFriday
+      ? 'This is your Friday evening preview. A final list will be emailed Saturday morning.'
+      : 'This is your final market day list. Good luck today!',
+  };
+}
+
+function buildEmailText(summary, copy) {
   const buckets = groupSummaryOrders(summary.orders);
-  const header = isFriday
-    ? `Knead & Bake TX - Friday Evening Preview\nPreorders for Saturday ${summary.marketDate}`
-    : `Knead & Bake TX - Market Day Final List\nPreorders for Saturday ${summary.marketDate}`;
   const lines = [
-    header,
+    copy.textHeader,
     `Generated: ${summary.generatedAt}`,
     '',
     'Totals',
@@ -271,9 +306,7 @@ function buildEmailText(summary, isFriday) {
   appendSectionText(lines, 'Payment Due at Pickup', buckets.unpaidPickup, 'Collect payment at pickup.');
 
   lines.push('');
-  lines.push(isFriday
-    ? 'This is your Friday evening preview. A final list will be emailed Saturday morning.'
-    : 'This is your final market day list. Good luck today!');
+  lines.push(copy.footer);
 
   return lines.join('\n');
 }
@@ -322,6 +355,7 @@ function buildOrderCardHtml(order) {
       ${order.items.map((item) => `<li>${escapeHtml(`${item.qty}x ${item.name}`)}</li>`).join('')}
     </ul>
     <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#5e4a3d;"><strong>Notes:</strong> ${escapeHtml(order.notes || 'None')}</p>
+    ${buildContactButtonsHtml(order, { size: 'sm' })}
   </div>`;
 }
 
@@ -337,21 +371,14 @@ function buildSectionHtml(title, description, orders, accentColor) {
   </div>`;
 }
 
-function buildEmailHtml(summary, isFriday) {
+function buildEmailHtml(summary, copy) {
   const buckets = groupSummaryOrders(summary.orders);
-  const badgeText = isFriday ? 'Friday Preview' : 'Market Day List';
-  const heading = isFriday
-    ? `Preorders for Saturday ${summary.marketDate}`
-    : `Market Day Orders for ${summary.marketDate}`;
-  const intro = isFriday
-    ? 'Your preview is grouped by payment status so you can see what is already covered before market day.'
-    : 'Your final market day list is grouped by payment status so pickup prep is easier to scan.';
 
   return buildSummaryEmailShell({
-    iconEntity: '&#128203;',
-    badgeText,
-    heading,
-    intro,
+    iconEntity: copy.iconEntity || '&#128203;',
+    badgeText: copy.badgeText,
+    heading: copy.heading,
+    intro: copy.intro,
     bodyHtml: `
 <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#5e4a3d;">Generated at ${escapeHtml(summary.generatedAt)}.</p>
 ${buildMetricCards(summary, buckets)}
@@ -362,9 +389,7 @@ ${buildMetricCards(summary, buckets)}
 ${buildSectionHtml('Paid Online', 'These orders were already paid by card online.', buckets.paidOnline, '#2e8b57')}
 ${buildSectionHtml('Marked Paid', 'These orders were recorded as paid manually.', buckets.markedPaid, '#8a5a44')}
 ${buildSectionHtml('Payment Due at Pickup', 'These orders still need payment collected at pickup.', buckets.unpaidPickup, '#c97a2b')}
-<p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#6e5645;">${escapeHtml(isFriday
-      ? 'This is your Friday evening preview. A final list will be emailed Saturday morning.'
-      : 'This is your final market day list. Good luck today!')}</p>`,
+<p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#6e5645;">${escapeHtml(copy.footer)}</p>`,
   });
 }
 
@@ -635,4 +660,73 @@ async function sendCustomerReminders() {
   }
 
   return { marketDate, sent, skipped, failed: failed.length };
+}
+
+// ── Special market day-of list (owner) ──
+
+async function querySpecialMarketsForDate(pickupDate) {
+  if (!CONFIG_TABLE) throw new Error('CONFIG_TABLE environment variable is not configured.');
+  const events = [];
+  let ExclusiveStartKey;
+  do {
+    const result = await ddb.send(new QueryCommand({
+      TableName: CONFIG_TABLE,
+      KeyConditionExpression: '#type = :type',
+      ExpressionAttributeNames: { '#type': 'type' },
+      ExpressionAttributeValues: { ':type': 'SPECIAL_MARKET' },
+      ExclusiveStartKey,
+    }));
+    events.push(...(result.Items || []));
+    ExclusiveStartKey = result.LastEvaluatedKey;
+  } while (ExclusiveStartKey);
+  return events.filter((ev) => ev && ev.id && ev.pickupDate === pickupDate);
+}
+
+function specialCopy(ev, summary) {
+  const when = [formatLongDate(summary.marketDate), ev.pickupWindow].filter(Boolean).join(', ');
+  return {
+    iconEntity: '&#9733;',
+    textHeader: `Knead & Bake TX - ${ev.name} Day-Of List\nPickup ${when}${ev.pickupLocation ? ` at ${ev.pickupLocation}` : ''}`,
+    badgeText: 'Special Market · Day Of',
+    heading: `${ev.name} Orders`,
+    intro: `Pickup ${when}${ev.pickupLocation ? ` at ${ev.pickupLocation}` : ''}. Every order here is paid.`,
+    footer: `This is your ${ev.name} pickup list. Good luck today!`,
+  };
+}
+
+async function sendSpecialMarketSummaries(now = new Date()) {
+  const today = getMarketDateYmd(now);
+  const events = await querySpecialMarketsForDate(today);
+  if (!events.length) {
+    console.log(`No special markets picking up on ${today}.`);
+    return { sent: 0 };
+  }
+
+  const dayOrders = await queryOrdersByPickupDate(today);
+  let sent = 0;
+  for (const ev of events) {
+    // Paid orders only; abandoned checkouts (PENDING_PAYMENT) never reach the list.
+    const orders = dayOrders.filter((order) =>
+      order.specialMarketId === ev.id
+      && String(order.paymentStatus || '').toUpperCase() === 'PAID'
+      && !INACTIVE_STATUSES.has(String(order.status || 'NEW').toUpperCase()));
+    const summary = buildDailySummary(orders, today);
+    const copy = specialCopy(ev, summary);
+    const subject = `${ev.name} Day-Of List - ${today} (${summary.totals.orderCount} orders)`;
+
+    await ses.send(new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: { ToAddresses: [OWNER_EMAIL] },
+      Message: {
+        Subject: { Data: subject },
+        Body: {
+          Text: { Data: buildEmailText(summary, copy) },
+          Html: { Data: buildEmailHtml(summary, copy) },
+        },
+      },
+    }));
+    sent += 1;
+    console.log(`Email sent to ${OWNER_EMAIL} with subject: "${subject}"`);
+  }
+  return { sent };
 }
