@@ -10,6 +10,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { SendEmailCommand } from '@aws-sdk/client-ses';
 import { randomUUID } from 'crypto';
+import { buildContactButtonsHtml, buildContactLinksText } from './confirmation-text.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ORDERS_TABLE = process.env.ORDERS_TABLE;
@@ -307,6 +308,10 @@ Total paid: ${money(order.totalPaidCents)}
 Square Payment ID: ${order.squarePaymentId}
 
 Comments: ${order.notes || 'None'}
+
+Confirm with ${order.name || 'the customer'}:
+${buildContactLinksText(order, { paid: true })}
+
 Order ID: ${order.orderId}` },
           Html: { Data: e.buildCustomerEmailShell({
             iconEntity: '&#9733;',
@@ -315,6 +320,7 @@ Order ID: ${order.orderId}` },
             intro: 'A customer placed and paid for a special market preorder.',
             bodyHtml: `
 <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5e4a3d;"><strong>${e.escapeHtml(order.name)}</strong> paid for order <strong>#${short}</strong>.</p>
+${buildContactButtonsHtml(order, { paid: true })}
 <p style="margin:0 0 6px;font-size:15px;"><strong>Phone:</strong> ${e.escapeHtml(order.phone)}</p>
 <p style="margin:0 0 16px;font-size:15px;"><strong>Email:</strong> ${e.escapeHtml(order.email)}</p>
 ${pickupBox}
