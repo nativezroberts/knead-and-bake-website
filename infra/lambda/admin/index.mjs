@@ -890,6 +890,7 @@ function buildPreorderSummary(orders, weekStart, weekEnd) {
         paymentStatus,
         paymentMethod,
         paid,
+        textedAt: sanitize(order.textedAt || '', 40),
         items,
         totalQty,
         totalCents,
@@ -1240,6 +1241,39 @@ async function togglePaymentStatus(orderId, body = {}) {
   return response(200, { message: paid ? 'Order marked as paid.' : 'Order marked as unpaid.', orderId, paid });
 }
 
+// ── Mark Order Texted ──
+// Records that a confirmation text went out (tap-to-text from Allyson's phone).
+async function setOrderTexted(orderId, body = {}) {
+  if (!ORDERS_TABLE) {
+    return response(500, { message: 'Orders table is not configured.' });
+  }
+  if (!orderId || typeof orderId !== 'string') {
+    return response(400, { message: 'A valid orderId is required.' });
+  }
+
+  const texted = body.texted !== false;
+  const textedAt = texted ? new Date().toISOString() : null;
+
+  try {
+    await ddb.send(new UpdateCommand({
+      TableName: ORDERS_TABLE,
+      Key: { orderId },
+      UpdateExpression: texted ? 'SET textedAt = :now' : 'REMOVE textedAt',
+      ...(texted ? { ExpressionAttributeValues: { ':now': textedAt } } : {}),
+      ConditionExpression: 'attribute_exists(orderId)',
+    }));
+  } catch (err) {
+    if (err.name === 'ConditionalCheckFailedException') {
+      return response(404, { message: 'Order not found.' });
+    }
+    console.error('Failed to update texted status:', err);
+    return response(500, { message: 'Failed to update texted status.' });
+  }
+
+  await writeAuditLog('UPDATE', 'ORDER', orderId, { textedAt });
+  return response(200, { message: texted ? 'Marked as texted.' : 'Texted mark cleared.', orderId, textedAt });
+}
+
 // ── Reject / Cancel Order ──
 async function rejectOrder(orderId, body = {}) {
   if (!ORDERS_TABLE) {
@@ -1470,6 +1504,13 @@ export async function handler(event) {
     const segments = path.split('/');
     const orderId = decodeURIComponent(segments[segments.length - 2]);
     return togglePaymentStatus(orderId, body);
+  }
+
+  // Mark confirmation texted
+  if (path.startsWith('/api/admin/orders/') && path.endsWith('/texted') && method === 'POST') {
+    const segments = path.split('/');
+    const orderId = decodeURIComponent(segments[segments.length - 2]);
+    return setOrderTexted(orderId, body);
   }
 
   // Reject order

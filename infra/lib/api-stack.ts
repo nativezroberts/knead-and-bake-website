@@ -473,6 +473,14 @@ export class ApiStack extends cdk.Stack {
       authorizer: jwtAuthorizer,
     });
 
+    // POST /api/admin/orders/{orderId}/texted (mark confirmation text sent)
+    httpApi.addRoutes({
+      path: '/api/admin/orders/{orderId}/texted',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: adminIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
     // ── Preorder Scheduler Lambda ──
     // Sends automated preorder summary emails:
     //   Friday 7 PM CDT  = 23:00 UTC  → cron(0 23 ? * FRI *)
