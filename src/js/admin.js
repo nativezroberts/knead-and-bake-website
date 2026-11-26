@@ -1121,7 +1121,7 @@ function renderPreorderOrders(summary) {
             const isPaid = isOnlinePaid || !!order.paid;
             const smsHref = buildSmsHref(order.phone, buildConfirmationText(order, { paid: isPaid }));
             const textHtml = smsHref
-              ? `<a class="btn btn--text-customer" data-order-id="${escapeHtml(order.orderId || '')}" href="${escapeHtml(smsHref)}">💬 Text ${escapeHtml(getFirstName(order.name) || 'customer')}</a>`
+              ? `<a class="btn btn--text-customer" data-order-id="${escapeHtml(order.orderId || '')}" href="${escapeHtml(smsHref)}">💬 Text ${escapeHtml(getFirstName(order.name) || 'customer')}</a>${textedToggleHtml(order)}`
               : '';
             const actionsHtml = textHtml + (isOnlinePaid
               ? '<span class="preorders-status-pill preorders-status-pill--online">Paid via Online</span>'
@@ -1169,6 +1169,74 @@ function renderPreorderOrders(summary) {
   container.querySelectorAll('.btn--reject').forEach(btn => {
     btn.addEventListener('click', () => handleRejectOrder(btn));
   });
+
+  // Tapping Text opens Messages; record it so the order shows Texted ✓.
+  container.querySelectorAll('.btn--text-customer').forEach(link => {
+    link.addEventListener('click', () => {
+      const toggle = container.querySelector(`.btn--texted[data-order-id="${CSS.escape(link.dataset.orderId || '')}"]`);
+      if (toggle && toggle.dataset.texted !== 'true') setTexted(toggle, true);
+    });
+  });
+
+  // Manual toggle, for texts sent from the new-preorder email.
+  container.querySelectorAll('.btn--texted').forEach(btn => {
+    btn.addEventListener('click', () => setTexted(btn, btn.dataset.texted !== 'true'));
+  });
+}
+
+function formatTextedAt(iso) {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
+}
+
+function textedLabel(textedAt) {
+  if (!textedAt) return 'Not texted';
+  const when = formatTextedAt(textedAt);
+  return when ? `Texted ✓ ${when}` : 'Texted ✓';
+}
+
+function textedToggleHtml(order) {
+  const texted = !!order.textedAt;
+  return `<button type="button" class="btn btn--texted${texted ? ' is-texted' : ''}" data-order-id="${escapeHtml(order.orderId || '')}" data-texted="${texted}" title="${texted ? 'Tap to clear' : 'Tap if you already texted them'}">${escapeHtml(textedLabel(order.textedAt))}</button>`;
+}
+
+function renderTexted(btn, textedAt) {
+  const texted = !!textedAt;
+  btn.dataset.texted = String(texted);
+  btn.classList.toggle('is-texted', texted);
+  btn.textContent = textedLabel(textedAt);
+  btn.title = texted ? 'Tap to clear' : 'Tap if you already texted them';
+}
+
+async function setTexted(btn, texted) {
+  const orderId = btn.dataset.orderId;
+  if (!orderId) return;
+  const previous = btn.dataset.texted === 'true';
+  const previousLabel = btn.textContent;
+  // Optimistic: the page may be backgrounded as Messages opens.
+  renderTexted(btn, texted ? new Date().toISOString() : null);
+  btn.disabled = true;
+  try {
+    const res = await authFetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/texted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texted }),
+      keepalive: true,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update texted status.');
+    renderTexted(btn, data.textedAt);
+    const order = renderedOrdersById.get(orderId);
+    if (order) order.textedAt = data.textedAt || '';
+  } catch (e) {
+    btn.dataset.texted = String(previous);
+    btn.classList.toggle('is-texted', previous);
+    btn.textContent = previousLabel;
+    setPreordersError(e.message || 'Failed to update texted status.');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // Orders as last rendered in the preorders table, so the Text link can be rebuilt
