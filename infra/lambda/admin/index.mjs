@@ -21,6 +21,7 @@ import {
 } from './special-markets.mjs';
 import { createProduct, updateProduct, toProductResponse } from './products.mjs';
 import { buildContactButtonsHtml, buildContactLinksText } from './confirmation-text.mjs';
+import { buildSocialPromptEmail } from './social-prompt.mjs';
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const s3 = new S3Client({});
@@ -149,6 +150,25 @@ function buildSummaryEmailShell({ iconEntity, badgeText, heading, intro, bodyHtm
     </div>
   </body>
 </html>`;
+}
+
+// Emails the owner a ready-to-paste Claude/ChatGPT prompt + sample images for
+// the Instagram post. Best-effort: never blocks or fails the save.
+async function sendSocialPromptEmail(item) {
+  if (!SEND_EMAILS || !FROM_EMAIL || !OWNER_EMAIL || item.active === false) return;
+  try {
+    const { subject, text, html } = buildSocialPromptEmail(item);
+    await ses.send(new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: { ToAddresses: [OWNER_EMAIL] },
+      Message: {
+        Subject: { Data: subject },
+        Body: { Text: { Data: text }, Html: { Data: html } },
+      },
+    }));
+  } catch (e) {
+    console.error('Failed to send social prompt email:', e);
+  }
 }
 
 async function queryByType(type) {
@@ -325,6 +345,7 @@ async function createAnnouncement(body) {
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
   await writeAuditLog('CREATE', 'ANNOUNCEMENT', item.id, { title: item.title, startDate: item.startDate, endDate: item.endDate, active: item.active });
+  await sendSocialPromptEmail(item);
   return response(201, { announcement: item });
 }
 
@@ -557,6 +578,7 @@ async function createNewsPost(body) {
 
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
   await writeAuditLog('CREATE', 'NEWS', item.id, { title: item.title, startDate: item.startDate, slug: item.slug, active: item.active });
+  await sendSocialPromptEmail(item);
   return response(201, { post: item });
 }
 
