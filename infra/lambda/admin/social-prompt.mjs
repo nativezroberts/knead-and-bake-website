@@ -47,7 +47,8 @@ export function toAnnouncementDetails(item = {}) {
   const headline = (item.title || item.message || '').trim();
   const lines = [
     isNews ? item.subtitle : '',
-    isNews ? item.excerpt : item.message !== headline ? item.message : '',
+    !isNews && item.message !== headline ? item.message : '',
+    item.excerpt,
     item.content,
   ].map(s => (s || '').trim()).filter(Boolean);
   return {
